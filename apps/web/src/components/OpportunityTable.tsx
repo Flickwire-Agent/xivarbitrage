@@ -1,5 +1,9 @@
 import type { ArbitrageOpportunity } from "@xiv-arbitrage/shared";
 
+function getUniversalisUrl(itemId: number): string {
+  return `https://universalis.app/market/${itemId}`;
+}
+
 interface OpportunityTableProps {
   opportunities: ArbitrageOpportunity[];
   isLoading: boolean;
@@ -34,7 +38,14 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
                 <div className="itemCell">
                   {opportunity.item.iconUrl ? <img src={opportunity.item.iconUrl} alt="" loading="lazy" /> : null}
                   <div>
-                    <strong>{opportunity.item.name}</strong>
+                    <a
+                      href={getUniversalisUrl(opportunity.itemId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View on Universalis"
+                    >
+                      <strong>{opportunity.item.name}</strong>
+                    </a>
                     <span>{opportunity.item.category ?? "Uncategorized"}</span>
                   </div>
                 </div>
