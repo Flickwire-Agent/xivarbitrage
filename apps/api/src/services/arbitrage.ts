@@ -26,6 +26,10 @@ export class ArbitrageService {
         connectionString: config.databaseUrl,
         ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
       });
+      this.db.on("error", (error) => {
+        console.error(`ArbitrageService: Unexpected database pool error: ${error}`);
+        // Don't crash the app; log and continue. The pool will attempt to reconnect.
+      });
     }
   }
 
