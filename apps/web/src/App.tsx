@@ -1,5 +1,5 @@
 import type { OpportunityFilters, OpportunityResponse } from "@xiv-arbitrage/shared";
-import { ArrowDownUp, Filter, Gauge, RefreshCw, TrendingUp } from "lucide-react";
+import { ArrowDownUp, Filter, Gauge, Moon, RefreshCw, Sun, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { OpportunityTable } from "./components/OpportunityTable.js";
 import { SelectField } from "./components/SelectField.js";
@@ -15,6 +15,17 @@ export function App() {
   const [data, setData] = useState<OpportunityResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("darkMode") === "true" || window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
+    localStorage.setItem("darkMode", String(isDarkMode));
+  }, [isDarkMode]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -76,10 +87,20 @@ export function App() {
           <p className="eyebrow">Final Fantasy XIV Market Board</p>
           <h1>XIV Arbitrage</h1>
         </div>
-        <button className="iconButton" type="button" onClick={() => setFilters((current) => ({ ...current }))}>
-          <RefreshCw size={18} aria-hidden="true" />
-          <span>Refresh</span>
-        </button>
+        <div className="topBarActions">
+          <button className="iconButton" type="button" onClick={() => setFilters((current) => ({ ...current }))}>
+            <RefreshCw size={18} aria-hidden="true" />
+            <span>Refresh</span>
+          </button>
+          <button
+            className="iconButton"
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDarkMode ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+          </button>
+        </div>
       </section>
 
       <section className="metricStrip" aria-label="Market summary">
@@ -157,3 +178,4 @@ export function App() {
     </main>
   );
 }
+
