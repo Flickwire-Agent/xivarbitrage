@@ -28,7 +28,6 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
             <th>Sell to</th>
             <th>Spread</th>
             <th>Volume</th>
-            <th>Score</th>
           </tr>
         </thead>
         <tbody>
@@ -70,10 +69,6 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
                 <strong>{opportunity.recentSales.toLocaleString()}</strong>
                 <span>recent units</span>
               </td>
-              <td>
-                <strong>{Math.round(opportunity.profitScore).toLocaleString()}</strong>
-                <span>profit score</span>
-              </td>
             </tr>
           ))}
         </tbody>
@@ -81,3 +76,4 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
     </section>
   );
 }
+

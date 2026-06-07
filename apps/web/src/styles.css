@@ -7,6 +7,11 @@
   text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="dark"] {
+  color: #e1e8f0;
+  background: #0f1419;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -36,12 +41,21 @@ select {
   margin-bottom: 24px;
 }
 
+.topBarActions {
+  display: flex;
+  gap: 8px;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: #586575;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .eyebrow {
+  color: #8a95a8;
 }
 
 h1 {
@@ -61,6 +75,23 @@ h1 {
   color: #17212b;
   padding: 0 14px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.iconButton:hover {
+  border-color: #a8b5c7;
+  background: #f5f7fb;
+}
+
+:root[data-theme="dark"] .iconButton {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .iconButton:hover {
+  border-color: #3a4a5f;
+  background: #232d3d;
 }
 
 .metricStrip {
@@ -80,11 +111,21 @@ h1 {
   padding: 16px;
 }
 
+:root[data-theme="dark"] .metricStrip article {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
 .metricStrip span,
 td span {
   display: block;
   color: #687586;
   font-size: 0.82rem;
+}
+
+:root[data-theme="dark"] .metricStrip span,
+:root[data-theme="dark"] td span {
+  color: #8a95a8;
 }
 
 .metricStrip strong {
@@ -101,6 +142,10 @@ td span {
   border-block: 1px solid #d7dee9;
   padding: 16px 0;
   margin-bottom: 18px;
+}
+
+:root[data-theme="dark"] .toolbar {
+  border-block-color: #2a3a4f;
 }
 
 .toolbarTitle {
@@ -120,6 +165,11 @@ td span {
   font-weight: 700;
 }
 
+:root[data-theme="dark"] .selectField,
+:root[data-theme="dark"] .numberField {
+  color: #8a95a8;
+}
+
 select,
 input {
   min-height: 42px;
@@ -129,6 +179,27 @@ input {
   background: #ffffff;
   color: #17212b;
   padding: 0 10px;
+  transition: all 0.2s ease;
+}
+
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] input {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #e1e8f0;
+}
+
+select:focus,
+input:focus {
+  outline: none;
+  border-color: #5a8dd8;
+  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.1);
+}
+
+:root[data-theme="dark"] select:focus,
+:root[data-theme="dark"] input:focus {
+  border-color: #5a8dd8;
+  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.2);
 }
 
 .notice {
@@ -139,6 +210,12 @@ input {
   color: #526071;
 }
 
+:root[data-theme="dark"] .notice {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #8a95a8;
+}
+
 .notice.error {
   border-color: #f0b0a8;
   background: #fff4f2;
@@ -146,11 +223,22 @@ input {
   margin-bottom: 16px;
 }
 
+:root[data-theme="dark"] .notice.error {
+  border-color: #5a3a35;
+  background: #3a2420;
+  color: #f0b0a8;
+}
+
 .tableShell {
   overflow-x: auto;
   border: 1px solid #d7dee9;
   border-radius: 8px;
   background: #ffffff;
+}
+
+:root[data-theme="dark"] .tableShell {
+  border-color: #2a3a4f;
+  background: #1a2332;
 }
 
 table {
@@ -167,10 +255,19 @@ td {
   vertical-align: middle;
 }
 
+:root[data-theme="dark"] th,
+:root[data-theme="dark"] td {
+  border-bottom-color: #2a3a4f;
+}
+
 th {
   color: #526071;
   font-size: 0.78rem;
   text-transform: uppercase;
+}
+
+:root[data-theme="dark"] th {
+  color: #8a95a8;
 }
 
 tbody tr:last-child td {
@@ -180,6 +277,10 @@ tbody tr:last-child td {
 td strong {
   display: block;
   color: #17212b;
+}
+
+:root[data-theme="dark"] td strong {
+  color: #e1e8f0;
 }
 
 .itemCell {
@@ -195,6 +296,23 @@ td strong {
   border-radius: 6px;
   object-fit: cover;
   background: #eef2f7;
+}
+
+:root[data-theme="dark"] .itemCell img {
+  background: #2a3a4f;
+}
+
+a {
+  color: #5a8dd8;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] a {
+  color: #7ba3e8;
 }
 
 @media (max-width: 980px) {
@@ -227,3 +345,4 @@ td strong {
     grid-template-columns: 1fr;
   }
 }
+
