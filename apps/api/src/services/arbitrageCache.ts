@@ -30,10 +30,14 @@ export class ArbitrageCache {
     }
 
     this.refreshPromise = this.service
-      .scanOpportunities(config.arbitrageItemLimit)
+      .scanOpportunitiesFromDb()
       .then((opportunities) => {
         this.latest = opportunities;
         this.generatedAt = new Date().toISOString();
+        console.log(`[ArbitrageCache] Refreshed with ${opportunities.length} opportunities`);
+      })
+      .catch((error) => {
+        console.error(`[ArbitrageCache] Error refreshing: ${error}`);
       })
       .finally(() => {
         this.refreshPromise = null;

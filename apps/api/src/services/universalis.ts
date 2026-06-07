@@ -71,3 +71,5 @@ export class UniversalisClient {
     });
   }
 }
+
+export const universalis = new UniversalisClient();

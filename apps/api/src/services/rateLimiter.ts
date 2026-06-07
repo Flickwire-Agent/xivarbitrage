@@ -1,3 +1,5 @@
+import { config } from "../config.js";
+
 export class RateLimiter {
   private nextAvailableAt = 0;
 
@@ -16,3 +18,5 @@ export class RateLimiter {
     return task();
   }
 }
+
+export const rateLimiter = new RateLimiter(config.universalisRequestsPerSecond);

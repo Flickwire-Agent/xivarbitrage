@@ -10,5 +10,18 @@
     "healthcheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
+  },
+  "services": {
+    "postgres": {
+      "image": "postgres:16-alpine",
+      "environment": {
+        "POSTGRES_USER": "arbitrage",
+        "POSTGRES_PASSWORD": "${{Yz_PASSWORD}}",
+        "POSTGRES_DB": "arbitrage"
+      }
+    },
+    "redis": {
+      "image": "redis:7-alpine"
+    }
   }
 }
