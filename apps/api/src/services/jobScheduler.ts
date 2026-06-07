@@ -152,7 +152,7 @@ export class JobScheduler {
       for (const job of jobs) {
         await queue.add(`evaluate-item-${job.itemId}-${job.region}`, job, {
           delay,
-          priority: 100 - (delay / 1000) % 100 // Prioritize older delays slightly
+          priority: Math.floor(100 - ((delay / 1000) % 100)) // Prioritize older delays slightly
         });
 
         delay += delayBetweenJobs;
