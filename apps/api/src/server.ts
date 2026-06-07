@@ -1,5 +1,8 @@
 import cors from "@fastify/cors";
+import staticFiles from "@fastify/static";
 import Fastify from "fastify";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { config } from "./config.js";
 import { opportunityRoutes } from "./routes/opportunities.js";
 
@@ -14,6 +17,22 @@ await app.register(cors, {
 await app.register(opportunityRoutes, {
   prefix: "/api"
 });
+
+const webDistPath = fileURLToPath(new URL("../../web/dist", import.meta.url));
+if (existsSync(webDistPath)) {
+  await app.register(staticFiles, {
+    root: webDistPath,
+    wildcard: false
+  });
+
+  app.setNotFoundHandler((request, reply) => {
+    if (request.raw.url?.startsWith("/api/")) {
+      return reply.status(404).send({ error: "Not found" });
+    }
+
+    return reply.sendFile("index.html");
+  });
+}
 
 try {
   await app.listen({

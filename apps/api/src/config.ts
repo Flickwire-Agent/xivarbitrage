@@ -4,5 +4,6 @@ export const config = {
   xivapiBaseUrl: process.env.XIVAPI_BASE_URL ?? "https://v2.xivapi.com/api",
   universalisRequestsPerSecond: Number(process.env.UNIVERSALIS_REQS_PER_SECOND ?? 20),
   arbitrageItemLimit: Number(process.env.ARBITRAGE_ITEM_LIMIT ?? 80),
-  arbitrageMaxConcurrency: Number(process.env.ARBITRAGE_MAX_CONCURRENCY ?? 4)
+  arbitrageMaxConcurrency: Number(process.env.ARBITRAGE_MAX_CONCURRENCY ?? 4),
+  arbitrageRefreshMinutes: Number(process.env.ARBITRAGE_REFRESH_MINUTES ?? 15)
 };

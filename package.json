@@ -9,7 +9,8 @@
     "build": "pnpm -r build",
     "check": "pnpm -r check",
     "dev": "pnpm --parallel dev",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "start": "pnpm --filter @xiv-arbitrage/api start"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

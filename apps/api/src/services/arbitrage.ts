@@ -19,17 +19,28 @@ export class ArbitrageService {
   ) {}
 
   async findOpportunities(filters: OpportunityFilters): Promise<OpportunityResponse> {
+    const opportunities = await this.scanOpportunities(filters.limit ?? config.arbitrageItemLimit);
+    return this.createResponse(opportunities, filters, new Date().toISOString());
+  }
+
+  async scanOpportunities(limit: number = config.arbitrageItemLimit): Promise<ArbitrageOpportunity[]> {
     const marketableIds = await this.universalis.getMarketableItemIds();
-    const idsToInspect = marketableIds.slice(0, filters.limit ?? config.arbitrageItemLimit);
-    const opportunities = (
+    const idsToInspect = marketableIds.slice(0, limit);
+    return (
       await mapConcurrent(idsToInspect, config.arbitrageMaxConcurrency, (itemId) => this.evaluateItem(itemId))
     ).filter((opportunity): opportunity is ArbitrageOpportunity => opportunity !== null);
+  }
 
+  createResponse(
+    opportunities: ArbitrageOpportunity[],
+    filters: OpportunityFilters,
+    generatedAt: string
+  ): OpportunityResponse {
     const filtered = this.applyFilters(opportunities, filters);
     const sorted = this.sort(filtered, filters.sort ?? "best");
 
     return {
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       filters,
       opportunities: sorted.slice(0, filters.limit ?? 50),
       worlds: [...new Set(worlds.map((world) => world.name))].sort(),
