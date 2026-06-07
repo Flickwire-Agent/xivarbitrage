@@ -14,18 +14,21 @@ export async function runMigrations(connectionString: string): Promise<void> {
     // Create market_snapshots table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS market_snapshots (
-        id serial PRIMARY KEY,
         item_id integer NOT NULL,
-        world_id integer NOT NULL,
-        price_per_unit integer NOT NULL,
-        quantity integer NOT NULL,
-        listing_id bigint,
-        hq boolean DEFAULT false,
+        region text NOT NULL,
+        data jsonb NOT NULL,
         fetched_at timestamptz NOT NULL DEFAULT now(),
-        created_at timestamptz NOT NULL DEFAULT now()
+        PRIMARY KEY (item_id, region)
       );
     `);
     console.log("✓ Created market_snapshots table");
+
+    // Create index on fetched_at for cleanup queries
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS market_snapshots_fetched_at_idx
+        ON market_snapshots (fetched_at);
+    `);
+    console.log("✓ Created index on market_snapshots (fetched_at)");
 
     // Create marketable_items table
     await pool.query(`
@@ -53,13 +56,6 @@ export async function runMigrations(connectionString: string): Promise<void> {
     `);
     console.log("✓ Created job_history table");
 
-    // Create indexes on market_snapshots for better query performance
-    await pool.query(`
-      CREATE INDEX IF NOT EXISTS market_snapshots_item_fetched_idx
-        ON market_snapshots (item_id, fetched_at DESC);
-    `);
-    console.log("✓ Created index on market_snapshots (item_id, fetched_at)");
-
     // Index for job_history queries
     await pool.query(`
       CREATE INDEX IF NOT EXISTS job_history_status_idx
@@ -79,3 +75,4 @@ export async function runMigrations(connectionString: string): Promise<void> {
     await pool.end();
   }
 }
+
