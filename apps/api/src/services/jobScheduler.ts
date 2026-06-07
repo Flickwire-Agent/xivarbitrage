@@ -6,7 +6,10 @@ import type { EvaluateItemJob } from "./jobQueue.js";
 
 const { Pool } = pg;
 
-const TARGET_REGIONS = ["North-America", "Europe", "Oceania"];
+// Target regions for market scanning.
+// To re-enable additional regions, add them back to this array:
+//   "North-America" | "Europe" | "Oceania"
+const TARGET_REGIONS = ["Europe"];
 
 export class JobScheduler {
   private db: pg.Pool;
@@ -24,6 +27,7 @@ export class JobScheduler {
 
   async initialize(): Promise<void> {
     console.log("[JobScheduler] Initializing...");
+    console.log(`[JobScheduler] Target regions: ${TARGET_REGIONS.join(", ")}`);
 
     // Load all marketable items into database if not already done
     await this.seedMarketableItems();
@@ -105,8 +109,7 @@ export class JobScheduler {
         `SELECT item_id FROM marketable_items 
          WHERE last_scanned IS NULL 
             OR last_scanned < now() - interval '1 day'
-         ORDER BY last_scanned NULLS FIRST
-         LIMIT 10000`
+         ORDER BY last_scanned NULLS FIRST`
       );
 
       const itemIds = result.rows.map((row) => row.item_id);
