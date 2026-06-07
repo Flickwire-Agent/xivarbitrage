@@ -49,10 +49,22 @@ export class UniversalisClient {
     return this.fetchJson<UniversalisDataCenter[]>("/data-centers");
   }
 
-  async getCurrentData(regionOrWorld: string, itemId: number): Promise<UniversalisMarketData> {
-    return this.fetchJson<UniversalisMarketData>(
-      `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entriesToReturn=20`
-    );
+  async getCurrentData(
+    regionOrWorld: string,
+    itemId: number
+  ): Promise<UniversalisMarketData | null> {
+    try {
+      return await this.fetchJson<UniversalisMarketData>(
+        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entriesToReturn=20`
+      );
+    } catch (error) {
+      console.warn(
+        `Universalis.getCurrentData: request failed for ${regionOrWorld}/${itemId}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      return null;
+    }
   }
 
   private async fetchJson<T>(path: string): Promise<T> {
