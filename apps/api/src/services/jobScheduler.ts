@@ -15,6 +15,10 @@ export class JobScheduler {
   private db: pg.Pool;
   private lastScheduleTime = 0;
   private scheduleInProgress = false;
+  // Cooldown is updated after each scheduling pass to match the estimated scan
+  // cycle duration, so a new batch is only enqueued once the prior one is
+  // nearly complete — enabling continuous back-to-back refresh cycles.
+  private scheduleCooldownMs = 60_000; // conservative default until first pass
 
   constructor() {
     this.db = new Pool({
@@ -92,9 +96,11 @@ export class JobScheduler {
       return;
     }
 
-    // Prevent scheduling more than once per minute
+    // Prevent a new scheduling pass from starting before the previous batch has
+    // had time to run. The cooldown is set to the estimated scan cycle duration
+    // after each pass, so batches chain back-to-back as fast as the API allows.
     const now = Date.now();
-    if (now - this.lastScheduleTime < 60000) {
+    if (now - this.lastScheduleTime < this.scheduleCooldownMs) {
       return;
     }
 
@@ -104,11 +110,12 @@ export class JobScheduler {
     try {
       console.log("[JobScheduler] Scheduling jobs...");
 
-      // Get all items that need scanning
+      // Fetch all items ordered by staleness so the least-recently-scanned items
+      // are always processed first. There is no age filter — with continuous
+      // cycling every item is refreshed as fast as the API rate allows, so we
+      // never want to skip items that were scanned "recently".
       const result = await this.db.query<{ item_id: number }>(
-        `SELECT item_id FROM marketable_items 
-         WHERE last_scanned IS NULL 
-            OR last_scanned < now() - interval '1 day'
+        `SELECT item_id FROM marketable_items
          ORDER BY last_scanned NULLS FIRST`
       );
 
@@ -130,21 +137,42 @@ export class JobScheduler {
         }
       }
 
-      // Calculate stagger timing to spread jobs evenly over 24 hours
-      // Target: complete all jobs in 24 hours
-      // With concurrency=4 and 20 req/sec rate limit:
-      // Each job takes ~1 second (API call + DB write)
-      // Total time needed: (itemCount * regions) / concurrency
-      // We want to spread this over 24 hours to avoid overwhelming the API
+      // Calculate stagger timing to maximise refresh frequency while respecting
+      // the Universalis API rate limit.
+      //
+      // Strategy:
+      //   - The rate limiter enforces a global cap of `universalisRequestsPerSecond`
+      //     across all concurrent workers.
+      //   - Each worker therefore gets an equal share of that budget:
+      //       perWorkerRate = universalisRequestsPerSecond / jobQueueConcurrency
+      //   - To keep every worker continuously busy without any single worker
+      //     exceeding its share, we space job *start* times by:
+      //       delayBetweenJobs = 1000ms / perWorkerRate
+      //   - Once the last job in a batch completes the cycle begins again
+      //     immediately, so items are refreshed as fast as the API allows.
+      const reqPerSecond = config.universalisRequestsPerSecond;
+      const concurrency = config.jobQueueConcurrency;
+      const perWorkerRate = reqPerSecond / concurrency; // req/sec per worker
+      const delayBetweenJobs = Math.max(1, Math.round(1000 / perWorkerRate)); // ms between job starts
+
       const totalJobs = jobs.length;
-      const jobsPerSecond = totalJobs / (24 * 3600); // Jobs per second over 24 hours
-      const delayBetweenJobs = Math.max(1, Math.floor(1000 / jobsPerSecond)); // Minimum 1ms between jobs
+      const estimatedScanSeconds = totalJobs / reqPerSecond;
+      const estimatedScanMinutes = (estimatedScanSeconds / 60).toFixed(1);
+
+      // Update the cooldown so the next scheduleJobs() call is deferred until
+      // this batch is nearly finished, enabling seamless back-to-back cycles.
+      this.scheduleCooldownMs = Math.max(60_000, estimatedScanSeconds * 1000);
 
       console.log(
         `[JobScheduler] Queueing ${totalJobs} jobs (${itemIds.length} items × ${TARGET_REGIONS.length} regions)`
       );
       console.log(
-        `[JobScheduler] Spacing jobs ${delayBetweenJobs}ms apart to spread over 24 hours`
+        `[JobScheduler] Rate limit: ${reqPerSecond} req/s across ${concurrency} workers ` +
+        `(${perWorkerRate} req/s per worker) → ${delayBetweenJobs}ms between jobs`
+      );
+      console.log(
+        `[JobScheduler] Estimated full scan time: ~${estimatedScanMinutes} minutes ` +
+        `(${estimatedScanSeconds.toFixed(0)}s at ${reqPerSecond} req/s)`
       );
 
       // Add jobs to queue with staggered delays
