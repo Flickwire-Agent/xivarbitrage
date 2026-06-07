@@ -2,6 +2,7 @@ export interface WorldInfo {
   id: number;
   name: string;
   dataCenter: string;
+  region?: string;
 }
 
 export const worlds: WorldInfo[] = [

@@ -23,11 +23,30 @@ export interface UniversalisMarketData {
   averagePriceNQ?: number;
 }
 
+export interface UniversalisWorld {
+  id: number;
+  name: string;
+}
+
+export interface UniversalisDataCenter {
+  name: string;
+  region: string;
+  worlds: number[];
+}
+
 export class UniversalisClient {
   private readonly limiter = new RateLimiter(config.universalisRequestsPerSecond);
 
   async getMarketableItemIds(): Promise<number[]> {
     return this.fetchJson<number[]>("/marketable");
+  }
+
+  async getWorlds(): Promise<UniversalisWorld[]> {
+    return this.fetchJson<UniversalisWorld[]>("/worlds");
+  }
+
+  async getDataCenters(): Promise<UniversalisDataCenter[]> {
+    return this.fetchJson<UniversalisDataCenter[]>("/data-centers");
   }
 
   async getCurrentData(regionOrWorld: string, itemId: number): Promise<UniversalisMarketData> {

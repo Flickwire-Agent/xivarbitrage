@@ -5,17 +5,16 @@ import type {
   WorldPrice
 } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
-import { worldById, worlds } from "../data/worlds.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { UniversalisClient } from "./universalis.js";
+import { WorldCatalog } from "./worldCatalog.js";
 import { XivApiClient } from "./xivapi.js";
-
-const REGION = "North-America";
 
 export class ArbitrageService {
   constructor(
     private readonly universalis = new UniversalisClient(),
-    private readonly xivapi = new XivApiClient()
+    private readonly xivapi = new XivApiClient(),
+    private readonly worldCatalog = new WorldCatalog(universalis)
   ) {}
 
   async findOpportunities(filters: OpportunityFilters): Promise<OpportunityResponse> {
@@ -26,9 +25,16 @@ export class ArbitrageService {
   async scanOpportunities(limit: number = config.arbitrageItemLimit): Promise<ArbitrageOpportunity[]> {
     const marketableIds = await this.universalis.getMarketableItemIds();
     const idsToInspect = marketableIds.slice(0, limit);
-    return (
-      await mapConcurrent(idsToInspect, config.arbitrageMaxConcurrency, (itemId) => this.evaluateItem(itemId))
+    const regions = await this.worldCatalog.getRegions();
+    const worldById = await this.worldCatalog.getWorldById();
+    const regionItemPairs = regions.flatMap((region) => idsToInspect.map((itemId) => ({ region, itemId })));
+    const regionalOpportunities = (
+      await mapConcurrent(regionItemPairs, config.arbitrageMaxConcurrency, ({ region, itemId }) =>
+        this.evaluateItem(region, itemId, worldById)
+      )
     ).filter((opportunity): opportunity is ArbitrageOpportunity => opportunity !== null);
+
+    return this.bestOpportunityPerItem(regionalOpportunities);
   }
 
   createResponse(
@@ -43,15 +49,19 @@ export class ArbitrageService {
       generatedAt,
       filters,
       opportunities: sorted.slice(0, filters.limit ?? 50),
-      worlds: [...new Set(worlds.map((world) => world.name))].sort(),
-      dataCenters: [...new Set(worlds.map((world) => world.dataCenter))].sort(),
+      worlds: [...new Set(opportunities.flatMap((opportunity) => [opportunity.low.worldName, opportunity.high.worldName]))].sort(),
+      dataCenters: [...new Set(opportunities.flatMap((opportunity) => [opportunity.low.dataCenter, opportunity.high.dataCenter]))].sort(),
       categories: [...new Set(opportunities.map((opportunity) => opportunity.item.category).filter(isDefined))].sort()
     };
   }
 
-  private async evaluateItem(itemId: number): Promise<ArbitrageOpportunity | null> {
-    const market = await this.universalis.getCurrentData(REGION, itemId);
-    const prices = this.extractWorldPrices(market);
+  private async evaluateItem(
+    region: string,
+    itemId: number,
+    worldById: Map<number, { name: string; dataCenter: string }>
+  ): Promise<ArbitrageOpportunity | null> {
+    const market = await this.universalis.getCurrentData(region, itemId);
+    const prices = this.extractWorldPrices(market, worldById);
 
     if (prices.length < 2) {
       return null;
@@ -84,7 +94,10 @@ export class ArbitrageService {
     };
   }
 
-  private extractWorldPrices(market: UniversalisMarketData): WorldPrice[] {
+  private extractWorldPrices(
+    market: UniversalisMarketData,
+    worldById: Map<number, { name: string; dataCenter: string }>
+  ): WorldPrice[] {
     const byWorld = new Map<number, WorldPrice>();
 
     for (const listing of market.listings ?? []) {
@@ -153,6 +166,19 @@ export class ArbitrageService {
     };
 
     return [...opportunities].sort((a, b) => selectors[sort](b) - selectors[sort](a));
+  }
+
+  private bestOpportunityPerItem(opportunities: ArbitrageOpportunity[]): ArbitrageOpportunity[] {
+    const byItem = new Map<number, ArbitrageOpportunity>();
+
+    for (const opportunity of opportunities) {
+      const current = byItem.get(opportunity.itemId);
+      if (!current || opportunity.profitScore > current.profitScore) {
+        byItem.set(opportunity.itemId, opportunity);
+      }
+    }
+
+    return [...byItem.values()];
   }
 }
 
