@@ -103,18 +103,28 @@ export class ArbitrageService {
       }
 
       // Aggregate prices across all recent snapshots
-      const allPrices = new Map<number, WorldPrice>();
+      const allListingPrices = new Map<number, WorldPrice>();
+      const allSoldPrices = new Map<number, WorldPrice>();
       let totalRecentSales = 0;
       let totalAveragePrice = 0;
       let dataPointCount = 0;
 
       for (const { data } of result.rows) {
-        const prices = this.extractWorldPrices(data, worldById);
+        const listingPrices = this.extractWorldPrices(data, worldById);
 
-        for (const price of prices) {
-          const existing = allPrices.get(price.worldId);
+        for (const price of listingPrices) {
+          const existing = allListingPrices.get(price.worldId);
           if (!existing || price.pricePerUnit < existing.pricePerUnit) {
-            allPrices.set(price.worldId, price);
+            allListingPrices.set(price.worldId, price);
+          }
+        }
+
+        const soldPrices = this.extractSoldPrices(data, worldById);
+
+        for (const price of soldPrices) {
+          const existing = allSoldPrices.get(price.worldId);
+          if (!existing || price.pricePerUnit > existing.pricePerUnit) {
+            allSoldPrices.set(price.worldId, price);
           }
         }
 
@@ -131,16 +141,23 @@ export class ArbitrageService {
         }
       }
 
-      const prices = [...allPrices.values()];
+      // Low side: cheapest listing price (what you pay to buy)
+      // High side: highest sold price per world (actual transactions, not wishful listings)
+      // Fall back to listing prices for the high side if no sales data is available
+      const lowPrices = [...allListingPrices.values()];
+      const highPrices =
+        allSoldPrices.size > 0
+          ? [...allSoldPrices.values()]
+          : [...allListingPrices.values()];
 
-      if (prices.length < 2) {
+      if (lowPrices.length < 1 || highPrices.length < 1) {
         return null;
       }
 
-      const low = prices.reduce((best, price) =>
+      const low = lowPrices.reduce((best, price) =>
         price.pricePerUnit < best.pricePerUnit ? price : best
       );
-      const high = prices.reduce((best, price) =>
+      const high = highPrices.reduce((best, price) =>
         price.pricePerUnit > best.pricePerUnit ? price : best
       );
       const spread = high.pricePerUnit - low.pricePerUnit;
@@ -234,6 +251,44 @@ export class ArbitrageService {
           dataCenter: world.dataCenter,
           pricePerUnit: listing.pricePerUnit,
           quantity: listing.quantity
+        });
+      }
+    }
+
+    return [...byWorld.values()];
+  }
+
+  /**
+   * Extracts the highest sold price per world from recentHistory.
+   * Using sold prices (actual transactions) rather than listing prices
+   * (asking prices) for the high side of the spread filters out
+   * unrealistic listings that will never sell.
+   */
+  private extractSoldPrices(
+    market: UniversalisMarketData,
+    worldById: Map<number, { name: string; dataCenter: string }>
+  ): WorldPrice[] {
+    const byWorld = new Map<number, WorldPrice>();
+
+    for (const sale of market.recentHistory ?? []) {
+      const worldId = sale.worldID;
+      if (!worldId) {
+        continue;
+      }
+
+      const world = worldById.get(worldId);
+      if (!world) {
+        continue;
+      }
+
+      const existing = byWorld.get(worldId);
+      if (!existing || sale.pricePerUnit > existing.pricePerUnit) {
+        byWorld.set(worldId, {
+          worldId,
+          worldName: sale.worldName ?? world.name,
+          dataCenter: world.dataCenter,
+          pricePerUnit: sale.pricePerUnit,
+          quantity: sale.quantity
         });
       }
     }
