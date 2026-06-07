@@ -11,6 +11,22 @@ export async function runMigrations(connectionString: string): Promise<void> {
   try {
     console.log("Starting database migrations...");
 
+    // Create market_snapshots table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS market_snapshots (
+        id serial PRIMARY KEY,
+        item_id integer NOT NULL,
+        world_id integer NOT NULL,
+        price_per_unit integer NOT NULL,
+        quantity integer NOT NULL,
+        listing_id bigint,
+        hq boolean DEFAULT false,
+        fetched_at timestamptz NOT NULL DEFAULT now(),
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+    `);
+    console.log("✓ Created market_snapshots table");
+
     // Create marketable_items table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS marketable_items (
