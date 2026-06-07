@@ -65,7 +65,7 @@ export class JobScheduler {
         const chunk = itemIds.slice(i, i + chunkSize);
         const placeholders = chunk.map((_, idx: number) => `($${idx + 1})`).join(",");
         const query = `
-          INSERT INTO marketable_items (item_id, created_at)
+          INSERT INTO marketable_items (item_id)
           VALUES ${placeholders}
           ON CONFLICT (item_id) DO NOTHING
         `;
