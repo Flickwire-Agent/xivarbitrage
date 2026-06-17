@@ -76,6 +76,24 @@ export interface ItemListing {
   discountPercent: number;
 }
 
+export interface BargainListing {
+  itemId: number;
+  item: ItemDetails;
+  worldId: number;
+  worldName: string;
+  dataCenter: string;
+  pricePerUnit: number;
+  quantity: number;
+  recentAvgPrice: number;
+  discount: number;
+  discountPercent: number;
+}
+
+export interface BargainsResponse {
+  generatedAt: string;
+  bargains: BargainListing[];
+}
+
 export interface ListingsResponse {
   itemId: number;
   item: ItemDetails;

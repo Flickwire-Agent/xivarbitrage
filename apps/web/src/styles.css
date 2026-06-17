@@ -242,6 +242,42 @@ input:focus {
   background: #ffffff;
 }
 
+.tableFooter {
+  padding: 8px 16px 12px;
+  font-size: 0.82rem;
+  color: #687586;
+  border-top: 1px solid #eef2f7;
+  margin: 0;
+}
+
+:root[data-theme="dark"] .tableFooter {
+  color: #8a95a8;
+  border-top-color: #2a3a4f;
+}
+
+tr.clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+tr.clickable:hover {
+  background: #f0f3f8;
+}
+
+:root[data-theme="dark"] tr.clickable:hover {
+  background: #2a3a4f;
+}
+
+.cellSubtext {
+  display: block;
+  font-size: 0.82rem;
+  color: #687586;
+}
+
+:root[data-theme="dark"] .cellSubtext {
+  color: #8a95a8;
+}
+
 :root[data-theme="dark"] .tableShell {
   border-color: #2a3a4f;
   background: #1a2332;

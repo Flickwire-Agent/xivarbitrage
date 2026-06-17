@@ -10,6 +10,9 @@ const ItemPage = lazy(() =>
 const ListingsPage = lazy(() =>
   import("./components/ListingsPage.js").then((m) => ({ default: m.ListingsPage })),
 );
+const BargainsPage = lazy(() =>
+  import("./components/BargainsPage.js").then((m) => ({ default: m.BargainsPage })),
+);
 
 function PageFallback() {
   return <div className="notice">Loading...</div>;
@@ -21,6 +24,7 @@ export function App() {
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/" element={<OpportunitiesPage />} />
+          <Route path="/bargains" element={<BargainsPage />} />
           <Route path="/items/:itemId" element={<ItemPage />} />
           <Route path="/items/:itemId/listings" element={<ListingsPage />} />
         </Routes>

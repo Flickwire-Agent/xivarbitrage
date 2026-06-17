@@ -11,7 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { NavLink, useSearchParams } from "react-router-dom";
 import { OpportunityTable } from "./OpportunityTable.js";
 import { SelectField } from "./SelectField.js";
 
@@ -157,6 +157,9 @@ export function OpportunitiesPage() {
           <h1>XIV Arbitrage</h1>
         </div>
         <div className="topBarActions">
+          <NavLink to="/bargains" className="iconButton">
+            <span>Bargains</span>
+          </NavLink>
           <button
             className="iconButton"
             type="button"

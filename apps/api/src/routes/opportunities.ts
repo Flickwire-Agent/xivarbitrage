@@ -97,6 +97,9 @@ export async function opportunityRoutes(app: FastifyInstance) {
   const arbitrage = new ArbitrageCache();
   arbitrage.start();
 
+  const { bargainsCache } = await import("../services/bargainsCache.js");
+  bargainsCache.start();
+
   app.get("/health", async (request, reply) => {
     const dbHealthy = await checkDatabaseHealth();
     const redisHealthy = await checkRedisHealth();
@@ -234,6 +237,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
         perDataCenter: dcAverages,
       },
     };
+  });
+
+  app.get("/bargains", async () => {
+    return bargainsCache.get();
   });
 
   app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {
