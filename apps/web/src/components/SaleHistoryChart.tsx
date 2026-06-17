@@ -92,6 +92,7 @@ export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps
           }}
         />
         <YAxis
+          dataKey="pricePerUnit"
           tickFormatter={(v: number) => v.toLocaleString()}
           stroke="#687586"
           tick={{ fontSize: 12 }}
