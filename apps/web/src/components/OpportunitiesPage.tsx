@@ -13,6 +13,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { OpportunityTable } from "./OpportunityTable.js";
+import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -156,6 +157,7 @@ export function OpportunitiesPage() {
           <p className="eyebrow">Final Fantasy XIV Market Board</p>
           <h1>XIV Arbitrage</h1>
         </div>
+        <SearchBox />
         <div className="topBarActions">
           <NavLink to="/bargains" className="iconButton">
             <span>Bargains</span>

@@ -2,6 +2,7 @@ import type { BargainsResponse } from "@xiv-arbitrage/shared";
 import { Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { SearchBox } from "./SearchBox.js";
 
 export function BargainsPage() {
   const navigate = useNavigate();
@@ -59,6 +60,7 @@ export function BargainsPage() {
           <p className="eyebrow">Best Deals</p>
           <h1>Market Bargains</h1>
         </div>
+        <SearchBox />
         <div className="topBarActions">
           <NavLink to="/" className="iconButton">
             <span>Arbitrage</span>

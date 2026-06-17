@@ -163,6 +163,64 @@ export async function opportunityRoutes(app: FastifyInstance) {
     return response;
   });
 
+  // In-memory cache for XIVAPI search results (no need to re-query same term)
+  const searchCache = new Map<
+    string,
+    { results: { id: number; name: string; iconUrl?: string; category?: string }[] }
+  >();
+
+  app.get("/items/search", async (request, reply) => {
+    const { q } = z.object({ q: z.string().min(1).max(100) }).parse(request.query);
+    const cached = searchCache.get(q);
+    if (cached) return cached;
+
+    try {
+      const sanitized = q.replace(/["\\]/g, "").trim();
+      const url = new URL(`${config.xivapiBaseUrl}/search`);
+      url.searchParams.set("query", `Name~"${sanitized}"`);
+      url.searchParams.set("sheets", "Item");
+      url.searchParams.set("fields", "Name,Icon,ItemUICategory.Name");
+      url.searchParams.set("limit", "20");
+
+      const response = await fetch(url, {
+        headers: { "User-Agent": "xiv-arbitrage/0.1.0" },
+      });
+
+      if (!response.ok) {
+        return reply.status(502).send({ error: "Search service unavailable" });
+      }
+
+      const data = (await response.json()) as {
+        results?: {
+          row_id: number;
+          fields: {
+            Name: string;
+            Icon?: { path?: string; path_hr1?: string };
+            ItemUICategory?: { fields?: { Name: string } };
+          };
+        }[];
+      };
+
+      const results = (data.results ?? []).map((r) => {
+        const iconPath = r.fields.Icon?.path_hr1 ?? r.fields.Icon?.path;
+        return {
+          id: r.row_id,
+          name: r.fields.Name ?? `Item ${r.row_id}`,
+          iconUrl: iconPath
+            ? `${config.xivapiBaseUrl}/asset?path=${encodeURIComponent(iconPath)}&format=png`
+            : undefined,
+          category: r.fields.ItemUICategory?.fields?.Name,
+        };
+      });
+
+      const result = { results };
+      searchCache.set(q, result);
+      return result;
+    } catch {
+      return reply.status(502).send({ error: "Search failed" });
+    }
+  });
+
   app.get<{ Params: { itemId: string } }>("/items/:itemId/listings", async (request, reply) => {
     const itemId = Number(request.params.itemId);
 

@@ -52,6 +52,146 @@ select {
   gap: 8px;
 }
 
+.searchBox {
+  position: relative;
+  flex: 0 1 320px;
+  min-width: 0;
+}
+
+.searchBox input {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border: 1px solid #c9d2df;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17212b;
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.searchBox input:focus {
+  border-color: #5a8dd8;
+  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.15);
+}
+
+:root[data-theme="dark"] .searchBox input {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .searchBox input:focus {
+  border-color: #5a8dd8;
+  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.25);
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8a95a8;
+  pointer-events: none;
+}
+
+.searchDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+:root[data-theme="dark"] .searchDropdown {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.searchResult {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.searchResult:first-child {
+  border-radius: 8px 8px 0 0;
+}
+
+.searchResult:last-child {
+  border-radius: 0 0 8px 8px;
+}
+
+.searchResult.active,
+.searchResult:hover {
+  background: #f0f3f8;
+}
+
+:root[data-theme="dark"] .searchResult.active,
+:root[data-theme="dark"] .searchResult:hover {
+  background: #2a3a4f;
+}
+
+.searchResultIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #eef2f7;
+  flex-shrink: 0;
+}
+
+:root[data-theme="dark"] .searchResultIcon {
+  background: #1e2d3d;
+}
+
+.searchResultInfo {
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.searchResultInfo strong {
+  display: block;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.searchResultInfo span {
+  display: block;
+  font-size: 0.78rem;
+  color: #687586;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:root[data-theme="dark"] .searchResultInfo span {
+  color: #8a95a8;
+}
+
+@media (max-width: 780px) {
+  .searchBox {
+    flex: 1 1 100%;
+    order: 3;
+  }
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: #586575;
