@@ -22,5 +22,11 @@
     "oxlint": "^0.15.0",
     "typescript": "^6.0.3"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "@fastify/static@>=8.0.0 <=9.1.0": ">=9.1.1",
+      "esbuild@>=0.27.3 <0.28.1": ">=0.28.1"
+    }
+  }
 }
