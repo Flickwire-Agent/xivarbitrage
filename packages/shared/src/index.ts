@@ -41,6 +41,8 @@ export interface OpportunityFilters {
   minSpread?: number;
   sort?: OpportunitySort;
   limit?: number;
+  page?: number;
+  perPage?: number;
 }
 
 export interface OpportunityResponse {
@@ -50,4 +52,8 @@ export interface OpportunityResponse {
   worlds: string[];
   dataCenters: string[];
   categories: string[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
 }

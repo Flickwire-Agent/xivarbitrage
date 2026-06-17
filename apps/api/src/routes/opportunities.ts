@@ -18,6 +18,8 @@ const querySchema = z.object({
   limit: z.coerce.number().int().positive().max(500).optional(),
   refresh: z.coerce.boolean().optional(),
   includeHistory: z.coerce.boolean().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  perPage: z.coerce.number().int().positive().max(100).optional(),
 });
 
 async function checkDatabaseHealth(): Promise<boolean> {

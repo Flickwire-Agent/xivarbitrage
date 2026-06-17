@@ -14,11 +14,12 @@ import { useEffect, useMemo, useState } from "react";
 import { OpportunityTable } from "./components/OpportunityTable.js";
 import { SelectField } from "./components/SelectField.js";
 
-const PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 50;
 
 const initialFilters: OpportunityFilters = {
   profile: "all",
   sort: "best",
+  perPage: DEFAULT_PAGE_SIZE,
 };
 
 export function App() {
@@ -43,10 +44,6 @@ export function App() {
   }, [isDarkMode]);
 
   useEffect(() => {
-    setPage(1);
-  }, [filters]);
-
-  useEffect(() => {
     const controller = new AbortController();
 
     async function load() {
@@ -58,6 +55,9 @@ export function App() {
         if (value !== undefined && value !== "" && value !== "all") {
           params.set(key, String(value));
         }
+      }
+      if (page > 1) {
+        params.set("page", String(page));
       }
 
       try {
@@ -83,25 +83,24 @@ export function App() {
 
     void load();
     return () => controller.abort();
-  }, [filters]);
+  }, [filters, page]);
 
-  const allOpportunities = data?.opportunities ?? [];
-
-  const totalPages = Math.max(1, Math.ceil(allOpportunities.length / PAGE_SIZE));
-  const clampedPage = Math.min(page, totalPages);
-  const pageStart = (clampedPage - 1) * PAGE_SIZE;
-  const paginatedOpportunities = allOpportunities.slice(pageStart, pageStart + PAGE_SIZE);
+  const totalPages = data?.totalPages ?? 1;
+  const currentPage = data?.page ?? 1;
+  const opportunities = data?.opportunities ?? [];
 
   const summary = useMemo(() => {
-    const best = allOpportunities[0];
-    const totalVolume = allOpportunities.reduce(
+    if (!data) return { best: null, count: 0, totalVolume: 0 };
+    const best = data.opportunities[0];
+    const totalVolume = data.opportunities.reduce(
       (sum, opportunity) => sum + opportunity.recentSales,
       0,
     );
-    return { best, count: allOpportunities.length, totalVolume };
+    return { best, count: data.total, totalVolume };
   }, [data]);
 
   function updateFilter<K extends keyof OpportunityFilters>(key: K, value: OpportunityFilters[K]) {
+    setPage(1);
     setFilters((current) => ({
       ...current,
       [key]: value === "" ? undefined : value,
@@ -118,11 +117,11 @@ export function App() {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
       pages.push(1);
-      if (clampedPage > 3) pages.push("ellipsis");
-      const start = Math.max(2, clampedPage - 1);
-      const end = Math.min(totalPages - 1, clampedPage + 1);
+      if (currentPage > 3) pages.push("ellipsis");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) pages.push(i);
-      if (clampedPage < totalPages - 2) pages.push("ellipsis");
+      if (currentPage < totalPages - 2) pages.push("ellipsis");
       pages.push(totalPages);
     }
     return pages;
@@ -232,14 +231,14 @@ export function App() {
       </section>
 
       {error ? <div className="notice error">{error}</div> : null}
-      <OpportunityTable opportunities={paginatedOpportunities} isLoading={isLoading} />
-      {allOpportunities.length > PAGE_SIZE ? (
+      <OpportunityTable opportunities={opportunities} isLoading={isLoading} />
+      {data && data.total > DEFAULT_PAGE_SIZE ? (
         <nav className="pagination" aria-label="Pagination">
           <button
             type="button"
             className="iconButton"
-            disabled={clampedPage <= 1}
-            onClick={() => goToPage(clampedPage - 1)}
+            disabled={currentPage <= 1}
+            onClick={() => goToPage(currentPage - 1)}
             aria-label="Previous page"
           >
             <ChevronLeft size={16} aria-hidden="true" />
@@ -255,10 +254,10 @@ export function App() {
                 <button
                   key={p}
                   type="button"
-                  className={`paginationPage${p === clampedPage ? " active" : ""}`}
+                  className={`paginationPage${p === currentPage ? " active" : ""}`}
                   onClick={() => goToPage(p)}
                   aria-label={`Page ${p}`}
-                  aria-current={p === clampedPage ? "page" : undefined}
+                  aria-current={p === currentPage ? "page" : undefined}
                 >
                   {p}
                 </button>
@@ -268,8 +267,8 @@ export function App() {
           <button
             type="button"
             className="iconButton"
-            disabled={clampedPage >= totalPages}
-            onClick={() => goToPage(clampedPage + 1)}
+            disabled={currentPage >= totalPages}
+            onClick={() => goToPage(currentPage + 1)}
             aria-label="Next page"
           >
             <span>Next</span>

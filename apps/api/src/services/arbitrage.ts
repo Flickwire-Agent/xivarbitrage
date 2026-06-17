@@ -201,10 +201,18 @@ export class ArbitrageService {
     const filtered = this.applyFilters(opportunities, filters);
     const sorted = this.sort(filtered, filters.sort ?? "best");
 
+    const page = Math.max(1, filters.page ?? 1);
+    const perPage = Math.min(100, Math.max(1, filters.perPage ?? 50));
+    const total = sorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    const clampedPage = Math.min(page, totalPages);
+    const start = (clampedPage - 1) * perPage;
+    const paginated = sorted.slice(start, start + perPage);
+
     return {
       generatedAt,
       filters,
-      opportunities: filters.limit ? sorted.slice(0, filters.limit) : sorted,
+      opportunities: paginated,
       worlds: [
         ...new Set(
           opportunities.flatMap((opportunity) => [
@@ -224,6 +232,10 @@ export class ArbitrageService {
       categories: [
         ...new Set(opportunities.map((opportunity) => opportunity.item.category).filter(isDefined)),
       ].sort(),
+      total,
+      page: clampedPage,
+      perPage,
+      totalPages,
     };
   }
 
