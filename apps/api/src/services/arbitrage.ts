@@ -2,7 +2,7 @@ import type {
   ArbitrageOpportunity,
   OpportunityFilters,
   OpportunityResponse,
-  WorldPrice
+  WorldPrice,
 } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import pg from "pg";
@@ -24,7 +24,7 @@ export class ArbitrageService {
     if (config.databaseUrl) {
       this.db = new Pool({
         connectionString: config.databaseUrl,
-        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
       });
       this.db.on("error", (error) => {
         console.error(`ArbitrageService: Unexpected database pool error: ${error}`);
@@ -57,7 +57,7 @@ export class ArbitrageService {
         WHERE fetched_at > now() - interval '24 hours'
         GROUP BY item_id
         LIMIT 10000
-        `
+        `,
       );
 
       const itemsToEvaluate = result.rows;
@@ -68,9 +68,10 @@ export class ArbitrageService {
 
       const opportunities: (ArbitrageOpportunity | null)[] = await Promise.all(
         itemsToEvaluate.map(({ item_id: itemId, regions: regionsStr }) => {
-          const regions = typeof regionsStr === 'string' ? JSON.parse(regionsStr) : (regionsStr as string[]);
+          const regions =
+            typeof regionsStr === "string" ? JSON.parse(regionsStr) : (regionsStr as string[]);
           return this.evaluateItemFromDb(itemId, regions, worldById);
-        })
+        }),
       );
 
       return opportunities.filter((opp): opp is ArbitrageOpportunity => opp !== null);
@@ -83,7 +84,7 @@ export class ArbitrageService {
   private async evaluateItemFromDb(
     itemId: number,
     regions: string[],
-    worldById: Map<number, { name: string; dataCenter: string }>
+    worldById: Map<number, { name: string; dataCenter: string }>,
   ): Promise<ArbitrageOpportunity | null> {
     if (!this.db) return null;
 
@@ -99,7 +100,7 @@ export class ArbitrageService {
         ORDER BY fetched_at DESC
         LIMIT 100
         `,
-        [itemId, regions]
+        [itemId, regions],
       );
 
       if (result.rows.length === 0) {
@@ -135,7 +136,7 @@ export class ArbitrageService {
         if (data.recentHistory) {
           totalRecentSales += data.recentHistory.reduce(
             (sum, sale) => sum + Math.max(1, sale.quantity),
-            0
+            0,
           );
         }
 
@@ -150,19 +151,17 @@ export class ArbitrageService {
       // Fall back to listing prices for the high side if no sales data is available
       const lowPrices = [...allListingPrices.values()];
       const highPrices =
-        allSoldPrices.size > 0
-          ? [...allSoldPrices.values()]
-          : [...allListingPrices.values()];
+        allSoldPrices.size > 0 ? [...allSoldPrices.values()] : [...allListingPrices.values()];
 
       if (lowPrices.length < 1 || highPrices.length < 1) {
         return null;
       }
 
       const low = lowPrices.reduce((best, price) =>
-        price.pricePerUnit < best.pricePerUnit ? price : best
+        price.pricePerUnit < best.pricePerUnit ? price : best,
       );
       const high = highPrices.reduce((best, price) =>
-        price.pricePerUnit > best.pricePerUnit ? price : best
+        price.pricePerUnit > best.pricePerUnit ? price : best,
       );
       const spread = high.pricePerUnit - low.pricePerUnit;
 
@@ -186,7 +185,7 @@ export class ArbitrageService {
         averageSalePrice,
         velocityScore: recentSales * Math.max(1, averageSalePrice),
         profitScore: spread * Math.max(1, recentSales),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       };
     } catch (error) {
       console.error(`ArbitrageService: Error evaluating item ${itemId}: ${error}`);
@@ -197,7 +196,7 @@ export class ArbitrageService {
   createResponse(
     opportunities: ArbitrageOpportunity[],
     filters: OpportunityFilters,
-    generatedAt: string
+    generatedAt: string,
   ): OpportunityResponse {
     const filtered = this.applyFilters(opportunities, filters);
     const sorted = this.sort(filtered, filters.sort ?? "best");
@@ -205,34 +204,32 @@ export class ArbitrageService {
     return {
       generatedAt,
       filters,
-      opportunities: sorted.slice(0, filters.limit ?? 50),
+      opportunities: filters.limit ? sorted.slice(0, filters.limit) : sorted,
       worlds: [
         ...new Set(
           opportunities.flatMap((opportunity) => [
             opportunity.low.worldName,
-            opportunity.high.worldName
-          ])
-        )
+            opportunity.high.worldName,
+          ]),
+        ),
       ].sort(),
       dataCenters: [
         ...new Set(
           opportunities.flatMap((opportunity) => [
             opportunity.low.dataCenter,
-            opportunity.high.dataCenter
-          ])
-        )
+            opportunity.high.dataCenter,
+          ]),
+        ),
       ].sort(),
       categories: [
-        ...new Set(
-          opportunities.map((opportunity) => opportunity.item.category).filter(isDefined)
-        )
-      ].sort()
+        ...new Set(opportunities.map((opportunity) => opportunity.item.category).filter(isDefined)),
+      ].sort(),
     };
   }
 
   private extractWorldPrices(
     market: UniversalisMarketData,
-    worldById: Map<number, { name: string; dataCenter: string }>
+    worldById: Map<number, { name: string; dataCenter: string }>,
   ): WorldPrice[] {
     const byWorld = new Map<number, WorldPrice>();
 
@@ -254,7 +251,7 @@ export class ArbitrageService {
           worldName: listing.worldName ?? world.name,
           dataCenter: world.dataCenter,
           pricePerUnit: listing.pricePerUnit,
-          quantity: listing.quantity
+          quantity: listing.quantity,
         });
       }
     }
@@ -270,7 +267,7 @@ export class ArbitrageService {
    */
   private extractSoldPrices(
     market: UniversalisMarketData,
-    worldById: Map<number, { name: string; dataCenter: string }>
+    worldById: Map<number, { name: string; dataCenter: string }>,
   ): WorldPrice[] {
     const byWorld = new Map<number, WorldPrice>();
 
@@ -292,7 +289,7 @@ export class ArbitrageService {
           worldName: sale.worldName ?? world.name,
           dataCenter: world.dataCenter,
           pricePerUnit: sale.pricePerUnit,
-          quantity: sale.quantity
+          quantity: sale.quantity,
         });
       }
     }
@@ -302,7 +299,7 @@ export class ArbitrageService {
 
   private applyFilters(
     opportunities: ArbitrageOpportunity[],
-    filters: OpportunityFilters
+    filters: OpportunityFilters,
   ): ArbitrageOpportunity[] {
     return opportunities.filter((opportunity) => {
       if (filters.highWorld && opportunity.high.worldName !== filters.highWorld) {
@@ -332,14 +329,14 @@ export class ArbitrageService {
 
   private sort(
     opportunities: ArbitrageOpportunity[],
-    sort: NonNullable<OpportunityFilters["sort"]>
+    sort: NonNullable<OpportunityFilters["sort"]>,
   ) {
     const selectors = {
       best: (opportunity: ArbitrageOpportunity) => opportunity.profitScore,
       spread: (opportunity: ArbitrageOpportunity) => opportunity.spread,
       spreadPercent: (opportunity: ArbitrageOpportunity) => opportunity.spreadPercent,
       volume: (opportunity: ArbitrageOpportunity) => opportunity.recentSales,
-      velocity: (opportunity: ArbitrageOpportunity) => opportunity.velocityScore
+      velocity: (opportunity: ArbitrageOpportunity) => opportunity.velocityScore,
     };
 
     return [...opportunities].sort((a, b) => selectors[sort](b) - selectors[sort](a));

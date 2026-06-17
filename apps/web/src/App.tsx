@@ -1,13 +1,24 @@
 import type { OpportunityFilters, OpportunityResponse } from "@xiv-arbitrage/shared";
-import { ArrowDownUp, Filter, Gauge, Moon, RefreshCw, Sun, TrendingUp } from "lucide-react";
+import {
+  ArrowDownUp,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
+  Gauge,
+  Moon,
+  RefreshCw,
+  Sun,
+  TrendingUp,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { OpportunityTable } from "./components/OpportunityTable.js";
 import { SelectField } from "./components/SelectField.js";
 
+const PAGE_SIZE = 50;
+
 const initialFilters: OpportunityFilters = {
   profile: "all",
   sort: "best",
-  limit: 60
 };
 
 export function App() {
@@ -17,15 +28,23 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("darkMode") === "true" || window.matchMedia("(prefers-color-scheme: dark)").matches;
+      return (
+        localStorage.getItem("darkMode") === "true" ||
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      );
     }
     return false;
   });
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
     localStorage.setItem("darkMode", String(isDarkMode));
   }, [isDarkMode]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filters]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -43,7 +62,7 @@ export function App() {
 
       try {
         const response = await fetch(`/api/opportunities?${params.toString()}`, {
-          signal: controller.signal
+          signal: controller.signal,
         });
 
         if (!response.ok) {
@@ -66,18 +85,47 @@ export function App() {
     return () => controller.abort();
   }, [filters]);
 
+  const allOpportunities = data?.opportunities ?? [];
+
+  const totalPages = Math.max(1, Math.ceil(allOpportunities.length / PAGE_SIZE));
+  const clampedPage = Math.min(page, totalPages);
+  const pageStart = (clampedPage - 1) * PAGE_SIZE;
+  const paginatedOpportunities = allOpportunities.slice(pageStart, pageStart + PAGE_SIZE);
+
   const summary = useMemo(() => {
-    const opportunities = data?.opportunities ?? [];
-    const best = opportunities[0];
-    const totalVolume = opportunities.reduce((sum, opportunity) => sum + opportunity.recentSales, 0);
-    return { best, count: opportunities.length, totalVolume };
+    const best = allOpportunities[0];
+    const totalVolume = allOpportunities.reduce(
+      (sum, opportunity) => sum + opportunity.recentSales,
+      0,
+    );
+    return { best, count: allOpportunities.length, totalVolume };
   }, [data]);
 
   function updateFilter<K extends keyof OpportunityFilters>(key: K, value: OpportunityFilters[K]) {
     setFilters((current) => ({
       ...current,
-      [key]: value === "" ? undefined : value
+      [key]: value === "" ? undefined : value,
     }));
+  }
+
+  function goToPage(p: number) {
+    setPage(Math.max(1, Math.min(p, totalPages)));
+  }
+
+  function getPageNumbers(): (number | "ellipsis")[] {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (clampedPage > 3) pages.push("ellipsis");
+      const start = Math.max(2, clampedPage - 1);
+      const end = Math.min(totalPages - 1, clampedPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (clampedPage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
   }
 
   return (
@@ -88,7 +136,11 @@ export function App() {
           <h1>XIV Arbitrage</h1>
         </div>
         <div className="topBarActions">
-          <button className="iconButton" type="button" onClick={() => setFilters((current) => ({ ...current }))}>
+          <button
+            className="iconButton"
+            type="button"
+            onClick={() => setFilters((current) => ({ ...current }))}
+          >
             <RefreshCw size={18} aria-hidden="true" />
             <span>Refresh</span>
           </button>
@@ -98,7 +150,11 @@ export function App() {
             onClick={() => setIsDarkMode(!isDarkMode)}
             aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
-            {isDarkMode ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+            {isDarkMode ? (
+              <Sun size={18} aria-hidden="true" />
+            ) : (
+              <Moon size={18} aria-hidden="true" />
+            )}
           </button>
         </div>
       </section>
@@ -168,14 +224,59 @@ export function App() {
             min="0"
             type="number"
             value={filters.minVolume ?? ""}
-            onChange={(event) => updateFilter("minVolume", event.target.value ? Number(event.target.value) : undefined)}
+            onChange={(event) =>
+              updateFilter("minVolume", event.target.value ? Number(event.target.value) : undefined)
+            }
           />
         </label>
       </section>
 
       {error ? <div className="notice error">{error}</div> : null}
-      <OpportunityTable opportunities={data?.opportunities ?? []} isLoading={isLoading} />
+      <OpportunityTable opportunities={paginatedOpportunities} isLoading={isLoading} />
+      {allOpportunities.length > PAGE_SIZE ? (
+        <nav className="pagination" aria-label="Pagination">
+          <button
+            type="button"
+            className="iconButton"
+            disabled={clampedPage <= 1}
+            onClick={() => goToPage(clampedPage - 1)}
+            aria-label="Previous page"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            <span>Prev</span>
+          </button>
+          <div className="paginationPages">
+            {getPageNumbers().map((p, i) =>
+              p === "ellipsis" ? (
+                <span key={`e${i}`} className="paginationEllipsis">
+                  &hellip;
+                </span>
+              ) : (
+                <button
+                  key={p}
+                  type="button"
+                  className={`paginationPage${p === clampedPage ? " active" : ""}`}
+                  onClick={() => goToPage(p)}
+                  aria-label={`Page ${p}`}
+                  aria-current={p === clampedPage ? "page" : undefined}
+                >
+                  {p}
+                </button>
+              ),
+            )}
+          </div>
+          <button
+            type="button"
+            className="iconButton"
+            disabled={clampedPage >= totalPages}
+            onClick={() => goToPage(clampedPage + 1)}
+            aria-label="Next page"
+          >
+            <span>Next</span>
+            <ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </nav>
+      ) : null}
     </main>
   );
 }
-

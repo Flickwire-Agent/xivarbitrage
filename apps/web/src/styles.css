@@ -2,7 +2,13 @@
   color: #17212b;
   background: #f5f7fb;
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -335,6 +341,91 @@ a:hover {
   }
 }
 
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 0;
+}
+
+.paginationPages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.paginationPage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid #c9d2df;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #17212b;
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  transition: all 0.2s ease;
+}
+
+.paginationPage:hover {
+  border-color: #a8b5c7;
+  background: #f5f7fb;
+}
+
+.paginationPage.active {
+  border-color: #5a8dd8;
+  background: #5a8dd8;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .paginationPage {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .paginationPage:hover {
+  border-color: #3a4a5f;
+  background: #232d3d;
+}
+
+:root[data-theme="dark"] .paginationPage.active {
+  border-color: #5a8dd8;
+  background: #5a8dd8;
+  color: #ffffff;
+}
+
+.paginationEllipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 36px;
+  color: #687586;
+  font-size: 0.88rem;
+}
+
+.iconButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.iconButton:disabled:hover {
+  border-color: #c9d2df;
+  background: #ffffff;
+}
+
+:root[data-theme="dark"] .iconButton:disabled:hover {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
 @media (max-width: 620px) {
   .appShell {
     width: min(100vw - 20px, 1480px);
@@ -344,5 +435,14 @@ a:hover {
   .toolbar {
     grid-template-columns: 1fr;
   }
-}
 
+  .paginationPages {
+    gap: 2px;
+  }
+
+  .paginationPage {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.82rem;
+  }
+}
