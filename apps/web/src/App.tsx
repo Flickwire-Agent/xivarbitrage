@@ -1,4 +1,8 @@
-import type { OpportunityFilters, OpportunityResponse } from "@xiv-arbitrage/shared";
+import type {
+  ItemHistoryResponse,
+  OpportunityFilters,
+  OpportunityResponse,
+} from "@xiv-arbitrage/shared";
 import {
   ArrowDownUp,
   ChevronLeft,
@@ -12,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { OpportunityTable } from "./components/OpportunityTable.js";
+import { SaleHistoryView } from "./components/SaleHistoryView.js";
 import { SelectField } from "./components/SelectField.js";
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -37,11 +42,49 @@ export function App() {
     return false;
   });
   const [page, setPage] = useState(1);
+  const [selectedItem, setSelectedItem] = useState<{
+    itemId: number;
+    itemName: string;
+  } | null>(null);
+  const [itemHistory, setItemHistory] = useState<ItemHistoryResponse | null>(null);
+  const [_historyLoading, setHistoryLoading] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
     localStorage.setItem("darkMode", String(isDarkMode));
   }, [isDarkMode]);
+
+  // Fetch item sale history when an item is selected
+  useEffect(() => {
+    if (!selectedItem) {
+      setItemHistory(null);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function load() {
+      setHistoryLoading(true);
+      try {
+        const response = await fetch(`/api/items/${selectedItem.itemId}/history`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error(`API returned ${response.status}`);
+        setItemHistory((await response.json()) as ItemHistoryResponse);
+      } catch (loadError) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load item history:", loadError);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    void load();
+    return () => controller.abort();
+  }, [selectedItem]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -125,6 +168,28 @@ export function App() {
       pages.push(totalPages);
     }
     return pages;
+  }
+
+  if (selectedItem && itemHistory) {
+    return (
+      <main className="appShell">
+        <div className="topBarActions" style={{ justifyContent: "flex-end", marginBottom: 16 }}>
+          <button
+            className="iconButton"
+            type="button"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDarkMode ? (
+              <Sun size={18} aria-hidden="true" />
+            ) : (
+              <Moon size={18} aria-hidden="true" />
+            )}
+          </button>
+        </div>
+        <SaleHistoryView data={itemHistory} onBack={() => setSelectedItem(null)} />
+      </main>
+    );
   }
 
   return (
@@ -231,7 +296,11 @@ export function App() {
       </section>
 
       {error ? <div className="notice error">{error}</div> : null}
-      <OpportunityTable opportunities={opportunities} isLoading={isLoading} />
+      <OpportunityTable
+        opportunities={opportunities}
+        isLoading={isLoading}
+        onItemClick={(itemId, itemName) => setSelectedItem({ itemId, itemName })}
+      />
       {data && data.total > DEFAULT_PAGE_SIZE ? (
         <nav className="pagination" aria-label="Pagination">
           <button

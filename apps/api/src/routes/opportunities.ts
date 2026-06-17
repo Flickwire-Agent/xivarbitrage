@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { ArbitrageCache } from "../services/arbitrageCache.js";
 import { getQueueStats } from "../services/jobQueue.js";
+import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
+import { XivApiClient } from "../services/xivapi.js";
 import { config } from "../config.js";
 import pg from "pg";
 
@@ -119,6 +121,30 @@ export async function opportunityRoutes(app: FastifyInstance) {
     }
 
     return response;
+  });
+
+  app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {
+    const itemId = Number(request.params.itemId);
+
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+      return reply.status(400).send({ error: "Invalid item ID" });
+    }
+
+    const [sales, item] = await Promise.all([
+      marketSnapshotStore.getSaleHistory(itemId),
+      new XivApiClient().getItemDetails(itemId),
+    ]);
+
+    if (!item) {
+      return reply.status(404).send({ error: "Item not found" });
+    }
+
+    return {
+      itemId,
+      item,
+      sales,
+      worlds: [...new Set(sales.map((s) => s.worldName))].sort(),
+    };
   });
 
   app.get("/worker/status", async () => {

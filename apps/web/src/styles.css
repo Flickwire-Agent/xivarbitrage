@@ -426,6 +426,146 @@ a:hover {
   background: #1a2332;
 }
 
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.itemDetailTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.itemDetailTitle h1 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemDetailIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #eef2f7;
+  flex-shrink: 0;
+}
+
+:root[data-theme="dark"] .itemDetailIcon {
+  background: #2a3a4f;
+}
+
+.chartShell {
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+:root[data-theme="dark"] .chartShell {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+.chartServerFilter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.chartServerFilterLabel {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #526071;
+}
+
+:root[data-theme="dark"] .chartServerFilterLabel {
+  color: #8a95a8;
+}
+
+.chartToggleAll {
+  border: none;
+  background: none;
+  color: #5a8dd8;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0;
+}
+
+.chartToggleAll:hover {
+  text-decoration: underline;
+}
+
+.chartServerTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.serverTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid #c9d2df;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.serverTag:hover {
+  border-color: #a8b5c7;
+  background: #f5f7fb;
+}
+
+.serverTag input {
+  display: none;
+}
+
+:root[data-theme="dark"] .serverTag {
+  border-color: #2a3a4f;
+  background: #1a2332;
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .serverTag:hover {
+  border-color: #3a4a5f;
+  background: #232d3d;
+}
+
+.recharts-legend-item-text {
+  color: #e1e8f0 !important;
+}
+
+.itemNameButton {
+  background: none;
+  border: none;
+  color: #5a8dd8;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+}
+
+.itemNameButton:hover {
+  text-decoration: underline;
+}
+
+.itemNameButton strong {
+  display: block;
+  color: #5a8dd8;
+}
+
 @media (max-width: 620px) {
   .appShell {
     width: min(100vw - 20px, 1480px);

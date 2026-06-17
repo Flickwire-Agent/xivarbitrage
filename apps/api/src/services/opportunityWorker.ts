@@ -35,6 +35,9 @@ export async function initializeWorker(): Promise<void> {
           // Persist to database
           await marketSnapshotStore.upsert(region, itemId, data);
 
+          // Extract and store individual sale records for history graph
+          await marketSnapshotStore.storeSales(itemId, data);
+
           // Update job history
           await db.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)

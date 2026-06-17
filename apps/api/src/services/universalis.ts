@@ -13,6 +13,7 @@ export interface UniversalisSale {
   quantity: number;
   worldID?: number;
   worldName?: string;
+  timestamp?: number;
 }
 
 export interface UniversalisMarketData {

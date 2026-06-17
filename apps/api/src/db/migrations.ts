@@ -70,6 +70,47 @@ export async function runMigrations(connectionString: string): Promise<void> {
     `);
     console.log("✓ Created index on marketable_items (last_scanned)");
 
+    // Create sale_history table for storing individual sale records
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sale_history (
+        id bigserial,
+        item_id integer NOT NULL,
+        world_id integer NOT NULL,
+        world_name text,
+        price_per_unit integer NOT NULL,
+        quantity integer NOT NULL,
+        sold_at timestamptz NOT NULL,
+        fetched_at timestamptz NOT NULL DEFAULT now()
+      );
+    `);
+    console.log("✓ Created sale_history table");
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS sale_history_item_sold_idx
+        ON sale_history (item_id, sold_at DESC);
+    `);
+    console.log("✓ Created index on sale_history (item_id, sold_at)");
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS sale_history_item_world_idx
+        ON sale_history (item_id, world_id);
+    `);
+    console.log("✓ Created index on sale_history (item_id, world_id)");
+
+    await pool.query(`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'sale_history_unique_sale'
+        ) THEN
+          ALTER TABLE sale_history ADD CONSTRAINT sale_history_unique_sale
+            UNIQUE (item_id, world_id, price_per_unit, sold_at);
+        END IF;
+      END $$;
+    `);
+    console.log(
+      "✓ Added unique constraint on sale_history (item_id, world_id, price_per_unit, sold_at)",
+    );
+
     console.log("Database migrations completed successfully");
   } finally {
     await pool.end();

@@ -49,6 +49,21 @@ export interface OpportunityFilters {
   perPage?: number;
 }
 
+export interface SaleRecord {
+  worldId: number;
+  worldName: string;
+  pricePerUnit: number;
+  quantity: number;
+  soldAt: string;
+}
+
+export interface ItemHistoryResponse {
+  itemId: number;
+  item: ItemDetails;
+  sales: SaleRecord[];
+  worlds: string[];
+}
+
 export interface OpportunityResponse {
   generatedAt: string;
   filters: OpportunityFilters;

@@ -1,15 +1,12 @@
 import type { ArbitrageOpportunity } from "@xiv-arbitrage/shared";
 
-function getUniversalisUrl(itemId: number): string {
-  return `https://universalis.app/market/${itemId}`;
-}
-
 interface OpportunityTableProps {
   opportunities: ArbitrageOpportunity[];
   isLoading: boolean;
+  onItemClick?: (itemId: number, itemName: string) => void;
 }
 
-export function OpportunityTable({ opportunities, isLoading }: OpportunityTableProps) {
+export function OpportunityTable({ opportunities, isLoading, onItemClick }: OpportunityTableProps) {
   if (isLoading && opportunities.length === 0) {
     return <div className="notice">Scanning market board data...</div>;
   }
@@ -41,14 +38,14 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
                     <img src={opportunity.item.iconUrl} alt="" loading="lazy" />
                   ) : null}
                   <div>
-                    <a
-                      href={getUniversalisUrl(opportunity.itemId)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="View on Universalis"
+                    <button
+                      type="button"
+                      className="itemNameButton"
+                      onClick={() => onItemClick?.(opportunity.itemId, opportunity.item.name)}
+                      title="View sale history"
                     >
                       <strong>{opportunity.item.name}</strong>
-                    </a>
+                    </button>
                     <span>{opportunity.item.category ?? "Uncategorized"}</span>
                   </div>
                 </div>

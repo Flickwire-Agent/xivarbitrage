@@ -59,6 +59,27 @@ if (config.databaseUrl) {
     }
 
     scheduleLoop();
+
+    // Periodic cleanup of old data
+    const { marketSnapshotStore } = await import("./services/marketSnapshotStore.js");
+
+    // Cull stale market snapshots and old sale records every hour
+    async function cleanupLoop(): Promise<void> {
+      try {
+        const staleCount = await marketSnapshotStore.deleteStale();
+        const saleCount = await marketSnapshotStore.pruneOldSales();
+        if (staleCount > 0 || saleCount > 0) {
+          console.log(
+            `[Cleanup] Removed ${staleCount} stale snapshots, ${saleCount} old sale records`,
+          );
+        }
+      } catch (error) {
+        console.error(`[Cleanup] Error: ${error}`);
+      }
+      setTimeout(cleanupLoop, 3_600_000); // every hour
+    }
+
+    cleanupLoop();
   } catch (error) {
     app.log.error(error);
     process.exit(1);
