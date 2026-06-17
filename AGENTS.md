@@ -49,7 +49,7 @@
 
 - **JavaScript/TypeScript**: Use pnpm for all npm packages. Write all new projects in TypeScript.
 - **TypeScript tools**: Use `oxlint` (linter) and `oxfmt` (formatter) with default config.
-- **pnpm security**: Global config enforces `engine-strict=true`, `save-prefix=~`, `minimumReleaseAge=7 days`.
+- **pnpm security**: Global config enforces `engine-strict=true`, `save-prefix=~`, `minimumReleaseAge=10080` (7 days in minutes).
 - **TypeScript version**: Always use the latest stable TypeScript (currently 6.0.3).
 - **New TS projects**: Configure husky with pre-commit hooks for oxlint and oxfmt
   - `pnpm add -D husky oxlint && pnpm pkg set scripts.prepare="husky" && pnpm run prepare`
