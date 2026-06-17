@@ -1,5 +1,5 @@
 import type { BargainsResponse } from "@xiv-arbitrage/shared";
-import { Moon, Sun } from "lucide-react";
+import { ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { SearchBox } from "./SearchBox.js";
@@ -65,6 +65,16 @@ export function BargainsPage() {
           <NavLink to="/" className="iconButton">
             <span>Arbitrage</span>
           </NavLink>
+          <a
+            href="https://github.com/Flickwire-Agent/xivarbitrage"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="iconButton"
+            aria-label="View source on GitHub"
+          >
+            <ExternalLink size={18} aria-hidden="true" />
+            <span>GitHub</span>
+          </a>
           <button
             type="button"
             className="iconButton"

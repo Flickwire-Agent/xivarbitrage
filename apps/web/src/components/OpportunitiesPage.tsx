@@ -3,6 +3,7 @@ import {
   ArrowDownUp,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   Filter,
   Gauge,
   Moon,
@@ -162,6 +163,16 @@ export function OpportunitiesPage() {
           <NavLink to="/bargains" className="iconButton">
             <span>Bargains</span>
           </NavLink>
+          <a
+            href="https://github.com/Flickwire-Agent/xivarbitrage"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="iconButton"
+            aria-label="View source on GitHub"
+          >
+            <ExternalLink size={18} aria-hidden="true" />
+            <span>GitHub</span>
+          </a>
           <button
             className="iconButton"
             type="button"
