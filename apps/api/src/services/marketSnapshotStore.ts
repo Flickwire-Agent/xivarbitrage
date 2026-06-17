@@ -148,7 +148,7 @@ export class MarketSnapshotStore {
         worldName: sale.worldName ?? "",
         price: sale.pricePerUnit,
         qty: sale.quantity,
-        soldAt: new Date(sale.timestamp),
+        soldAt: new Date(sale.timestamp * 1000),
       });
     }
 

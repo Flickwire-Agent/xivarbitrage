@@ -12,10 +12,6 @@ function getUniversalisUrl(itemId: number): string {
   return `https://universalis.app/market/${itemId}`;
 }
 
-function getXivapiIconUrl(path: string | undefined): string | undefined {
-  return path ? `https://v2.xivapi.com/api/asset?path=${path}&format=png` : undefined;
-}
-
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
 
@@ -52,12 +48,7 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
           </button>
           <div className="itemDetailTitle">
             {data.item.iconUrl ? (
-              <img
-                src={getXivapiIconUrl(data.item.iconUrl)}
-                alt=""
-                className="itemDetailIcon"
-                loading="lazy"
-              />
+              <img src={data.item.iconUrl} alt="" className="itemDetailIcon" loading="lazy" />
             ) : null}
             <div>
               <h1>{data.item.name}</h1>
