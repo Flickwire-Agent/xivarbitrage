@@ -34,8 +34,65 @@ export class JobScheduler {
     // Load all marketable items into database if not already done
     await this.seedMarketableItems();
 
+    // Schedule a daily refresh of the item list to pick up newly added items
+    this.startDailyItemRefresh();
+
     // Schedule initial jobs
     await this.scheduleJobs();
+  }
+
+  private startDailyItemRefresh(): void {
+    const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+    const doRefresh = async () => {
+      try {
+        await this.refreshMarketableItems();
+      } catch (error) {
+        console.error(
+          `[JobScheduler] Daily item refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    };
+
+    // Run once immediately after the first scan cycle completes, then every 24 hours
+    setTimeout(async () => {
+      await doRefresh();
+      setInterval(doRefresh, REFRESH_INTERVAL_MS).unref();
+    }, 60_000).unref();
+  }
+
+  private async refreshMarketableItems(): Promise<void> {
+    console.log("[JobScheduler] Refreshing marketable items list from Universalis...");
+    const itemIds = await universalis.getMarketableItemIds();
+
+    if (!itemIds || itemIds.length === 0) {
+      console.error("[JobScheduler] No items received from Universalis during refresh");
+      return;
+    }
+
+    let inserted = 0;
+    const chunkSize = 1000;
+    for (let i = 0; i < itemIds.length; i += chunkSize) {
+      const chunk = itemIds.slice(i, i + chunkSize);
+      const placeholders = chunk.map((_, idx) => `($${idx + 1})`).join(",");
+      const result = await this.db.query(
+        `
+          INSERT INTO marketable_items (item_id)
+          VALUES ${placeholders}
+          ON CONFLICT (item_id) DO NOTHING
+        `,
+        chunk,
+      );
+      inserted += result.rowCount ?? 0;
+    }
+
+    if (inserted > 0) {
+      console.log(
+        `[JobScheduler] Added ${inserted} new item(s) to marketable_items (total: ${itemIds.length})`,
+      );
+    } else {
+      console.log(`[JobScheduler] Item list is up to date (${itemIds.length} items)`);
+    }
   }
 
   private async seedMarketableItems(): Promise<void> {
