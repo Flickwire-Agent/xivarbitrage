@@ -123,6 +123,9 @@ export class MarketSnapshotStore {
     }
 
     await this.init();
+
+    // De-duplicate within a single Universalis response (unlikely but safe)
+    const seen = new Set<string>();
     const values: {
       itemId: number;
       worldId: number;
@@ -134,6 +137,10 @@ export class MarketSnapshotStore {
 
     for (const sale of data.recentHistory) {
       if (!sale.worldID || !sale.timestamp) continue;
+
+      const key = `${itemId}:${sale.worldID}:${sale.pricePerUnit}:${sale.timestamp}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
 
       values.push({
         itemId,
@@ -147,7 +154,8 @@ export class MarketSnapshotStore {
 
     if (values.length === 0) return;
 
-    // Batch upsert using UNIQUE constraint on (item_id, world_id, price_per_unit, sold_at)
+    // Batch upsert using UNIQUE constraint on (item_id, world_id, price_per_unit, sold_at).
+    // On conflict, update world_name in case it drifted (e.g. server rename).
     const placeholders = values.map((_, i) => {
       const base = i * 6;
       return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
@@ -167,7 +175,7 @@ export class MarketSnapshotStore {
         INSERT INTO sale_history (item_id, world_id, world_name, price_per_unit, quantity, sold_at)
         VALUES ${placeholders.join(", ")}
         ON CONFLICT (item_id, world_id, price_per_unit, sold_at)
-        DO NOTHING
+        DO UPDATE SET world_name = EXCLUDED.world_name
       `,
       params,
     );
