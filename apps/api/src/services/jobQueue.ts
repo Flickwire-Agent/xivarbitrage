@@ -1,4 +1,4 @@
-import { Queue, Worker, QueueEvents } from "bullmq";
+import { Queue, QueueEvents } from "bullmq";
 import { config } from "../config.js";
 
 export interface EvaluateItemJob {
@@ -13,28 +13,28 @@ export function getQueue(): Queue<EvaluateItemJob> {
   if (!queue) {
     queue = new Queue<EvaluateItemJob>("arbitrage-opportunities", {
       connection: {
-        url: config.redisUrl
+        url: config.redisUrl,
       },
       defaultJobOptions: {
         attempts: 3,
         backoff: {
           type: "exponential",
-          delay: 2000
+          delay: 2000,
         },
         removeOnComplete: {
-          age: 3600 // Remove completed jobs after 1 hour
+          age: 3600, // Remove completed jobs after 1 hour
         },
         removeOnFail: {
-          age: 86400 // Keep failed jobs for 24 hours for debugging
-        }
-      }
+          age: 86400, // Keep failed jobs for 24 hours for debugging
+        },
+      },
     });
 
     // Listen to queue events
     queueEvents = new QueueEvents("arbitrage-opportunities", {
       connection: {
-        url: config.redisUrl
-      }
+        url: config.redisUrl,
+      },
     });
 
     queueEvents.on("completed", ({ jobId }) => {
@@ -82,6 +82,6 @@ export async function getQueueStats(): Promise<{
     completed: counts.completed ?? 0,
     failed: counts.failed ?? 0,
     delayed: counts.delayed ?? 0,
-    paused: counts.paused ?? 0
+    paused: counts.paused ?? 0,
   };
 }
