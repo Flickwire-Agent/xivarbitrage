@@ -56,7 +56,7 @@ export class UniversalisClient {
   ): Promise<UniversalisMarketData | null> {
     try {
       return await this.fetchJson<UniversalisMarketData>(
-        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entriesToReturn=20`,
+        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entries=100`,
       );
     } catch (error) {
       console.warn(
