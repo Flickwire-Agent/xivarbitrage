@@ -1,8 +1,12 @@
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 
-const OpportunitiesPage = lazy(() => import("./components/OpportunitiesPage.js"));
-const ItemPage = lazy(() => import("./components/ItemPage.js"));
+const OpportunitiesPage = lazy(() =>
+  import("./components/OpportunitiesPage.js").then((m) => ({ default: m.OpportunitiesPage })),
+);
+const ItemPage = lazy(() =>
+  import("./components/ItemPage.js").then((m) => ({ default: m.ItemPage })),
+);
 
 function PageFallback() {
   return <div className="notice">Loading...</div>;
