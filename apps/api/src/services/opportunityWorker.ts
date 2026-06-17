@@ -18,7 +18,7 @@ export async function initializeWorker(): Promise<void> {
 
   const db = new Pool({
     connectionString: config.databaseUrl,
-    ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+    ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
   });
 
   worker = new Worker<EvaluateItemJob>(
@@ -29,9 +29,7 @@ export async function initializeWorker(): Promise<void> {
 
       try {
         // Use rate limiter to respect Universalis API limits
-        const data = await rateLimiter.schedule(() =>
-          universalis.getCurrentData(region, itemId)
-        );
+        const data = await rateLimiter.schedule(() => universalis.getCurrentData(region, itemId));
 
         if (data) {
           // Persist to database
@@ -41,12 +39,12 @@ export async function initializeWorker(): Promise<void> {
           await db.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
              VALUES ($1, $2, $3, $4, now(), now())`,
-            [job.id, itemId, region, "completed"]
+            [job.id, itemId, region, "completed"],
           );
 
           const duration = Date.now() - startTime;
           console.log(
-            `[Worker] Processed item_id=${itemId} region=${region} duration=${duration}ms`
+            `[Worker] Processed item_id=${itemId} region=${region} duration=${duration}ms`,
           );
         }
 
@@ -58,23 +56,21 @@ export async function initializeWorker(): Promise<void> {
         await db.query(
           `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)
            VALUES ($1, $2, $3, $4, $5, now())`,
-          [job.id, itemId, region, "failed", errorMsg]
+          [job.id, itemId, region, "failed", errorMsg],
         );
 
-        console.error(
-          `[Worker] Failed item_id=${itemId} region=${region} error=${errorMsg}`
-        );
+        console.error(`[Worker] Failed item_id=${itemId} region=${region} error=${errorMsg}`);
         throw error;
       }
     },
     {
       connection: {
-        url: config.redisUrl
+        url: config.redisUrl,
       },
       concurrency: config.jobQueueConcurrency,
       maxStalledCount: 3,
-      stalledInterval: 30000 // Check for stalled jobs every 30 seconds
-    }
+      stalledInterval: 30000, // Check for stalled jobs every 30 seconds
+    },
   );
 
   worker.on("failed", (job, err) => {

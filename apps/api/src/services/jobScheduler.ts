@@ -23,9 +23,7 @@ export class JobScheduler {
   constructor() {
     this.db = new Pool({
       connectionString: config.databaseUrl!,
-      ssl: config.databaseUrl!.includes("localhost")
-        ? false
-        : { rejectUnauthorized: false }
+      ssl: config.databaseUrl!.includes("localhost") ? false : { rejectUnauthorized: false },
     });
   }
 
@@ -43,15 +41,13 @@ export class JobScheduler {
   private async seedMarketableItems(): Promise<void> {
     try {
       const count = await this.db.query<{ count: string }>(
-        "SELECT COUNT(*)::text as count FROM marketable_items"
+        "SELECT COUNT(*)::text as count FROM marketable_items",
       );
 
       const itemCount = parseInt(count.rows[0]?.count ?? "0", 10);
 
       if (itemCount > 100) {
-        console.log(
-          `[JobScheduler] Found ${itemCount} existing items in marketable_items table`
-        );
+        console.log(`[JobScheduler] Found ${itemCount} existing items in marketable_items table`);
         return;
       }
 
@@ -63,9 +59,7 @@ export class JobScheduler {
         return;
       }
 
-      console.log(
-        `[JobScheduler] Received ${itemIds.length} items, inserting into database...`
-      );
+      console.log(`[JobScheduler] Received ${itemIds.length} items, inserting into database...`);
 
       // Batch insert in chunks to avoid query size limits
       const chunkSize = 1000;
@@ -81,11 +75,11 @@ export class JobScheduler {
       }
 
       console.log(
-        `[JobScheduler] Successfully seeded ${itemIds.length} items to marketable_items table`
+        `[JobScheduler] Successfully seeded ${itemIds.length} items to marketable_items table`,
       );
     } catch (error) {
       console.error(
-        `[JobScheduler] Error seeding marketable items: ${error instanceof Error ? error.message : String(error)}`
+        `[JobScheduler] Error seeding marketable items: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -116,7 +110,7 @@ export class JobScheduler {
       // never want to skip items that were scanned "recently".
       const result = await this.db.query<{ item_id: number }>(
         `SELECT item_id FROM marketable_items
-         ORDER BY last_scanned NULLS FIRST`
+         ORDER BY last_scanned NULLS FIRST`,
       );
 
       const itemIds = result.rows.map((row) => row.item_id);
@@ -164,15 +158,15 @@ export class JobScheduler {
       this.scheduleCooldownMs = Math.max(60_000, estimatedScanSeconds * 1000);
 
       console.log(
-        `[JobScheduler] Queueing ${totalJobs} jobs (${itemIds.length} items × ${TARGET_REGIONS.length} regions)`
+        `[JobScheduler] Queueing ${totalJobs} jobs (${itemIds.length} items × ${TARGET_REGIONS.length} regions)`,
       );
       console.log(
         `[JobScheduler] Rate limit: ${reqPerSecond} req/s across ${concurrency} workers ` +
-        `(${perWorkerRate} req/s per worker) → ${delayBetweenJobs}ms between jobs`
+          `(${perWorkerRate} req/s per worker) → ${delayBetweenJobs}ms between jobs`,
       );
       console.log(
         `[JobScheduler] Estimated full scan time: ~${estimatedScanMinutes} minutes ` +
-        `(${estimatedScanSeconds.toFixed(0)}s at ${reqPerSecond} req/s)`
+          `(${estimatedScanSeconds.toFixed(0)}s at ${reqPerSecond} req/s)`,
       );
 
       // Add jobs to queue with staggered delays
@@ -180,7 +174,7 @@ export class JobScheduler {
       for (const job of jobs) {
         await queue.add(`evaluate-item-${job.itemId}-${job.region}`, job, {
           delay,
-          priority: Math.floor(100 - ((delay / 1000) % 100)) // Prioritize older delays slightly
+          priority: Math.floor(100 - ((delay / 1000) % 100)), // Prioritize older delays slightly
         });
 
         delay += delayBetweenJobs;
@@ -189,7 +183,7 @@ export class JobScheduler {
       console.log(`[JobScheduler] Successfully queued ${totalJobs} jobs`);
     } catch (error) {
       console.error(
-        `[JobScheduler] Error scheduling jobs: ${error instanceof Error ? error.message : String(error)}`
+        `[JobScheduler] Error scheduling jobs: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
       this.scheduleInProgress = false;

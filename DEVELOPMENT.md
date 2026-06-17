@@ -43,7 +43,7 @@ The API runs on `http://localhost:4000` and the web app on `http://localhost:517
 The spread between worlds is calculated as:
 
 - **Low side** — cheapest current listing price (what you pay to buy the item)
-- **High side** — highest recent *sold* price on the destination world (actual transactions, not asking prices)
+- **High side** — highest recent _sold_ price on the destination world (actual transactions, not asking prices)
 
 Using sold prices for the high side filters out unrealistic listings that inflate apparent profit margins and would never actually sell. If no recent sales data is available for a world, the calculation falls back to listing prices.
 

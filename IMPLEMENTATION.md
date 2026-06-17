@@ -9,16 +9,19 @@ Successfully implemented a distributed background worker system to evaluate all 
 ## What Was Implemented
 
 ### 1. **Infrastructure Configuration** (`railway.json`)
+
 - Added PostgreSQL 16 Alpine service for persistent data storage
 - Added Redis 7 Alpine service for job queue management
 - Both services automatically provisioned on Railway deployment
 
 ### 2. **Environment Configuration** (`apps/api/src/config.ts`)
+
 - Added `REDIS_URL` for Redis connection (default: `redis://localhost:6379`)
 - Added `JOB_QUEUE_CONCURRENCY` for worker parallelism (default: 4)
 - Integrated with existing `DATABASE_URL` for PostgreSQL
 
 ### 3. **Database Schema** (`apps/api/src/db/migrations.ts`)
+
 - **`marketable_items`** table: Tracks all item IDs, last scanned timestamp, priority
 - **`job_history`** table: Records job execution status, errors, completion times
 - Added indexes on `(item_id, fetched_at DESC)` for fast queries
@@ -27,6 +30,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 ### 4. **Job Queue System**
 
 #### `apps/api/src/services/jobQueue.ts`
+
 - BullMQ queue initialized with Redis connection
 - Job configuration:
   - **Retry**: 3 attempts with exponential backoff (2s initial, 2x multiplier)
@@ -36,6 +40,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 - `getQueueStats()` returns real-time queue metrics
 
 #### `apps/api/src/services/jobScheduler.ts`
+
 - Seeds `marketable_items` table with all Universalis marketable items on first run
 - Generates 30,000 jobs (10,000 items × 3 regions: North-America, Europe, Oceania)
 - Distributes jobs evenly over 24 hours (~0.35 jobs/sec) to prevent API spikes
@@ -43,6 +48,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 - Prevents scanning items more than once per day
 
 #### `apps/api/src/services/opportunityWorker.ts`
+
 - Consumes BullMQ jobs (4 concurrent workers)
 - For each job:
   1. Calls Universalis API via rate limiter (respects 20 req/sec limit)
@@ -52,12 +58,14 @@ Successfully implemented a distributed background worker system to evaluate all 
 - Handles failures gracefully with 3 automatic retries
 
 ### 5. **Arbitrage Service Refactor** (`apps/api/src/services/arbitrage.ts`)
+
 - **Before**: Fetched live data from Universalis API (limited to 250 items)
 - **After**: Evaluates opportunities from PostgreSQL database (all items)
 - `scanOpportunitiesFromDb()` aggregates recent market snapshots and calculates scores
 - Returns best opportunity per item across all regions
 
 ### 6. **Arbitrage Cache Update** (`apps/api/src/services/arbitrageCache.ts`)
+
 - Changed data source from live API to PostgreSQL
 - Still refreshes in-memory cache every 15 minutes for fast API responses
 - Added logging for cache refresh events
@@ -65,6 +73,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 ### 7. **API Enhancements** (`apps/api/src/routes/opportunities.ts`)
 
 #### Enhanced `/api/opportunities` Endpoint
+
 - **New query parameter**: `?includeHistory=true`
   - Returns 7-day historical price data for each opportunity
   - Format: `{ timestamp, price }` array per opportunity
@@ -73,10 +82,12 @@ Successfully implemented a distributed background worker system to evaluate all 
 #### New Endpoints
 
 **`GET /api/health`** (Enhanced)
+
 - Returns database and Redis connection status
 - Response: `{ ok: boolean, database: boolean, redis: boolean }`
 
 **`GET /api/worker/status`** (New)
+
 - Returns real-time worker metrics:
   ```json
   {
@@ -102,6 +113,7 @@ Successfully implemented a distributed background worker system to evaluate all 
   ```
 
 ### 8. **Server Initialization** (`apps/api/src/server.ts`)
+
 - Runs database migrations on startup
 - Initializes job queue and worker processes
 - Seeds marketable items and generates initial job batch
@@ -109,6 +121,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 - Graceful shutdown: cleans up queue, worker, scheduler on SIGTERM/SIGINT
 
 ### 9. **Dependencies Added**
+
 - `bullmq@^5.4.2` – Job queue management
 - `redis@^5.0.0` – Redis client (compatible with BullMQ)
 
@@ -117,6 +130,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 ## How It Works
 
 ### Startup Flow
+
 ```
 1. Server starts
    ↓
@@ -134,6 +148,7 @@ Successfully implemented a distributed background worker system to evaluate all 
 ```
 
 ### Job Processing Flow
+
 ```
 For each job {itemId, region}:
    1. Call Universalis API: GET /{region}/{itemId}
@@ -146,6 +161,7 @@ For each job {itemId, region}:
 ```
 
 ### API Opportunities Generation Flow
+
 ```
 When GET /api/opportunities is called:
    1. Return cached opportunities (refreshed every 15 min)
@@ -167,6 +183,7 @@ When GET /api/opportunities is called:
 ## Deployment Steps
 
 ### 1. Configure Railway Variables
+
 Set these environment variables on Railway:
 
 ```env
@@ -184,6 +201,7 @@ UNIVERSALIS_REQS_PER_SECOND=20
 ```
 
 ### 2. Deploy to Railway
+
 ```bash
 # Commit changes
 git add -A
@@ -194,6 +212,7 @@ git push
 ```
 
 Railway will:
+
 1. Build with `pnpm install --frozen-lockfile && pnpm build`
 2. Start API with `pnpm start`
 3. Health check: `GET /api/health` every 30s with 5-min timeout
@@ -221,18 +240,21 @@ curl "https://your-railway-domain.com/api/opportunities?limit=5&includeHistory=t
 ## Performance Characteristics
 
 ### Job Processing Rate
+
 - **Target**: All ~10,000 items × 3 regions = 30,000 jobs completed in 24 hours
 - **Actual Rate**: ~0.35 jobs/sec (spread evenly across 24h)
 - **Concurrent Workers**: 4 (controlled by `JOB_QUEUE_CONCURRENCY`)
 - **API Rate Limit**: 20 req/sec (respected by all workers)
 
 ### Database Performance
+
 - **Market Snapshots**: ~10,000 items × 3 regions × 30 snapshots/month = ~900k rows/month
 - **Retention**: Configurable (default 14 days) = ~400k rows at steady state
 - **Indexes**: Fast queries on (item_id, fetched_at) for aggregation
 - **Writes**: ~1 write/sec during job processing (well within PostgreSQL limits)
 
 ### API Response Times
+
 - **Cache Hit** (15-min fresh): < 50ms
 - **First Request** (cold cache): < 500ms (fetches from DB)
 - **Worker Status**: < 100ms (queries job_history table)
@@ -242,7 +264,9 @@ curl "https://your-railway-domain.com/api/opportunities?limit=5&includeHistory=t
 ## Monitoring
 
 ### Queue Monitoring
+
 Access `/api/worker/status` to see:
+
 - **Pending jobs**: Items waiting to be processed
 - **Active jobs**: Currently running
 - **Completed/Failed**: Historical stats
@@ -261,16 +285,19 @@ Access `/api/worker/status` to see:
 ### Common Issues
 
 **Queue stuck (no progress)**:
+
 - Check Redis connection: `redis-cli -u $REDIS_URL ping`
 - Check job errors in `job_history` table
 - Restart worker: `pnpm restart` on Railway
 
 **Missing opportunities**:
+
 - Check market snapshot count: `SELECT COUNT(*) FROM market_snapshots`
 - If low, jobs are still processing; wait 1-2 hours
 - Force refresh: `GET /api/opportunities?refresh=true`
 
 **API rate limit errors**:
+
 - Reduce `JOB_QUEUE_CONCURRENCY` to lower concurrent requests
 - Reduce `UNIVERSALIS_REQS_PER_SECOND` if needed
 - Check Universalis status: https://universalis.app/
@@ -280,6 +307,7 @@ Access `/api/worker/status` to see:
 ## Configuration Tuning
 
 ### Increase Item Coverage Speed
+
 ```env
 # Process items faster (more concurrent API requests)
 JOB_QUEUE_CONCURRENCY=8  # Default: 4
@@ -289,12 +317,14 @@ UNIVERSALIS_REQS_PER_SECOND=30  # Up from 20 if allowed
 ```
 
 ### Reduce Database Footprint
+
 ```env
 # Keep less history
 MARKET_SNAPSHOT_RETENTION_DAYS=7  # Down from 14
 ```
 
 ### Faster In-Memory Cache
+
 ```env
 # Refresh opportunities more frequently
 ARBITRAGE_REFRESH_MINUTES=5  # Down from 15 (uses more CPU/memory)
@@ -350,6 +380,7 @@ ARBITRAGE_REFRESH_MINUTES=5  # Down from 15 (uses more CPU/memory)
 ## Support
 
 For issues or questions:
+
 1. Check logs: Railway → Logs tab
 2. Monitor status: `GET /api/worker/status`
 3. Verify connectivity: `GET /api/health`

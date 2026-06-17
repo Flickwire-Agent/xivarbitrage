@@ -37,7 +37,7 @@ export const worlds: WorldInfo[] = [
   { id: 408, name: "Cuchulainn", dataCenter: "Dynamis" },
   { id: 409, name: "Golem", dataCenter: "Dynamis" },
   { id: 410, name: "Kraken", dataCenter: "Dynamis" },
-  { id: 411, name: "Rafflesia", dataCenter: "Dynamis" }
+  { id: 411, name: "Rafflesia", dataCenter: "Dynamis" },
 ];
 
 export const worldById = new Map(worlds.map((world) => [world.id, world]));

@@ -13,7 +13,7 @@ export class MarketSnapshotStore {
   private readonly pool = config.databaseUrl
     ? new Pool({
         connectionString: config.databaseUrl,
-        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
       })
     : null;
   private initialized: Promise<void> | null = null;
@@ -27,7 +27,8 @@ export class MarketSnapshotStore {
       return;
     }
 
-    this.initialized ??= this.pool.query(`
+    this.initialized ??= this.pool
+      .query(`
       CREATE TABLE IF NOT EXISTS market_snapshots (
         item_id integer NOT NULL,
         region text NOT NULL,
@@ -38,7 +39,8 @@ export class MarketSnapshotStore {
 
       CREATE INDEX IF NOT EXISTS market_snapshots_fetched_at_idx
         ON market_snapshots (fetched_at);
-    `).then(() => undefined);
+    `)
+      .then(() => undefined);
 
     await this.initialized;
   }
@@ -57,7 +59,7 @@ export class MarketSnapshotStore {
           AND region = $2
           AND fetched_at > now() - ($3::text)::interval
       `,
-      [itemId, region, `${config.marketSnapshotFreshHours} hours`]
+      [itemId, region, `${config.marketSnapshotFreshHours} hours`],
     );
 
     return result.rows[0]?.data ?? null;
@@ -76,7 +78,7 @@ export class MarketSnapshotStore {
         ON CONFLICT (item_id, region)
         DO UPDATE SET data = EXCLUDED.data, fetched_at = EXCLUDED.fetched_at
       `,
-      [itemId, region, data]
+      [itemId, region, data],
     );
   }
 
@@ -91,7 +93,7 @@ export class MarketSnapshotStore {
         DELETE FROM market_snapshots
         WHERE fetched_at < now() - ($1::text)::interval
       `,
-      [`${config.marketSnapshotRetentionDays} days`]
+      [`${config.marketSnapshotRetentionDays} days`],
     );
 
     return result.rowCount ?? 0;

@@ -36,8 +36,8 @@ export class XivApiClient {
 
     const response = await fetch(url, {
       headers: {
-        "User-Agent": "xiv-arbitrage/0.1.0"
-      }
+        "User-Agent": "xiv-arbitrage/0.1.0",
+      },
     });
 
     if (!response.ok) {
@@ -55,7 +55,7 @@ export class XivApiClient {
         : undefined,
       category: row.fields.ItemUICategory?.fields?.Name,
       levelItem: row.fields.LevelItem,
-      stackSize: row.fields.StackSize
+      stackSize: row.fields.StackSize,
     };
 
     this.cache.set(itemId, item);

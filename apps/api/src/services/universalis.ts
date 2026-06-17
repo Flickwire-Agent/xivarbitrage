@@ -51,17 +51,17 @@ export class UniversalisClient {
 
   async getCurrentData(
     regionOrWorld: string,
-    itemId: number
+    itemId: number,
   ): Promise<UniversalisMarketData | null> {
     try {
       return await this.fetchJson<UniversalisMarketData>(
-        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entriesToReturn=20`
+        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entriesToReturn=20`,
       );
     } catch (error) {
       console.warn(
         `Universalis.getCurrentData: request failed for ${regionOrWorld}/${itemId}: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
       return null;
     }
@@ -71,8 +71,8 @@ export class UniversalisClient {
     return this.limiter.schedule(async () => {
       const response = await fetch(`${config.universalisBaseUrl}${path}`, {
         headers: {
-          "User-Agent": "xiv-arbitrage/0.1.0"
-        }
+          "User-Agent": "xiv-arbitrage/0.1.0",
+        },
       });
 
       if (!response.ok) {

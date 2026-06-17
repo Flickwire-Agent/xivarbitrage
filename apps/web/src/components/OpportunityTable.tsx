@@ -32,10 +32,14 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
         </thead>
         <tbody>
           {opportunities.map((opportunity) => (
-            <tr key={`${opportunity.itemId}-${opportunity.high.worldId}-${opportunity.low.worldId}`}>
+            <tr
+              key={`${opportunity.itemId}-${opportunity.high.worldId}-${opportunity.low.worldId}`}
+            >
               <td>
                 <div className="itemCell">
-                  {opportunity.item.iconUrl ? <img src={opportunity.item.iconUrl} alt="" loading="lazy" /> : null}
+                  {opportunity.item.iconUrl ? (
+                    <img src={opportunity.item.iconUrl} alt="" loading="lazy" />
+                  ) : null}
                   <div>
                     <a
                       href={getUniversalisUrl(opportunity.itemId)}
@@ -76,4 +80,3 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
     </section>
   );
 }
-

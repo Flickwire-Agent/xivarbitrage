@@ -1,5 +1,9 @@
 import { worlds as fallbackWorlds, type WorldInfo } from "../data/worlds.js";
-import { UniversalisClient, type UniversalisDataCenter, type UniversalisWorld } from "./universalis.js";
+import {
+  UniversalisClient,
+  type UniversalisDataCenter,
+  type UniversalisWorld,
+} from "./universalis.js";
 
 const TARGET_REGIONS = new Set(["North-America", "Europe", "Oceania"]);
 const FALLBACK_REGIONS = ["North-America"];
@@ -36,9 +40,11 @@ export class WorldCatalog {
   private async fetchSupportedWorlds(): Promise<WorldInfo[]> {
     const [availableWorlds, dataCenters] = await Promise.all([
       this.universalis.getWorlds(),
-      this.universalis.getDataCenters()
+      this.universalis.getDataCenters(),
     ]);
-    const worldNames = new Map(availableWorlds.map((world: UniversalisWorld) => [world.id, world.name]));
+    const worldNames = new Map(
+      availableWorlds.map((world: UniversalisWorld) => [world.id, world.name]),
+    );
 
     return dataCenters
       .filter((dataCenter: UniversalisDataCenter) => TARGET_REGIONS.has(dataCenter.region))
@@ -47,8 +53,8 @@ export class WorldCatalog {
           id: worldId,
           name: worldNames.get(worldId) ?? `World ${worldId}`,
           dataCenter: dataCenter.name,
-          region: dataCenter.region
-        }))
+          region: dataCenter.region,
+        })),
       );
   }
 }

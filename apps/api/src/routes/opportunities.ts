@@ -17,7 +17,7 @@ const querySchema = z.object({
   sort: z.enum(["best", "spread", "spreadPercent", "volume", "velocity"]).optional(),
   limit: z.coerce.number().int().positive().max(500).optional(),
   refresh: z.coerce.boolean().optional(),
-  includeHistory: z.coerce.boolean().optional()
+  includeHistory: z.coerce.boolean().optional(),
 });
 
 async function checkDatabaseHealth(): Promise<boolean> {
@@ -28,7 +28,7 @@ async function checkDatabaseHealth(): Promise<boolean> {
   try {
     const pool = new Pool({
       connectionString: config.databaseUrl,
-      ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+      ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
     });
 
     const result = await pool.query("SELECT NOW()");
@@ -62,7 +62,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     if (!dbHealthy || !redisHealthy) {
       return reply.status(503).send({
-        error: `Database: ${dbHealthy ? "ok" : "down"}, Redis: ${redisHealthy ? "ok" : "down"}`
+        error: `Database: ${dbHealthy ? "ok" : "down"}, Redis: ${redisHealthy ? "ok" : "down"}`,
       });
     }
 
@@ -82,7 +82,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
       try {
         const pool = new Pool({
           connectionString: config.databaseUrl,
-          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
         });
 
         // Fetch historical data for each item
@@ -101,12 +101,12 @@ export async function opportunityRoutes(app: FastifyInstance) {
             ORDER BY fetched_at DESC
             LIMIT 168
             `,
-            [opportunity.itemId]
+            [opportunity.itemId],
           );
 
           (opportunity as any).history = result.rows.map((row) => ({
             timestamp: row.fetched_at,
-            price: Math.round(Number(row.avg_price))
+            price: Math.round(Number(row.avg_price)),
           }));
         }
 
@@ -129,7 +129,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
       const pool = new Pool({
         connectionString: config.databaseUrl,
-        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false }
+        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
       });
 
       // Get item and job statistics
@@ -138,17 +138,17 @@ export async function opportunityRoutes(app: FastifyInstance) {
           `SELECT 
             COUNT(*)::text as count,
             COUNT(CASE WHEN last_scanned IS NOT NULL THEN 1 END)::text as scanned
-          FROM marketable_items`
+          FROM marketable_items`,
         ),
         pool.query<{ count: string; status: string }>(
           `SELECT status, COUNT(*)::text as count
            FROM job_history
            WHERE created_at > now() - interval '24 hours'
-           GROUP BY status`
+           GROUP BY status`,
         ),
         pool.query<{ last_scanned: string | null }>(
-          `SELECT MAX(last_scanned) as last_scanned FROM marketable_items`
-        )
+          `SELECT MAX(last_scanned) as last_scanned FROM marketable_items`,
+        ),
       ]);
 
       await pool.end();
@@ -156,7 +156,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
       const totalItems = parseInt(itemStats.rows[0]?.count ?? "0", 10);
       const scannedItems = parseInt(itemStats.rows[0]?.scanned ?? "0", 10);
       const jobsByStatus = Object.fromEntries(
-        jobStats.rows.map((row) => [row.status, parseInt(row.count, 10)])
+        jobStats.rows.map((row) => [row.status, parseInt(row.count, 10)]),
       );
 
       return {
@@ -164,10 +164,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
         items: {
           total: totalItems,
           scanned: scannedItems,
-          progress: totalItems > 0 ? ((scannedItems / totalItems) * 100).toFixed(2) + "%" : "0%"
+          progress: totalItems > 0 ? ((scannedItems / totalItems) * 100).toFixed(2) + "%" : "0%",
         },
         jobs24h: jobsByStatus,
-        lastFullScan: lastScan.rows[0]?.last_scanned
+        lastFullScan: lastScan.rows[0]?.last_scanned,
       };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };

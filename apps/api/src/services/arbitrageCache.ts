@@ -1,4 +1,8 @@
-import type { ArbitrageOpportunity, OpportunityFilters, OpportunityResponse } from "@xiv-arbitrage/shared";
+import type {
+  ArbitrageOpportunity,
+  OpportunityFilters,
+  OpportunityResponse,
+} from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import { ArbitrageService } from "./arbitrage.js";
 
@@ -11,9 +15,12 @@ export class ArbitrageCache {
 
   start() {
     void this.refresh();
-    setInterval(() => {
-      void this.refresh();
-    }, config.arbitrageRefreshMinutes * 60 * 1000).unref();
+    setInterval(
+      () => {
+        void this.refresh();
+      },
+      config.arbitrageRefreshMinutes * 60 * 1000,
+    ).unref();
   }
 
   async get(filters: OpportunityFilters): Promise<OpportunityResponse> {

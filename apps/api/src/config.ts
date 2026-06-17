@@ -10,5 +10,5 @@ export const config = {
   marketSnapshotRetentionDays: Number(process.env.MARKET_SNAPSHOT_RETENTION_DAYS ?? 14),
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
-  jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4)
+  jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4),
 };

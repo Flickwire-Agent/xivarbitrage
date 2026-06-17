@@ -9,6 +9,7 @@ A comprehensive guide for developers and AI agents working on the XIVArbitrage p
 **XIVArbitrage** is a TypeScript monorepo that identifies profitable arbitrage opportunities in the Final Fantasy XIV in-game market by monitoring price differences across worlds.
 
 ### Key Characteristics
+
 - **Monorepo**: Multiple interconnected packages in a single repository
 - **Full-Stack**: Backend API, Frontend UI, Shared types
 - **Real-Time Data**: Evaluates ~10,000+ market items across 3 regions continuously
@@ -80,24 +81,26 @@ XIVArbitrage/
 
 ### Directory Functions
 
-| Directory | Purpose | Key Files |
-|-----------|---------|-----------|
-| `apps/api` | Backend server | `server.ts`, `services/*`, `routes/*` |
-| `apps/web` | Frontend application | `App.tsx`, `components/*` |
-| `packages/shared` | Shared types | `index.ts` (interfaces) |
-| `apps/api/src/db` | Database layer | `migrations.ts` |
-| `apps/api/src/services` | Business logic | `arbitrage.ts`, `jobQueue.ts`, etc. |
+| Directory               | Purpose              | Key Files                             |
+| ----------------------- | -------------------- | ------------------------------------- |
+| `apps/api`              | Backend server       | `server.ts`, `services/*`, `routes/*` |
+| `apps/web`              | Frontend application | `App.tsx`, `components/*`             |
+| `packages/shared`       | Shared types         | `index.ts` (interfaces)               |
+| `apps/api/src/db`       | Database layer       | `migrations.ts`                       |
+| `apps/api/src/services` | Business logic       | `arbitrage.ts`, `jobQueue.ts`, etc.   |
 
 ---
 
 ## Tech Stack
 
 ### Core Technologies
+
 - **Language**: TypeScript 5.7+
 - **Runtime**: Node.js 22+
 - **Package Manager**: pnpm 9+
 
 ### Backend
+
 - **Framework**: Fastify 5.2 (lightweight, performant HTTP server)
 - **Database**: PostgreSQL 16 (market snapshots, job history)
 - **Cache**: Redis 7 (job queue storage)
@@ -107,16 +110,19 @@ XIVArbitrage/
 - **Driver**: pg 8.13 (PostgreSQL client)
 
 ### Frontend
+
 - **Framework**: React (UI components)
 - **Build Tool**: Vite 6 (fast bundling)
 - **Styling**: Plain CSS (simple, maintainable)
 
 ### Development
+
 - **Type Checking**: TypeScript 5.7
 - **Build System**: tsc (TypeScript compiler)
 - **Dev Server**: tsx (TypeScript executor)
 
 ### Infrastructure
+
 - **Hosting**: Railway.app (cloud platform)
 - **Build**: NIXPACKS (Railway's build system)
 - **CI/CD**: Automatic on git push
@@ -126,6 +132,7 @@ XIVArbitrage/
 ## Development Setup
 
 ### Prerequisites
+
 ```bash
 # Required
 Node.js 22+
@@ -137,6 +144,7 @@ Redis (for local job queue testing)
 ```
 
 ### Installation
+
 ```bash
 # Install dependencies (all workspaces)
 pnpm install
@@ -147,6 +155,7 @@ pnpm install
 ### Environment Configuration
 
 Create `.env.local` in `apps/api/` (git-ignored):
+
 ```env
 # Optional - leave unset for in-memory only
 DATABASE_URL=postgresql://user:pass@localhost:5432/arbitrage
@@ -183,19 +192,23 @@ pnpm start
 ## Key Architectural Patterns
 
 ### 1. Service Singletons
+
 Services are exported as singletons to ensure single instances:
+
 ```typescript
 // services/universalis.ts
 export const universalis = new UniversalisClient();
 
 // Usage in other files
-import { universalis } from './services/universalis.js';
+import { universalis } from "./services/universalis.js";
 ```
 
 **Why**: Prevents multiple instances of expensive resources (connection pools, rate limiters, caches).
 
 ### 2. Rate Limiting
+
 All Universalis API calls go through the rate limiter:
+
 ```typescript
 // services/rateLimiter.ts
 export const rateLimiter = new RateLimiter(20); // 20 req/sec
@@ -207,7 +220,9 @@ await rateLimiter.schedule(() => universalis.getCurrentData(region, itemId));
 **Why**: Universalis enforces 20 req/sec; exceeding causes 429 errors.
 
 ### 3. Database Abstraction
+
 `marketSnapshotStore` handles all DB interactions:
+
 ```typescript
 // services/marketSnapshotStore.ts
 await marketSnapshotStore.upsert(region, itemId, data);
@@ -217,14 +232,16 @@ const fresh = await marketSnapshotStore.getFresh(region, itemId);
 **Why**: Single responsibility, easier mocking for tests.
 
 ### 4. Job Queue Pattern (NEW)
+
 Background work uses BullMQ for resilience:
+
 ```typescript
 // services/jobQueue.ts
 const queue = getQueue();
-await queue.add('evaluate-item', { itemId, region }, { delay: 1000 });
+await queue.add("evaluate-item", { itemId, region }, { delay: 1000 });
 
 // services/opportunityWorker.ts
-const worker = new Worker('arbitrage-opportunities', async (job) => {
+const worker = new Worker("arbitrage-opportunities", async (job) => {
   // Process job with retries built-in
 });
 ```
@@ -232,23 +249,29 @@ const worker = new Worker('arbitrage-opportunities', async (job) => {
 **Why**: Decouples long-running tasks, enables retry logic, provides progress tracking.
 
 ### 5. Configuration Through Environment
+
 All config via `config.ts`:
+
 ```typescript
 // config.ts
 export const config = {
   databaseUrl: process.env.DATABASE_URL,
-  redisUrl: process.env.REDIS_URL ?? 'redis://localhost:6379',
-  jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4)
+  redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
+  jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4),
 };
 
 // Usage
-if (config.databaseUrl) { /* enable DB */ }
+if (config.databaseUrl) {
+  /* enable DB */
+}
 ```
 
 **Why**: Enables local development without services, easy Railway deployment.
 
 ### 6. Cache-Then-Query Pattern
+
 API requests hit in-memory cache first:
+
 ```typescript
 // arbitrageCache.ts
 async get(filters) {
@@ -267,6 +290,7 @@ setInterval(() => this.refresh(), 15 * 60 * 1000);
 ## Data Flow
 
 ### Startup Flow
+
 ```
 Server Start
   ↓
@@ -286,6 +310,7 @@ Every 6 hours: reschedule remaining items
 ```
 
 ### API Request Flow
+
 ```
 GET /api/opportunities
   ↓
@@ -303,6 +328,7 @@ Return JSON response
 ```
 
 ### Background Job Flow
+
 ```
 BullMQ Worker picks job: { itemId, region }
   ↓
@@ -323,16 +349,20 @@ Job completes or retries (3 attempts max)
 ## Important Conventions
 
 ### 1. Import Extensions
+
 Always use `.js` extensions in imports:
+
 ```typescript
-import { config } from "../config.js";  // ✅ Correct
-import { config } from "../config";      // ❌ Won't work (ES modules)
+import { config } from "../config.js"; // ✅ Correct
+import { config } from "../config"; // ❌ Won't work (ES modules)
 ```
 
 **Why**: TypeScript with `"module": "esnext"` requires explicit extensions.
 
 ### 2. Error Handling
+
 Wrap async operations in try-catch:
+
 ```typescript
 try {
   await database.query(sql);
@@ -345,7 +375,9 @@ try {
 **Why**: Prevents unhandled promise rejections.
 
 ### 3. Type Safety
+
 Use TypeScript generics for database queries:
+
 ```typescript
 interface SnapshotRow {
   item_id: number;
@@ -359,9 +391,11 @@ const itemId = result.rows[0].item_id; // Typed!
 **Why**: Compile-time safety, IDE autocomplete.
 
 ### 4. Resource Cleanup
+
 Close connections on graceful shutdown:
+
 ```typescript
-process.on('SIGTERM', async () => {
+process.on("SIGTERM", async () => {
   await closeWorker();
   await closeQueue();
   await database.end();
@@ -372,11 +406,13 @@ process.on('SIGTERM', async () => {
 **Why**: Prevents connection leaks, ensures clean Railway deployments.
 
 ### 5. Logging Patterns
+
 Use prefixes for categorization:
+
 ```typescript
-console.log('[JobScheduler] Scheduling jobs...');
-console.error('[Worker] Failed item_id=12345: Network timeout');
-console.warn('[BullMQ] Job 57d8a54 stalled');
+console.log("[JobScheduler] Scheduling jobs...");
+console.error("[Worker] Failed item_id=12345: Network timeout");
+console.warn("[BullMQ] Job 57d8a54 stalled");
 ```
 
 **Why**: Easier log filtering in production.
@@ -388,13 +424,17 @@ console.warn('[BullMQ] Job 57d8a54 stalled');
 ### Public Endpoints
 
 #### `GET /api/health`
+
 Check database and Redis connectivity.
+
 ```json
 { "ok": true, "database": true, "redis": true }
 ```
 
 #### `GET /api/opportunities`
+
 Get arbitrage opportunities (filtered & sorted).
+
 ```
 Query parameters:
   ?limit=50              # Results per page (default: 50, max: 500)
@@ -431,7 +471,9 @@ Response:
 ```
 
 #### `GET /api/worker/status`
+
 Monitor background worker progress.
+
 ```json
 {
   "queue": {
@@ -459,7 +501,9 @@ Monitor background worker progress.
 ## Database Schema
 
 ### marketable_items
+
 Tracks all ~10,000 tradeable items and scan status.
+
 ```sql
 CREATE TABLE marketable_items (
   item_id integer PRIMARY KEY,
@@ -470,12 +514,15 @@ CREATE TABLE marketable_items (
 ```
 
 **Indexes**:
+
 - `(last_scanned NULLS FIRST)` – Find unscanned items first
 
 **Usage**: Job scheduler queries this to find items needing evaluation.
 
 ### market_snapshots
+
 All market data for all items, all regions.
+
 ```sql
 CREATE TABLE market_snapshots (
   item_id integer NOT NULL,
@@ -487,13 +534,16 @@ CREATE TABLE market_snapshots (
 ```
 
 **Indexes**:
+
 - `(item_id, fetched_at DESC)` – Fast aggregation per item
 - `(fetched_at)` – Cleanup old records
 
 **Usage**: Arbitrage evaluation queries this to compute opportunities.
 
 ### job_history
+
 Complete audit trail of all background jobs.
+
 ```sql
 CREATE TABLE job_history (
   id serial PRIMARY KEY,
@@ -508,6 +558,7 @@ CREATE TABLE job_history (
 ```
 
 **Indexes**:
+
 - `(status, completed_at DESC)` – Query recent jobs
 
 **Usage**: Monitoring, debugging, retry logic.
@@ -517,6 +568,7 @@ CREATE TABLE job_history (
 ## Testing Strategy
 
 ### What's Tested
+
 - ✅ TypeScript compilation
 - ✅ API endpoints (manual via curl)
 - ✅ Database migrations (auto on startup)
@@ -547,7 +599,9 @@ curl http://localhost:4000/api/worker/status
 ```
 
 ### Load Testing
+
 Simulating high load (manual):
+
 ```bash
 # In a loop
 for i in {1..100}; do
@@ -580,6 +634,7 @@ git push
 ```
 
 ### Environment Variables (Railway)
+
 ```
 DATABASE_URL          # Auto-provided by PostgreSQL service
 REDIS_URL             # Auto-provided by Redis service
@@ -587,6 +642,7 @@ JOB_QUEUE_CONCURRENCY # Optional (default: 4)
 ```
 
 ### Health Check
+
 Railway polls `GET /api/health` every 30 seconds with 5-minute timeout.
 
 ```json
@@ -602,12 +658,14 @@ Railway polls `GET /api/health` every 30 seconds with 5-minute timeout.
 ## Common Development Tasks
 
 ### Add a New API Endpoint
+
 1. Add route in `apps/api/src/routes/opportunities.ts`
 2. Validate input with Zod schema
 3. Call service methods
 4. Return JSON response
 
 Example:
+
 ```typescript
 app.get("/api/trending", async (request) => {
   const { days } = querySchema.parse(request.query);
@@ -617,11 +675,13 @@ app.get("/api/trending", async (request) => {
 ```
 
 ### Modify Database Schema
+
 1. Update `apps/api/src/db/migrations.ts`
 2. Add new table/index creation SQL
 3. Restart API (migrations auto-run on startup)
 
 Example:
+
 ```typescript
 await pool.query(`
   CREATE TABLE IF NOT EXISTS new_table (
@@ -632,11 +692,13 @@ await pool.query(`
 ```
 
 ### Add a New Service
+
 1. Create `apps/api/src/services/myService.ts`
 2. Export singleton at bottom
 3. Import in files that need it
 
 Example:
+
 ```typescript
 // services/myService.ts
 export class MyService {
@@ -649,14 +711,16 @@ import { myService } from '../services/myService.js';
 ```
 
 ### Adjust Configuration
+
 1. Add environment variable to `apps/api/src/config.ts`
 2. Set on Railway or in `.env.local` locally
 3. Use `config.myNewVar` throughout code
 
 Example:
+
 ```typescript
 export const config = {
-  myNewVar: Number(process.env.MY_NEW_VAR ?? 10)
+  myNewVar: Number(process.env.MY_NEW_VAR ?? 10),
 };
 ```
 
@@ -665,6 +729,7 @@ export const config = {
 ## Troubleshooting
 
 ### Build Failures
+
 ```bash
 # Clear cache and rebuild
 rm -rf dist node_modules
@@ -673,6 +738,7 @@ pnpm build
 ```
 
 ### TypeScript Errors
+
 ```bash
 # Check type errors
 pnpm build
@@ -684,6 +750,7 @@ pnpm build
 ```
 
 ### Database Connection Issues
+
 ```bash
 # Verify connection string
 echo $DATABASE_URL
@@ -696,6 +763,7 @@ psql $DATABASE_URL -c "SELECT * FROM information_schema.tables WHERE table_name=
 ```
 
 ### Redis Connection Issues
+
 ```bash
 # Verify connection string
 echo $REDIS_URL
@@ -706,6 +774,7 @@ redis-cli -u $REDIS_URL ping
 ```
 
 ### No Opportunities Returned
+
 1. Check `/api/health` returns ok
 2. Check `/api/worker/status` shows progress
 3. Wait 30+ minutes for first job batch
@@ -716,17 +785,20 @@ redis-cli -u $REDIS_URL ping
 ## Performance Considerations
 
 ### Memory Usage
+
 - **In-memory cache**: ~50MB for 10k opportunities
 - **Worker concurrency**: 4 concurrent jobs (tunable)
 - **Redis connection pool**: Minimal
 
 **Optimization**:
+
 ```env
 JOB_QUEUE_CONCURRENCY=2    # Lower memory usage
 ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 ```
 
 ### Database Performance
+
 - **Row count**: ~400k at steady state (10k items × 3 regions × 14 days)
 - **Query time**: <100ms for full scan
 - **Write throughput**: ~1-10 writes/sec
@@ -734,6 +806,7 @@ ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 **Optimization**: Indexes on (item_id, fetched_at) and (status).
 
 ### API Response Times
+
 - **Cached**: <50ms (in-memory)
 - **Uncached (cold start)**: <1s (database query)
 - **With history**: <500ms (7-day aggregation)
@@ -743,12 +816,14 @@ ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 ## Future Development
 
 ### Known Limitations
+
 1. Rolling evaluation not yet implemented (only daily full scans)
 2. No user-specific watchlists
 3. No price prediction/forecasting
 4. Single-region limitations not addressed
 
 ### Potential Improvements
+
 1. Incremental scanning (update popular items more frequently)
 2. User authentication and preferences
 3. Price trend analysis and predictions
@@ -757,6 +832,7 @@ ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 6. WebSocket real-time updates
 
 ### Code Organization Tips
+
 - Keep services pure (single responsibility)
 - Use dependency injection for testability
 - Favor composition over inheritance
@@ -768,11 +844,13 @@ ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 ## Resources
 
 ### Internal Documentation
+
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) – Technical deep dive
 - [QUICK_REFERENCE.md](QUICK_REFERENCE.md) – Command reference
 - [DEPLOYMENT_READY.md](DEPLOYMENT_READY.md) – Deployment guide
 
 ### External Resources
+
 - [Universalis API](https://universalis.app/docs/api)
 - [XIVAPI](https://v2.xivapi.com/api)
 - [BullMQ Docs](https://docs.bullmq.io/)
@@ -785,6 +863,7 @@ ARBITRAGE_REFRESH_MINUTES=30 # Refresh less frequently
 ## Summary
 
 XIVArbitrage is a well-structured TypeScript monorepo with clear separation of concerns:
+
 - **Backend**: Fastify API + background worker
 - **Frontend**: React UI
 - **Shared**: Common types
@@ -793,6 +872,7 @@ XIVArbitrage is a well-structured TypeScript monorepo with clear separation of c
 The codebase follows modern TypeScript practices with strict typing, proper error handling, and clean architecture. The distributed job system enables scaling from 250 to 10,000+ items while maintaining responsiveness.
 
 For agents working on this codebase, focus on:
+
 1. Following the existing patterns (singletons, rate limiting, error handling)
 2. Respecting environment configuration
 3. Maintaining TypeScript types throughout

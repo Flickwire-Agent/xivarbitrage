@@ -5,7 +5,7 @@ const { Pool } = pg;
 export async function runMigrations(connectionString: string): Promise<void> {
   const pool = new Pool({
     connectionString,
-    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false }
+    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
   });
 
   try {
@@ -75,4 +75,3 @@ export async function runMigrations(connectionString: string): Promise<void> {
     await pool.end();
   }
 }
-

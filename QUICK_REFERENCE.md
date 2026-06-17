@@ -2,28 +2,28 @@
 
 ## New Files Created
 
-| File | Purpose |
-|------|---------|
-| [apps/api/src/services/jobQueue.ts](apps/api/src/services/jobQueue.ts) | BullMQ queue initialization, event handling, stats |
-| [apps/api/src/services/jobScheduler.ts](apps/api/src/services/jobScheduler.ts) | Seed marketable items, generate & distribute 30k jobs over 24h |
-| [apps/api/src/services/opportunityWorker.ts](apps/api/src/services/opportunityWorker.ts) | Process jobs: fetch API, persist to DB, update state |
-| [apps/api/src/db/migrations.ts](apps/api/src/db/migrations.ts) | Create database tables & indexes on startup |
-| [IMPLEMENTATION.md](IMPLEMENTATION.md) | Full technical documentation |
+| File                                                                                     | Purpose                                                        |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| [apps/api/src/services/jobQueue.ts](apps/api/src/services/jobQueue.ts)                   | BullMQ queue initialization, event handling, stats             |
+| [apps/api/src/services/jobScheduler.ts](apps/api/src/services/jobScheduler.ts)           | Seed marketable items, generate & distribute 30k jobs over 24h |
+| [apps/api/src/services/opportunityWorker.ts](apps/api/src/services/opportunityWorker.ts) | Process jobs: fetch API, persist to DB, update state           |
+| [apps/api/src/db/migrations.ts](apps/api/src/db/migrations.ts)                           | Create database tables & indexes on startup                    |
+| [IMPLEMENTATION.md](IMPLEMENTATION.md)                                                   | Full technical documentation                                   |
 
 ## Files Modified
 
-| File | Changes |
-|------|---------|
-| [railway.json](railway.json) | Added PostgreSQL & Redis service definitions |
-| [apps/api/package.json](apps/api/package.json) | Added bullmq^5.4.2, redis^5.0.0 |
-| [apps/api/src/config.ts](apps/api/src/config.ts) | Added REDIS_URL, JOB_QUEUE_CONCURRENCY config |
-| [apps/api/src/server.ts](apps/api/src/server.ts) | Initialize migrations, queue, worker, scheduler |
-| [apps/api/src/services/arbitrage.ts](apps/api/src/services/arbitrage.ts) | Refactored: query DB instead of live API |
-| [apps/api/src/services/arbitrageCache.ts](apps/api/src/services/arbitrageCache.ts) | Changed data source to scanOpportunitiesFromDb() |
-| [apps/api/src/services/universalis.ts](apps/api/src/services/universalis.ts) | Export singleton: `universalis` |
-| [apps/api/src/services/rateLimiter.ts](apps/api/src/services/rateLimiter.ts) | Export singleton: `rateLimiter` |
-| [apps/api/src/services/marketSnapshotStore.ts](apps/api/src/services/marketSnapshotStore.ts) | Export singleton: `marketSnapshotStore` |
-| [apps/api/src/routes/opportunities.ts](apps/api/src/routes/opportunities.ts) | Added ?includeHistory param, /api/worker/status, enhanced health check |
+| File                                                                                         | Changes                                                                |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [railway.json](railway.json)                                                                 | Added PostgreSQL & Redis service definitions                           |
+| [apps/api/package.json](apps/api/package.json)                                               | Added bullmq^5.4.2, redis^5.0.0                                        |
+| [apps/api/src/config.ts](apps/api/src/config.ts)                                             | Added REDIS_URL, JOB_QUEUE_CONCURRENCY config                          |
+| [apps/api/src/server.ts](apps/api/src/server.ts)                                             | Initialize migrations, queue, worker, scheduler                        |
+| [apps/api/src/services/arbitrage.ts](apps/api/src/services/arbitrage.ts)                     | Refactored: query DB instead of live API                               |
+| [apps/api/src/services/arbitrageCache.ts](apps/api/src/services/arbitrageCache.ts)           | Changed data source to scanOpportunitiesFromDb()                       |
+| [apps/api/src/services/universalis.ts](apps/api/src/services/universalis.ts)                 | Export singleton: `universalis`                                        |
+| [apps/api/src/services/rateLimiter.ts](apps/api/src/services/rateLimiter.ts)                 | Export singleton: `rateLimiter`                                        |
+| [apps/api/src/services/marketSnapshotStore.ts](apps/api/src/services/marketSnapshotStore.ts) | Export singleton: `marketSnapshotStore`                                |
+| [apps/api/src/routes/opportunities.ts](apps/api/src/routes/opportunities.ts)                 | Added ?includeHistory param, /api/worker/status, enhanced health check |
 
 ## Environment Variables
 
@@ -45,6 +45,7 @@ MARKET_SNAPSHOT_RETENTION_DAYS=14
 ## Database Schema
 
 ### marketable_items
+
 ```sql
 CREATE TABLE marketable_items (
   item_id integer PRIMARY KEY,
@@ -52,17 +53,19 @@ CREATE TABLE marketable_items (
   priority integer DEFAULT 0,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX marketable_items_last_scanned_idx 
+CREATE INDEX marketable_items_last_scanned_idx
   ON marketable_items (last_scanned NULLS FIRST);
 ```
 
 ### market_snapshots (existing, enhanced)
+
 ```sql
 CREATE INDEX market_snapshots_item_fetched_idx
   ON market_snapshots (item_id, fetched_at DESC);
 ```
 
 ### job_history
+
 ```sql
 CREATE TABLE job_history (
   id serial PRIMARY KEY,
@@ -74,23 +77,23 @@ CREATE TABLE job_history (
   completed_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE INDEX job_history_status_idx 
+CREATE INDEX job_history_status_idx
   ON job_history (status, completed_at DESC);
 ```
 
 ## Key Metrics
 
-| Metric | Value |
-|--------|-------|
-| Items Evaluated | ~10,000 (all marketable) |
-| Regions | 3 (NA, EU, OCE) |
-| Total Jobs | 30,000 per cycle |
-| Cycle Duration | 24 hours |
-| Jobs/Second | ~0.35 |
-| Worker Concurrency | 4 |
-| API Rate Limit | 20 req/sec |
-| Cache Refresh | 15 minutes |
-| Data Retention | 14 days (configurable) |
+| Metric             | Value                    |
+| ------------------ | ------------------------ |
+| Items Evaluated    | ~10,000 (all marketable) |
+| Regions            | 3 (NA, EU, OCE)          |
+| Total Jobs         | 30,000 per cycle         |
+| Cycle Duration     | 24 hours                 |
+| Jobs/Second        | ~0.35                    |
+| Worker Concurrency | 4                        |
+| API Rate Limit     | 20 req/sec               |
+| Cache Refresh      | 15 minutes               |
+| Data Retention     | 14 days (configurable)   |
 
 ## Testing the System
 
@@ -106,6 +109,7 @@ pnpm dev
 ```
 
 Then in browser/curl:
+
 - `http://localhost:4000/api/health` – Check connection
 - `http://localhost:4000/api/opportunities` – Get opportunities (from cache)
 - `http://localhost:4000/api/worker/status` – Check job progress
@@ -119,30 +123,33 @@ git push  # Auto-deploys to Railway
 ```
 
 Monitor:
+
 - Railway Logs → watch for "[Worker]" messages
 - `GET /api/worker/status` → track progress
 - PostgreSQL → query job_history table
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| "Redis connection failed" | Ensure REDIS_URL is set and Redis service is running |
-| "Database connection failed" | Ensure DATABASE_URL is set and PostgreSQL is running |
-| "No opportunities returned" | Wait for jobs to process (check /api/worker/status) |
-| "Jobs not processing" | Check job_history table for errors |
-| "API rate limit errors" | Reduce JOB_QUEUE_CONCURRENCY or UNIVERSALIS_REQS_PER_SECOND |
-| "Memory usage high" | Reduce ARBITRAGE_REFRESH_MINUTES or JOB_QUEUE_CONCURRENCY |
+| Issue                        | Solution                                                    |
+| ---------------------------- | ----------------------------------------------------------- |
+| "Redis connection failed"    | Ensure REDIS_URL is set and Redis service is running        |
+| "Database connection failed" | Ensure DATABASE_URL is set and PostgreSQL is running        |
+| "No opportunities returned"  | Wait for jobs to process (check /api/worker/status)         |
+| "Jobs not processing"        | Check job_history table for errors                          |
+| "API rate limit errors"      | Reduce JOB_QUEUE_CONCURRENCY or UNIVERSALIS_REQS_PER_SECOND |
+| "Memory usage high"          | Reduce ARBITRAGE_REFRESH_MINUTES or JOB_QUEUE_CONCURRENCY   |
 
 ## Performance Tuning
 
 ### For Faster Processing
+
 ```env
 JOB_QUEUE_CONCURRENCY=8
 UNIVERSALIS_REQS_PER_SECOND=30
 ```
 
 ### For Lower Resource Usage
+
 ```env
 JOB_QUEUE_CONCURRENCY=2
 ARBITRAGE_REFRESH_MINUTES=30
@@ -152,6 +159,7 @@ MARKET_SNAPSHOT_RETENTION_DAYS=7
 ## Key Code Flows
 
 ### Initialization (server.ts)
+
 ```
 runMigrations()
   ↓
@@ -165,6 +173,7 @@ setInterval(scheduleJobs, 6h)
 ```
 
 ### Job Processing (opportunityWorker.ts)
+
 ```
 Worker.process(job)
   → rateLimiter.schedule()
@@ -175,6 +184,7 @@ Worker.process(job)
 ```
 
 ### Opportunity Generation (arbitrage.ts)
+
 ```
 scanOpportunitiesFromDb()
   → SELECT FROM market_snapshots (last 24h)
