@@ -1,2 +1,2 @@
-oxlint .
-oxfmt --check .
+output=$(oxlint --quiet . 2>&1) || { echo "$output"; exit 1; }
+output=$(oxfmt --check . 2>&1) || { echo "$output"; exit 1; }

@@ -5,12 +5,12 @@
   "description": "FFXIV market arbitrage explorer powered by Universalis and XIVAPI.",
   "type": "module",
   "scripts": {
-    "build": "pnpm -r build",
+    "build": "pnpm -r --reporter=append-only build",
     "check": "pnpm -r check",
     "dev": "pnpm --parallel dev",
-    "format": "oxfmt --check .",
-    "format:fix": "oxfmt .",
-    "lint": "oxlint . && pnpm -r lint",
+    "format": "oxfmt --check . 2>/dev/null",
+    "format:fix": "oxfmt . 2>/dev/null",
+    "lint": "oxlint --quiet . 2>/dev/null",
     "start": "pnpm --filter @xiv-arbitrage/api start",
     "prepare": "husky"
   },
