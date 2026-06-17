@@ -62,6 +62,7 @@ export interface ItemHistoryResponse {
   item: ItemDetails;
   sales: SaleRecord[];
   worlds: string[];
+  worldDataCenters: Record<number, string>;
 }
 
 export interface OpportunityResponse {

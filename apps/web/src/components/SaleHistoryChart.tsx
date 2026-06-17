@@ -1,16 +1,17 @@
 import type { SaleRecord } from "@xiv-arbitrage/shared";
 import {
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
+  ResponsiveContainer,
   Scatter,
-  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
-  ResponsiveContainer,
 } from "recharts";
 
-const COLORS = [
+const SCATTER_COLORS = [
   "#5a8dd8",
   "#e76f51",
   "#2a9d8f",
@@ -53,12 +54,19 @@ const COLORS = [
   "#fecaca",
 ];
 
+const DC_LINE_COLORS = ["#d62828", "#003049", "#7209b7", "#f77f00", "#1a936f", "#560bad"];
+
 interface SaleHistoryChartProps {
   sales: SaleRecord[];
   visibleWorlds: Set<string>;
+  worldDataCenters: Record<number, string>;
 }
 
-export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps) {
+export function SaleHistoryChart({
+  sales,
+  visibleWorlds,
+  worldDataCenters,
+}: SaleHistoryChartProps) {
   const byWorld = new Map<string, SaleRecord[]>();
   for (const sale of sales) {
     const group = byWorld.get(sale.worldName) ?? [];
@@ -68,11 +76,46 @@ export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps
 
   const worlds = [...byWorld.keys()].sort();
   const worldColor = new Map<string, string>();
-  worlds.forEach((world, i) => worldColor.set(world, COLORS[i % COLORS.length]));
+  worlds.forEach((world, i) => worldColor.set(world, SCATTER_COLORS[i % SCATTER_COLORS.length]));
+
+  const byDc = new Map<string, SaleRecord[]>();
+  for (const sale of sales) {
+    const dc = worldDataCenters[sale.worldId];
+    if (!dc) continue;
+    const group = byDc.get(dc) ?? [];
+    group.push(sale);
+    byDc.set(dc, group);
+  }
+
+  function computeDailyAverages(dcSales: SaleRecord[]): { soldAt: string; pricePerUnit: number }[] {
+    const byDate = new Map<string, number[]>();
+    for (const sale of dcSales) {
+      const day = sale.soldAt.slice(0, 10);
+      const prices = byDate.get(day) ?? [];
+      prices.push(sale.pricePerUnit);
+      byDate.set(day, prices);
+    }
+
+    return [...byDate.entries()]
+      .map(([day, prices]) => ({
+        soldAt: day,
+        pricePerUnit: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+      }))
+      .sort((a, b) => a.soldAt.localeCompare(b.soldAt));
+  }
+
+  const dcDailyAverages = new Map<string, ReturnType<typeof computeDailyAverages>>();
+  const dcs = [...byDc.keys()].sort();
+  for (const dc of dcs) {
+    dcDailyAverages.set(dc, computeDailyAverages(byDc.get(dc)!));
+  }
+
+  const dcColor = new Map<string, string>();
+  dcs.forEach((dc, i) => dcColor.set(dc, DC_LINE_COLORS[i % DC_LINE_COLORS.length]));
 
   return (
     <ResponsiveContainer width="100%" height={450}>
-      <ScatterChart margin={{ top: 20, right: 20, bottom: 30, left: 20 }}>
+      <ComposedChart margin={{ top: 20, right: 20, bottom: 30, left: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4f" opacity={0.3} />
         <XAxis
           dataKey="soldAt"
@@ -81,7 +124,6 @@ export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps
             return `${d.getDate()}/${d.getMonth() + 1}`;
           }}
           type="category"
-          allowDuplicatedCategory={false}
           stroke="#687586"
           tick={{ fontSize: 12 }}
           label={{
@@ -115,6 +157,18 @@ export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps
           labelFormatter={(label: string) => new Date(label).toLocaleString()}
         />
         <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+        {dcs.map((dc) => (
+          <Line
+            key={dc}
+            name={`${dc} avg`}
+            data={dcDailyAverages.get(dc)}
+            dataKey="pricePerUnit"
+            stroke={dcColor.get(dc)}
+            strokeWidth={2}
+            dot={false}
+            connectNulls
+          />
+        ))}
         {worlds.map((world) =>
           visibleWorlds.has(world) ? (
             <Scatter
@@ -128,7 +182,7 @@ export function SaleHistoryChart({ sales, visibleWorlds }: SaleHistoryChartProps
             />
           ) : null,
         )}
-      </ScatterChart>
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }

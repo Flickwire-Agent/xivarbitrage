@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ArbitrageCache } from "../services/arbitrageCache.js";
 import { getQueueStats } from "../services/jobQueue.js";
 import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
+import { universalis } from "../services/universalis.js";
 import { XivApiClient } from "../services/xivapi.js";
 import { config } from "../config.js";
 import pg from "pg";
@@ -130,13 +131,21 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [sales, item] = await Promise.all([
+    const [sales, item, dcList] = await Promise.all([
       marketSnapshotStore.getSaleHistory(itemId),
       new XivApiClient().getItemDetails(itemId),
+      universalis.getDataCenters(),
     ]);
 
     if (!item) {
       return reply.status(404).send({ error: "Item not found" });
+    }
+
+    const worldDataCenters: Record<number, string> = {};
+    for (const dc of dcList) {
+      for (const worldId of dc.worlds) {
+        worldDataCenters[worldId] = dc.name;
+      }
     }
 
     return {
@@ -144,6 +153,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
       item,
       sales,
       worlds: [...new Set(sales.map((s) => s.worldName))].sort(),
+      worldDataCenters,
     };
   });
 

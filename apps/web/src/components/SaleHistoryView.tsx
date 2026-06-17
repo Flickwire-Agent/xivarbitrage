@@ -130,7 +130,11 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
       </section>
 
       <section className="chartShell">
-        <SaleHistoryChart sales={data.sales} visibleWorlds={visibleWorlds} />
+        <SaleHistoryChart
+          sales={data.sales}
+          visibleWorlds={visibleWorlds}
+          worldDataCenters={data.worldDataCenters}
+        />
       </section>
     </div>
   );
