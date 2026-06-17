@@ -224,5 +224,6 @@ pnpm run -r --filter=@xiv-arbitrage/web build
 
 - **Arbitrage spread**: Low side = cheapest current listing (buy price); High side = highest recent _sold_ price (actual transactions, not listings)
 - **Universalis timestamps**: API returns seconds; `new Date(s * 1000)` required
-- **Routing**: react-router-dom v7 with URL search params for filters; lazy-loaded chunks (shell 235 kB, list 10 kB, detail 373 kB, listings 4 kB)
+- **Routing**: react-router-dom v7 with URL search params for filters; lazy-loaded chunks (shell 236 kB, list 10 kB, detail 373 kB, listings 4 kB, bargains 3 kB)
+- **Bargains page** (`/bargains`): cross-item bargains cache refreshed every 15 min; queries all items with recent snapshots + sale history, groups by (item_id, data_center), applies IQR outlier exclusion, returns top 200 discounts
 - **DC average lines**: `ComposedChart` with scatter (world sales) + Line (DC daily avg)
