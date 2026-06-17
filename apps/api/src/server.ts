@@ -1,3 +1,4 @@
+import { config as loadEnv } from "dotenv";
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
 import Fastify from "fastify";
@@ -10,23 +11,25 @@ import { getScheduler } from "./services/jobScheduler.js";
 import { initializeWorker, closeWorker } from "./services/opportunityWorker.js";
 import { closeQueue } from "./services/jobQueue.js";
 
+loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
+
 const app = Fastify({
-  logger: true
+  logger: true,
 });
 
 await app.register(cors, {
-  origin: true
+  origin: true,
 });
 
 await app.register(opportunityRoutes, {
-  prefix: "/api"
+  prefix: "/api",
 });
 
 const webDistPath = fileURLToPath(new URL("../../web/dist", import.meta.url));
 if (existsSync(webDistPath)) {
   await app.register(staticFiles, {
     root: webDistPath,
-    wildcard: false
+    wildcard: false,
   });
 
   app.setNotFoundHandler((request, reply) => {
@@ -47,13 +50,15 @@ if (config.databaseUrl) {
     const scheduler = getScheduler();
     await scheduler.initialize();
 
-    // Schedule jobs on an interval (every 6 hours)
-    setInterval(
-      () => {
-        void scheduler.scheduleJobs();
-      },
-      6 * 60 * 60 * 1000
-    );
+    // Continuously re-schedule scans as fast as the API rate limit allows.
+    // The scheduler's internal cooldown prevents overlapping passes, so we
+    // just poll every 30 seconds to kick off the next cycle when ready.
+    async function scheduleLoop(): Promise<void> {
+      await scheduler.scheduleJobs();
+      setTimeout(scheduleLoop, 30_000);
+    }
+
+    scheduleLoop();
   } catch (error) {
     app.log.error(error);
     process.exit(1);
@@ -89,7 +94,7 @@ let scheduler: any = null;
 try {
   await app.listen({
     port: config.port,
-    host: "0.0.0.0"
+    host: "0.0.0.0",
   });
 } catch (error) {
   app.log.error(error);
