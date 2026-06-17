@@ -62,7 +62,7 @@ export function BargainsPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <NavLink to="/" className="iconButton">
+          <NavLink to="/" className="iconButton" aria-label="View arbitrage opportunities">
             <span>Arbitrage</span>
           </NavLink>
           <a
@@ -90,21 +90,27 @@ export function BargainsPage() {
         </div>
       </section>
 
-      {error ? <div className="notice error">{error}</div> : null}
+      {error ? (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {isLoading ? (
-        <div className="notice">Scanning market for bargains...</div>
+        <div className="notice" role="status" aria-live="polite">
+          Scanning market for bargains...
+        </div>
       ) : data && data.bargains.length > 0 ? (
-        <section className="tableShell">
+        <section className="tableShell" aria-label="Bargains table">
           <table>
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Server</th>
-                <th>Data Center</th>
-                <th>Listed price</th>
-                <th>DC avg</th>
-                <th>Discount</th>
+                <th scope="col">Item</th>
+                <th scope="col">Server</th>
+                <th scope="col">Data Center</th>
+                <th scope="col">Listed price</th>
+                <th scope="col">DC avg</th>
+                <th scope="col">Discount</th>
               </tr>
             </thead>
             <tbody>

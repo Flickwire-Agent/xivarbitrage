@@ -76,7 +76,7 @@ export function SaleHistoryChart({
 
   const worlds = [...byWorld.keys()].sort();
   const worldColor = new Map<string, string>();
-  worlds.forEach((world, i) => worldColor.set(world, SCATTER_COLORS[i % SCATTER_COLORS.length]));
+  worlds.forEach((world, i) => worldColor.set(world, SCATTER_COLORS[i % SCATTER_COLORS.length]!));
 
   const byDc = new Map<string, SaleRecord[]>();
   for (const sale of sales) {
@@ -85,6 +85,10 @@ export function SaleHistoryChart({
     const group = byDc.get(dc) ?? [];
     group.push(sale);
     byDc.set(dc, group);
+  }
+
+  function safeString(v: unknown): string {
+    return String(v ?? "");
   }
 
   function computeDailyAverages(dcSales: SaleRecord[]): { soldAt: string; pricePerUnit: number }[] {
@@ -111,78 +115,83 @@ export function SaleHistoryChart({
   }
 
   const dcColor = new Map<string, string>();
-  dcs.forEach((dc, i) => dcColor.set(dc, DC_LINE_COLORS[i % DC_LINE_COLORS.length]));
+  dcs.forEach((dc, i) => dcColor.set(dc, DC_LINE_COLORS[i % DC_LINE_COLORS.length]!));
 
   return (
-    <ResponsiveContainer width="100%" height={450}>
-      <ComposedChart margin={{ top: 20, right: 20, bottom: 30, left: 20 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4f" opacity={0.3} />
-        <XAxis
-          dataKey="soldAt"
-          tickFormatter={(ts: string) => {
-            const d = new Date(ts);
-            return `${d.getDate()}/${d.getMonth() + 1}`;
-          }}
-          type="category"
-          stroke="#687586"
-          tick={{ fontSize: 12 }}
-          label={{
-            value: "Date",
-            position: "bottom",
-            offset: 10,
-            style: { fill: "#687586", fontSize: 12 },
-          }}
-        />
-        <YAxis
-          dataKey="pricePerUnit"
-          tickFormatter={(v: number) => v.toLocaleString()}
-          stroke="#687586"
-          tick={{ fontSize: 12 }}
-          label={{
-            value: "Gil",
-            angle: -90,
-            position: "insideLeft",
-            style: { fill: "#687586", fontSize: 12 },
-          }}
-        />
-        <Tooltip
-          contentStyle={{
-            background: "#1a2332",
-            border: "1px solid #2a3a4f",
-            borderRadius: 6,
-            fontSize: 13,
-          }}
-          labelStyle={{ color: "#e1e8f0" }}
-          formatter={(value: number, name: string) => [value.toLocaleString() + " gil", name]}
-          labelFormatter={(label: string) => new Date(label).toLocaleString()}
-        />
-        <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
-        {dcs.map((dc) => (
-          <Line
-            key={dc}
-            name={`${dc} avg`}
-            data={dcDailyAverages.get(dc)}
-            dataKey="pricePerUnit"
-            stroke={dcColor.get(dc)}
-            strokeWidth={2}
-            dot={false}
-            connectNulls
+    <div
+      role="img"
+      aria-label="Sale history chart showing individual world sales as scatter points and data center daily average prices as lines"
+    >
+      <ResponsiveContainer width="100%" height={450}>
+        <ComposedChart margin={{ top: 20, right: 20, bottom: 30, left: 20 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4f" opacity={0.3} />
+          <XAxis
+            dataKey="soldAt"
+            tickFormatter={(ts: string) => {
+              const d = new Date(ts);
+              return `${d.getDate()}/${d.getMonth() + 1}`;
+            }}
+            type="category"
+            stroke="#687586"
+            tick={{ fontSize: 12 }}
+            label={{
+              value: "Date",
+              position: "bottom",
+              offset: 10,
+              style: { fill: "#687586", fontSize: 12 },
+            }}
           />
-        ))}
-        {worlds.map((world) =>
-          visibleWorlds.has(world) ? (
-            <Scatter
-              key={world}
-              name={world}
-              data={byWorld.get(world)}
-              fill={worldColor.get(world)}
-              line={false}
-              shape="circle"
-              opacity={0.7}
+          <YAxis
+            dataKey="pricePerUnit"
+            tickFormatter={(v: number) => v.toLocaleString()}
+            stroke="#687586"
+            tick={{ fontSize: 12 }}
+            label={{
+              value: "Gil",
+              angle: -90,
+              position: "insideLeft",
+              style: { fill: "#687586", fontSize: 12 },
+            }}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "#1a2332",
+              border: "1px solid #2a3a4f",
+              borderRadius: 6,
+              fontSize: 13,
+            }}
+            labelStyle={{ color: "#e1e8f0" }}
+            formatter={(value, name) => [safeString(value) + " gil", safeString(name)]}
+            labelFormatter={(label) => new Date(safeString(label)).toLocaleString()}
+          />
+          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+          {dcs.map((dc) => (
+            <Line
+              key={dc}
+              name={`${dc} avg`}
+              data={dcDailyAverages.get(dc)}
+              dataKey="pricePerUnit"
+              stroke={dcColor.get(dc)}
+              strokeWidth={2}
+              dot={false}
+              connectNulls
             />
-          ) : null,
-        )}
-      </ComposedChart>
-    </ResponsiveContainer>
+          ))}
+          {worlds.map((world) =>
+            visibleWorlds.has(world) ? (
+              <Scatter
+                key={world}
+                name={world}
+                data={byWorld.get(world)}
+                fill={worldColor.get(world)}
+                line={false}
+                shape="circle"
+                opacity={0.7}
+              />
+            ) : null,
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

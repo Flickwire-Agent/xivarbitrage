@@ -55,11 +55,19 @@ export function ItemPage() {
   }, [itemId]);
 
   if (!itemId) {
-    return <div className="notice error">No item specified</div>;
+    return (
+      <div className="notice error" role="alert">
+        No item specified
+      </div>
+    );
   }
 
   if (isLoading || !data) {
-    return <div className="notice">Loading...</div>;
+    return (
+      <div className="notice" role="status" aria-live="polite">
+        Loading...
+      </div>
+    );
   }
 
   return (

@@ -5,11 +5,15 @@ interface SelectFieldProps {
   onChange: (value: string) => void;
 }
 
+let selectIdCounter = 0;
+
 export function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+  const selectId = `select-${label.replace(/\s+/g, "-").toLowerCase()}-${++selectIdCounter}`;
+
   return (
-    <label className="selectField">
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
+    <div className="selectField">
+      <label htmlFor={selectId}>{label}</label>
+      <select id={selectId} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">Any</option>
         {options.map((option) => (
           <option value={option} key={option}>
@@ -17,6 +21,6 @@ export function SelectField({ label, value, options, onChange }: SelectFieldProp
           </option>
         ))}
       </select>
-    </label>
+    </div>
   );
 }

@@ -1,4 +1,8 @@
 :root {
+  --color-text-primary: #17212b;
+  --color-text-secondary: #3d4c5e;
+  --color-link: #295cb5;
+  --color-focus-ring: rgba(41, 92, 181, 0.35);
   color: #17212b;
   background: #f5f7fb;
   font-family:
@@ -75,8 +79,8 @@ select {
 }
 
 .searchBox input:focus {
-  border-color: #5a8dd8;
-  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.15);
+  border-color: #295cb5;
+  box-shadow: 0 0 0 3px rgba(41, 92, 181, 0.35);
 }
 
 :root[data-theme="dark"] .searchBox input {
@@ -86,8 +90,8 @@ select {
 }
 
 :root[data-theme="dark"] .searchBox input:focus {
-  border-color: #5a8dd8;
-  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.25);
+  border-color: #7ba3e8;
+  box-shadow: 0 0 0 3px rgba(123, 163, 232, 0.4);
 }
 
 .searchIcon {
@@ -95,7 +99,7 @@ select {
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #8a95a8;
+  color: #5d6e82;
   pointer-events: none;
 }
 
@@ -175,14 +179,14 @@ select {
 .searchResultInfo span {
   display: block;
   font-size: 0.78rem;
-  color: #687586;
+  color: #3d4c5e;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 :root[data-theme="dark"] .searchResultInfo span {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 @media (max-width: 780px) {
@@ -194,14 +198,14 @@ select {
 
 .eyebrow {
   margin: 0 0 6px;
-  color: #586575;
+  color: #3d4c5e;
   font-size: 0.82rem;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 :root[data-theme="dark"] .eyebrow {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 h1 {
@@ -265,13 +269,13 @@ h1 {
 .metricStrip span,
 td span {
   display: block;
-  color: #687586;
+  color: #3d4c5e;
   font-size: 0.82rem;
 }
 
 :root[data-theme="dark"] .metricStrip span,
 :root[data-theme="dark"] td span {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 .metricStrip strong {
@@ -306,14 +310,14 @@ td span {
 .numberField {
   display: grid;
   gap: 5px;
-  color: #526071;
+  color: #3d4c5e;
   font-size: 0.8rem;
   font-weight: 700;
 }
 
 :root[data-theme="dark"] .selectField,
 :root[data-theme="dark"] .numberField {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 select,
@@ -338,14 +342,14 @@ input {
 select:focus,
 input:focus {
   outline: none;
-  border-color: #5a8dd8;
-  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.1);
+  border-color: #295cb5;
+  box-shadow: 0 0 0 3px rgba(41, 92, 181, 0.35);
 }
 
 :root[data-theme="dark"] select:focus,
 :root[data-theme="dark"] input:focus {
-  border-color: #5a8dd8;
-  box-shadow: 0 0 0 3px rgba(90, 141, 216, 0.2);
+  border-color: #7ba3e8;
+  box-shadow: 0 0 0 3px rgba(123, 163, 232, 0.4);
 }
 
 .notice {
@@ -353,19 +357,19 @@ input:focus {
   border-radius: 8px;
   background: #ffffff;
   padding: 22px;
-  color: #526071;
+  color: #3d4c5e;
 }
 
 :root[data-theme="dark"] .notice {
   border-color: #2a3a4f;
   background: #1a2332;
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 .notice.error {
-  border-color: #f0b0a8;
+  border-color: #e89a90;
   background: #fff4f2;
-  color: #a23f31;
+  color: #882b1f;
   margin-bottom: 16px;
 }
 
@@ -385,13 +389,13 @@ input:focus {
 .tableFooter {
   padding: 8px 16px 12px;
   font-size: 0.82rem;
-  color: #687586;
+  color: #3d4c5e;
   border-top: 1px solid #eef2f7;
   margin: 0;
 }
 
 :root[data-theme="dark"] .tableFooter {
-  color: #8a95a8;
+  color: #a3b3c5;
   border-top-color: #2a3a4f;
 }
 
@@ -411,11 +415,11 @@ tr.clickable:hover {
 .cellSubtext {
   display: block;
   font-size: 0.82rem;
-  color: #687586;
+  color: #3d4c5e;
 }
 
 :root[data-theme="dark"] .cellSubtext {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 :root[data-theme="dark"] .tableShell {
@@ -443,13 +447,13 @@ td {
 }
 
 th {
-  color: #526071;
+  color: #3d4c5e;
   font-size: 0.78rem;
   text-transform: uppercase;
 }
 
 :root[data-theme="dark"] th {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 tbody tr:last-child td {
@@ -485,7 +489,7 @@ td strong {
 }
 
 a {
-  color: #5a8dd8;
+  color: #295cb5;
   text-decoration: none;
 }
 
@@ -495,6 +499,18 @@ a:hover {
 
 :root[data-theme="dark"] a {
   color: #7ba3e8;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 980px) {
@@ -570,8 +586,8 @@ a:hover {
 }
 
 .paginationPage.active {
-  border-color: #5a8dd8;
-  background: #5a8dd8;
+  border-color: #1a4795;
+  background: #1a4795;
   color: #ffffff;
   font-weight: 700;
 }
@@ -588,9 +604,9 @@ a:hover {
 }
 
 :root[data-theme="dark"] .paginationPage.active {
-  border-color: #5a8dd8;
-  background: #5a8dd8;
-  color: #ffffff;
+  border-color: #7ba3e8;
+  background: #7ba3e8;
+  color: #0f1419;
 }
 
 .paginationEllipsis {
@@ -599,7 +615,7 @@ a:hover {
   justify-content: center;
   width: 30px;
   height: 36px;
-  color: #687586;
+  color: #3d4c5e;
   font-size: 0.88rem;
 }
 
@@ -694,17 +710,17 @@ a:hover {
 .chartServerFilterLabel {
   font-weight: 700;
   font-size: 0.82rem;
-  color: #526071;
+  color: #3d4c5e;
 }
 
 :root[data-theme="dark"] .chartServerFilterLabel {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 .chartToggleAll {
   border: none;
   background: none;
-  color: #5a8dd8;
+  color: #295cb5;
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 700;
@@ -741,8 +757,17 @@ a:hover {
   background: #f5f7fb;
 }
 
-.serverTag input {
-  display: none;
+.serverTag[aria-pressed="true"] {
+  border-color: #295cb5;
+  background: #e8effa;
+  color: #295cb5;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .serverTag[aria-pressed="true"] {
+  border-color: #7ba3e8;
+  background: #1a2f4a;
+  color: #7ba3e8;
 }
 
 :root[data-theme="dark"] .serverTag {
@@ -788,7 +813,7 @@ a:hover {
   border-radius: 6px;
   font-size: 0.88rem;
   font-weight: 700;
-  color: #687586;
+  color: #3d4c5e;
   transition: all 0.2s ease;
 }
 
@@ -805,12 +830,12 @@ a:hover {
 
 .itemTab.active {
   color: #ffffff;
-  background: #5a8dd8;
+  background: #1a4795;
 }
 
 .itemTab.active:hover {
   color: #ffffff;
-  background: #5a8dd8;
+  background: #1a4795;
 }
 
 .discountCell strong {
@@ -818,21 +843,21 @@ a:hover {
 }
 
 .discountPositive {
-  color: #2a9d8f;
+  color: #166b5c;
 }
 
 :root[data-theme="dark"] .discountPositive {
-  color: #4ade80;
+  color: #6ee7b7;
 }
 
 .discountPct {
   display: block;
   font-size: 0.82rem;
-  color: #687586;
+  color: #3d4c5e;
 }
 
 :root[data-theme="dark"] .discountPct {
-  color: #8a95a8;
+  color: #a3b3c5;
 }
 
 .recharts-legend-item-text {
@@ -842,7 +867,7 @@ a:hover {
 .itemNameButton {
   background: none;
   border: none;
-  color: #5a8dd8;
+  color: #295cb5;
   cursor: pointer;
   font: inherit;
   padding: 0;
@@ -855,7 +880,7 @@ a:hover {
 
 .itemNameButton strong {
   display: block;
-  color: #5a8dd8;
+  color: #295cb5;
 }
 
 @media (max-width: 620px) {

@@ -1,7 +1,7 @@
 import type { ItemListing, ListingsResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, useNavigate, useParams } from "react-router-dom";
+import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 
 function getUniversalisUrl(itemId: number): string {
   return `https://universalis.app/market/${itemId}`;
@@ -9,6 +9,7 @@ function getUniversalisUrl(itemId: number): string {
 
 export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const [data, setData] = useState<ListingsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -84,7 +85,12 @@ export function ListingsPage() {
 
       <section className="itemDetailHeader">
         <div className="topBarLeft">
-          <button type="button" className="iconButton" onClick={() => navigate("/")}>
+          <button
+            type="button"
+            className="iconButton"
+            onClick={() => navigate("/")}
+            aria-label="Go back to opportunities"
+          >
             <ArrowLeft size={18} aria-hidden="true" />
             <span>Back</span>
           </button>
@@ -102,6 +108,7 @@ export function ListingsPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="iconButton"
+            aria-label="Open Universalis in new tab"
           >
             <ExternalLink size={18} aria-hidden="true" />
             <span>Universalis</span>
@@ -109,26 +116,36 @@ export function ListingsPage() {
         </div>
       </section>
 
-      <nav className="itemTabs">
+      <nav className="itemTabs" role="tablist" aria-label="Item details">
         <NavLink
           to={`/items/${itemId}`}
           end
           className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+          role="tab"
+          aria-selected={location.pathname === `/items/${itemId}`}
         >
           History
         </NavLink>
         <NavLink
           to={`/items/${itemId}/listings`}
           className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+          role="tab"
+          aria-selected={location.pathname === `/items/${itemId}/listings`}
         >
           Listings
         </NavLink>
       </nav>
 
-      {error ? <div className="notice error">{error}</div> : null}
+      {error ? (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      ) : null}
 
       {isLoading ? (
-        <div className="notice">Loading listings...</div>
+        <div className="notice" role="status" aria-live="polite">
+          Loading listings...
+        </div>
       ) : data ? (
         <>
           <section className="metricStrip" aria-label="Market summary">
@@ -159,15 +176,15 @@ export function ListingsPage() {
           {data.listings.length === 0 ? (
             <div className="notice">No current listings are priced below the recent average.</div>
           ) : (
-            <section className="tableShell">
+            <section className="tableShell" aria-label="Listings table">
               <table>
                 <thead>
                   <tr>
-                    <th>Server</th>
-                    <th>Data Center</th>
-                    <th>Listed price</th>
-                    <th>Quantity</th>
-                    <th>Discount</th>
+                    <th scope="col">Server</th>
+                    <th scope="col">Data Center</th>
+                    <th scope="col">Listed price</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Discount</th>
                   </tr>
                 </thead>
                 <tbody>

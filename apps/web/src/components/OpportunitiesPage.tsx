@@ -160,7 +160,8 @@ export function OpportunitiesPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <NavLink to="/bargains" className="iconButton">
+          <NavLink to="/bargains" className="iconButton" aria-label="View bargains">
+            <TrendingUp size={16} aria-hidden="true" />
             <span>Bargains</span>
           </NavLink>
           <a
@@ -221,6 +222,7 @@ export function OpportunitiesPage() {
       </section>
 
       <section className="toolbar" aria-label="Filters">
+        <h2 className="srOnly">Filters</h2>
         <div className="toolbarTitle">
           <Filter size={18} aria-hidden="true" />
           <span>Filters</span>
@@ -268,7 +270,11 @@ export function OpportunitiesPage() {
         </label>
       </section>
 
-      {error ? <div className="notice error">{error}</div> : null}
+      {error ? (
+        <div className="notice error" role="alert">
+          {error}
+        </div>
+      ) : null}
       <OpportunityTable opportunities={opportunities} isLoading={isLoading} />
       {data && data.total > DEFAULT_PAGE_SIZE ? (
         <nav className="pagination" aria-label="Pagination">

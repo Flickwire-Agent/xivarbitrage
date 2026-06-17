@@ -9,7 +9,11 @@ interface OpportunityTableProps {
 export function OpportunityTable({ opportunities, isLoading }: OpportunityTableProps) {
   const navigate = useNavigate();
   if (isLoading && opportunities.length === 0) {
-    return <div className="notice">Scanning market board data...</div>;
+    return (
+      <div className="notice" role="status" aria-live="polite">
+        Scanning market board data...
+      </div>
+    );
   }
 
   if (opportunities.length === 0) {
@@ -17,15 +21,15 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
   }
 
   return (
-    <section className="tableShell" aria-busy={isLoading}>
+    <section className="tableShell" aria-busy={isLoading} aria-label="Opportunities table">
       <table>
         <thead>
           <tr>
-            <th>Item</th>
-            <th>Buy from</th>
-            <th>Sell to</th>
-            <th>Net spread</th>
-            <th>Volume</th>
+            <th scope="col">Item</th>
+            <th scope="col">Buy from</th>
+            <th scope="col">Sell to</th>
+            <th scope="col">Net spread</th>
+            <th scope="col">Volume</th>
           </tr>
         </thead>
         <tbody>
@@ -43,7 +47,7 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
                       type="button"
                       className="itemNameButton"
                       onClick={() => navigate(`/items/${opportunity.itemId}`)}
-                      title="View sale history"
+                      aria-label={`View sale history for ${opportunity.item.name}`}
                     >
                       <strong>{opportunity.item.name}</strong>
                     </button>

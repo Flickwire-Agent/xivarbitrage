@@ -1,7 +1,7 @@
 import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { SaleHistoryChart } from "./SaleHistoryChart.js";
 
 interface SaleHistoryViewProps {
@@ -14,6 +14,7 @@ function getUniversalisUrl(itemId: number): string {
 }
 
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
+  const location = useLocation();
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
 
   const saleStats = useMemo(() => {
@@ -63,6 +64,7 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="iconButton"
+            aria-label="Open Universalis in new tab"
           >
             <ExternalLink size={18} aria-hidden="true" />
             <span>Universalis</span>
@@ -70,17 +72,21 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
         </div>
       </section>
 
-      <nav className="itemTabs">
+      <nav className="itemTabs" role="tablist" aria-label="Item details">
         <NavLink
           to={`/items/${data.itemId}`}
           end
           className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+          role="tab"
+          aria-selected={location.pathname === `/items/${data.itemId}`}
         >
           History
         </NavLink>
         <NavLink
           to={`/items/${data.itemId}/listings`}
           className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+          role="tab"
+          aria-selected={location.pathname === `/items/${data.itemId}/listings`}
         >
           Listings
         </NavLink>
@@ -115,7 +121,7 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
         </section>
       ) : null}
 
-      <section className="chartShell">
+      <section className="chartShell" aria-label="Server filter">
         <div className="chartServerFilter">
           <span className="chartServerFilterLabel">Servers</span>
           <button
@@ -128,25 +134,27 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
                 setVisibleWorlds(new Set());
               }
             }}
+            aria-label={allHidden ? "Show all servers" : "Hide all servers"}
           >
             {allHidden ? "Show all" : "Hide all"}
           </button>
         </div>
-        <div className="chartServerTags">
+        <div className="chartServerTags" role="group" aria-label="Toggle server visibility">
           {data.worlds.map((world) => (
-            <label key={world} className="serverTag">
-              <input
-                type="checkbox"
-                checked={visibleWorlds.has(world)}
-                onChange={() => toggleWorld(world)}
-              />
-              <span>{world}</span>
-            </label>
+            <button
+              key={world}
+              type="button"
+              className={`serverTag${visibleWorlds.has(world) ? "" : ""}`}
+              onClick={() => toggleWorld(world)}
+              aria-pressed={visibleWorlds.has(world)}
+            >
+              {world}
+            </button>
           ))}
         </div>
       </section>
 
-      <section className="chartShell">
+      <section className="chartShell" aria-label="Sale history chart">
         <SaleHistoryChart
           sales={data.sales}
           visibleWorlds={visibleWorlds}

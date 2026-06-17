@@ -80,7 +80,8 @@ export function SearchBox() {
       case "Enter":
         e.preventDefault();
         if (selectedIndex >= 0 && selectedIndex < results.length) {
-          selectItem(results[selectedIndex]);
+          const item = results[selectedIndex]!;
+          selectItem(item);
         }
         break;
       case "Escape":
@@ -89,9 +90,11 @@ export function SearchBox() {
     }
   }
 
+  const listboxId = "search-listbox";
+
   return (
     <div className="searchBox" ref={containerRef}>
-      <Search size={16} className="searchIcon" />
+      <Search size={16} className="searchIcon" aria-hidden="true" />
       <input
         ref={inputRef}
         type="text"
@@ -101,14 +104,24 @@ export function SearchBox() {
         onFocus={() => results.length > 0 && setIsOpen(true)}
         onKeyDown={handleKeyDown}
         aria-label="Search items"
+        aria-controls={listboxId}
+        aria-activedescendant={
+          selectedIndex >= 0 && isOpen && results[selectedIndex]
+            ? `search-result-${results[selectedIndex].id}`
+            : undefined
+        }
+        aria-expanded={isOpen && results.length > 0}
+        aria-autocomplete="list"
         autoComplete="off"
+        role="combobox"
         spellCheck={false}
       />
       {isOpen && results.length > 0 ? (
-        <div className="searchDropdown" role="listbox">
+        <div className="searchDropdown" role="listbox" id={listboxId}>
           {results.map((item, i) => (
             <div
               key={item.id}
+              id={`search-result-${item.id}`}
               className={`searchResult${i === selectedIndex ? " active" : ""}`}
               role="option"
               aria-selected={i === selectedIndex}
