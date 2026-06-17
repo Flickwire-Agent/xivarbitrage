@@ -1,12 +1,13 @@
 import type { ArbitrageOpportunity } from "@xiv-arbitrage/shared";
+import { useNavigate } from "react-router-dom";
 
 interface OpportunityTableProps {
   opportunities: ArbitrageOpportunity[];
   isLoading: boolean;
-  onItemClick?: (itemId: number, itemName: string) => void;
 }
 
-export function OpportunityTable({ opportunities, isLoading, onItemClick }: OpportunityTableProps) {
+export function OpportunityTable({ opportunities, isLoading }: OpportunityTableProps) {
+  const navigate = useNavigate();
   if (isLoading && opportunities.length === 0) {
     return <div className="notice">Scanning market board data...</div>;
   }
@@ -41,7 +42,7 @@ export function OpportunityTable({ opportunities, isLoading, onItemClick }: Oppo
                     <button
                       type="button"
                       className="itemNameButton"
-                      onClick={() => onItemClick?.(opportunity.itemId, opportunity.item.name)}
+                      onClick={() => navigate(`/items/${opportunity.itemId}`)}
                       title="View sale history"
                     >
                       <strong>{opportunity.item.name}</strong>

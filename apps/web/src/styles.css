@@ -102,7 +102,7 @@ h1 {
 
 .metricStrip {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -322,11 +322,6 @@ a:hover {
 }
 
 @media (max-width: 980px) {
-  .topBar,
-  .metricStrip {
-    grid-template-columns: 1fr;
-  }
-
   .topBar {
     align-items: flex-start;
     flex-direction: column;
@@ -338,6 +333,27 @@ a:hover {
 
   .toolbarTitle {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 780px) {
+  .topBarLeft {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .chartShell {
+    margin-left: -10px;
+    margin-right: -10px;
+    padding: 12px;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
 }
 
@@ -440,10 +456,21 @@ a:hover {
   min-width: 0;
 }
 
+.itemDetailTitle {
+  min-width: 0;
+}
+
 .itemDetailTitle h1 {
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(1.1rem, 3vw, 2rem);
+}
+
+.itemDetailTitle .eyebrow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .itemDetailIcon {
@@ -464,6 +491,16 @@ a:hover {
   background: #ffffff;
   padding: 20px;
   margin-bottom: 16px;
+}
+
+.chartShell .recharts-responsive-container {
+  height: 450px;
+}
+
+@media (max-width: 620px) {
+  .chartShell .recharts-responsive-container {
+    height: 300px;
+  }
 }
 
 :root[data-theme="dark"] .chartShell {
@@ -569,11 +606,7 @@ a:hover {
 @media (max-width: 620px) {
   .appShell {
     width: min(100vw - 20px, 1480px);
-    padding: 18px 0;
-  }
-
-  .toolbar {
-    grid-template-columns: 1fr;
+    padding: 12px 0;
   }
 
   .paginationPages {
@@ -584,5 +617,19 @@ a:hover {
     min-width: 32px;
     height: 32px;
     font-size: 0.82rem;
+  }
+
+  .iconButton span {
+    display: none;
+  }
+
+  .iconButton {
+    padding: 0 10px;
+    min-height: 36px;
+  }
+
+  .itemDetailIcon {
+    width: 36px;
+    height: 36px;
   }
 }
