@@ -205,6 +205,50 @@ export class MarketSnapshotStore {
     }));
   }
 
+  async getCurrentListings(itemId: number): Promise<{
+    listings: { worldId: number; worldName: string; pricePerUnit: number; quantity: number }[];
+    saleStats: { avgPrice: number; count: number } | null;
+  }> {
+    if (!this.pool) return { listings: [], saleStats: null };
+
+    await this.init();
+
+    const [snapshotResult, saleStatsResult] = await Promise.all([
+      this.pool.query<{ data: UniversalisMarketData }>(
+        `SELECT data FROM market_snapshots WHERE item_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
+        [itemId],
+      ),
+      this.pool.query<{ avg_price: number; count: number }>(
+        `SELECT AVG(price_per_unit)::numeric as avg_price, COUNT(*)::int as count
+         FROM sale_history
+         WHERE item_id = $1 AND sold_at > now() - interval '14 days'`,
+        [itemId],
+      ),
+    ]);
+
+    const data = snapshotResult.rows[0]?.data;
+    if (!data?.listings) return { listings: [], saleStats: null };
+
+    const saleStats = saleStatsResult.rows[0]?.avg_price
+      ? {
+          avgPrice: Math.round(Number(saleStatsResult.rows[0].avg_price)),
+          count: Number(saleStatsResult.rows[0].count),
+        }
+      : null;
+
+    return {
+      listings: data.listings
+        .filter((l) => l.pricePerUnit > 0)
+        .map((l) => ({
+          worldId: l.worldID ?? 0,
+          worldName: l.worldName ?? "Unknown",
+          pricePerUnit: l.pricePerUnit,
+          quantity: l.quantity,
+        })),
+      saleStats,
+    };
+  }
+
   async pruneOldSales(): Promise<number> {
     if (!this.pool) return 0;
 

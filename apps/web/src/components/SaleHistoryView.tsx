@@ -1,6 +1,7 @@
 import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
+import { NavLink } from "react-router-dom";
 import { SaleHistoryChart } from "./SaleHistoryChart.js";
 
 interface SaleHistoryViewProps {
@@ -68,6 +69,22 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
           </a>
         </div>
       </section>
+
+      <nav className="itemTabs">
+        <NavLink
+          to={`/items/${data.itemId}`}
+          end
+          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        >
+          History
+        </NavLink>
+        <NavLink
+          to={`/items/${data.itemId}/listings`}
+          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        >
+          Listings
+        </NavLink>
+      </nav>
 
       {saleStats ? (
         <section className="metricStrip" aria-label="Sale summary">

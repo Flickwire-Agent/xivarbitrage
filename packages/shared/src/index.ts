@@ -65,6 +65,24 @@ export interface ItemHistoryResponse {
   worldDataCenters: Record<number, string>;
 }
 
+export interface ItemListing {
+  worldId: number;
+  worldName: string;
+  dataCenter: string;
+  pricePerUnit: number;
+  quantity: number;
+  recentAvgPrice: number;
+  discount: number;
+  discountPercent: number;
+}
+
+export interface ListingsResponse {
+  itemId: number;
+  item: ItemDetails;
+  listings: ItemListing[];
+  saleStats: { avgPrice: number; count: number } | null;
+}
+
 export interface OpportunityResponse {
   generatedAt: string;
   filters: OpportunityFilters;

@@ -124,6 +124,55 @@ export async function opportunityRoutes(app: FastifyInstance) {
     return response;
   });
 
+  app.get<{ Params: { itemId: string } }>("/items/:itemId/listings", async (request, reply) => {
+    const itemId = Number(request.params.itemId);
+
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+      return reply.status(400).send({ error: "Invalid item ID" });
+    }
+
+    const [listingData, item, dcList] = await Promise.all([
+      marketSnapshotStore.getCurrentListings(itemId),
+      new XivApiClient().getItemDetails(itemId),
+      universalis.getDataCenters(),
+    ]);
+
+    if (!item) {
+      return reply.status(404).send({ error: "Item not found" });
+    }
+
+    const worldDataCenters: Record<number, string> = {};
+    for (const dc of dcList) {
+      for (const wid of dc.worlds) {
+        worldDataCenters[wid] = dc.name;
+      }
+    }
+
+    const avgPrice = listingData.saleStats?.avgPrice ?? 0;
+
+    const listings = listingData.listings
+      .map((l) => ({
+        worldId: l.worldId,
+        worldName: l.worldName,
+        dataCenter: worldDataCenters[l.worldId] ?? "Unknown",
+        pricePerUnit: l.pricePerUnit,
+        quantity: l.quantity,
+        recentAvgPrice: avgPrice,
+        discount: avgPrice - l.pricePerUnit,
+        discountPercent:
+          avgPrice > 0 ? Math.round(((avgPrice - l.pricePerUnit) / avgPrice) * 100) : 0,
+      }))
+      .filter((l) => l.discount > 0)
+      .sort((a, b) => b.discountPercent - a.discountPercent);
+
+    return {
+      itemId,
+      item,
+      listings,
+      saleStats: listingData.saleStats,
+    };
+  });
+
   app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {
     const itemId = Number(request.params.itemId);
 

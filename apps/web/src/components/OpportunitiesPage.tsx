@@ -37,15 +37,18 @@ export function OpportunitiesPage() {
     localStorage.setItem("darkMode", String(isDarkMode));
   }, [isDarkMode]);
 
-  const filters: OpportunityFilters = useMemo(() => ({
-    profile: (searchParams.get("profile") as OpportunityFilters["profile"]) ?? "all",
-    sort: (searchParams.get("sort") as OpportunityFilters["sort"]) ?? "best",
-    highWorld: searchParams.get("highWorld") ?? undefined,
-    highDataCenter: searchParams.get("highDataCenter") ?? undefined,
-    category: searchParams.get("category") ?? undefined,
-    minVolume: searchParams.get("minVolume") ? Number(searchParams.get("minVolume")) : undefined,
-    perPage: DEFAULT_PAGE_SIZE,
-  }), [searchParams]);
+  const filters: OpportunityFilters = useMemo(
+    () => ({
+      profile: (searchParams.get("profile") as OpportunityFilters["profile"]) ?? "all",
+      sort: (searchParams.get("sort") as OpportunityFilters["sort"]) ?? "best",
+      highWorld: searchParams.get("highWorld") ?? undefined,
+      highDataCenter: searchParams.get("highDataCenter") ?? undefined,
+      category: searchParams.get("category") ?? undefined,
+      minVolume: searchParams.get("minVolume") ? Number(searchParams.get("minVolume")) : undefined,
+      perPage: DEFAULT_PAGE_SIZE,
+    }),
+    [searchParams],
+  );
 
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
 
