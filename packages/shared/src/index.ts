@@ -80,7 +80,11 @@ export interface ListingsResponse {
   itemId: number;
   item: ItemDetails;
   listings: ItemListing[];
-  saleStats: { avgPrice: number; count: number } | null;
+  saleStats: {
+    avgPrice: number;
+    count: number;
+    perDataCenter: Record<string, { avgPrice: number; count: number }>;
+  } | null;
 }
 
 export interface OpportunityResponse {

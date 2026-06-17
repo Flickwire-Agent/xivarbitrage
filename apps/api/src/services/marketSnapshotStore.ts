@@ -207,19 +207,20 @@ export class MarketSnapshotStore {
 
   async getCurrentListings(itemId: number): Promise<{
     listings: { worldId: number; worldName: string; pricePerUnit: number; quantity: number }[];
-    saleStats: { avgPrice: number; count: number } | null;
+    sales: { worldId: number; pricePerUnit: number }[];
+    saleStats: { count: number };
   }> {
-    if (!this.pool) return { listings: [], saleStats: null };
+    if (!this.pool) return { listings: [], sales: [], saleStats: { count: 0 } };
 
     await this.init();
 
-    const [snapshotResult, saleStatsResult] = await Promise.all([
+    const [snapshotResult, saleRecordsResult] = await Promise.all([
       this.pool.query<{ data: UniversalisMarketData }>(
         `SELECT data FROM market_snapshots WHERE item_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
         [itemId],
       ),
-      this.pool.query<{ avg_price: number; count: number }>(
-        `SELECT AVG(price_per_unit)::numeric as avg_price, COUNT(*)::int as count
+      this.pool.query<{ world_id: number; price_per_unit: number }>(
+        `SELECT world_id, price_per_unit
          FROM sale_history
          WHERE item_id = $1 AND sold_at > now() - interval '14 days'`,
         [itemId],
@@ -227,14 +228,7 @@ export class MarketSnapshotStore {
     ]);
 
     const data = snapshotResult.rows[0]?.data;
-    if (!data?.listings) return { listings: [], saleStats: null };
-
-    const saleStats = saleStatsResult.rows[0]?.avg_price
-      ? {
-          avgPrice: Math.round(Number(saleStatsResult.rows[0].avg_price)),
-          count: Number(saleStatsResult.rows[0].count),
-        }
-      : null;
+    if (!data?.listings) return { listings: [], sales: [], saleStats: { count: 0 } };
 
     return {
       listings: data.listings
@@ -245,7 +239,11 @@ export class MarketSnapshotStore {
           pricePerUnit: l.pricePerUnit,
           quantity: l.quantity,
         })),
-      saleStats,
+      sales: saleRecordsResult.rows.map((r) => ({
+        worldId: r.world_id,
+        pricePerUnit: r.price_per_unit,
+      })),
+      saleStats: { count: saleRecordsResult.rows.length },
     };
   }
 

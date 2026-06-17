@@ -134,14 +134,6 @@ export function ListingsPage() {
           <section className="metricStrip" aria-label="Market summary">
             <article>
               <div>
-                <span>Recent avg price</span>
-                <strong>
-                  {data.saleStats ? `${data.saleStats.avgPrice.toLocaleString()} gil` : "N/A"}
-                </strong>
-              </div>
-            </article>
-            <article>
-              <div>
                 <span>Recent sales</span>
                 <strong>{data.saleStats?.count.toLocaleString() ?? "N/A"}</strong>
               </div>
@@ -152,6 +144,16 @@ export function ListingsPage() {
                 <strong>{data.listings.length.toLocaleString()}</strong>
               </div>
             </article>
+            {data.saleStats?.perDataCenter
+              ? Object.entries(data.saleStats.perDataCenter).map(([dc, stats]) => (
+                  <article key={dc}>
+                    <div>
+                      <span>{dc} avg</span>
+                      <strong>{stats.avgPrice.toLocaleString()} gil</strong>
+                    </div>
+                  </article>
+                ))
+              : null}
           </section>
 
           {data.listings.length === 0 ? (

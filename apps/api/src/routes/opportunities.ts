@@ -10,6 +10,42 @@ import pg from "pg";
 
 const { Pool } = pg;
 
+function median(sorted: number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1]! + sorted[mid]!) / 2;
+  }
+  return sorted[mid]!;
+}
+
+/** Compute IQR-filtered average from an array of prices. */
+function iqrAverage(prices: number[]): number | null {
+  if (prices.length === 0) return null;
+  if (prices.length <= 3) {
+    return Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
+  }
+
+  const sorted = [...prices].sort((a, b) => a - b);
+  const n = sorted.length;
+
+  const lowerHalf = sorted.slice(0, Math.floor(n / 2));
+  const upperHalf = sorted.slice(Math.ceil(n / 2));
+
+  const q1 = median(lowerHalf);
+  const q3 = median(upperHalf);
+  const iqr = q3 - q1;
+
+  const lowerBound = q1 - 1.5 * iqr;
+  const upperBound = q3 + 1.5 * iqr;
+
+  const filtered = sorted.filter((p) => p >= lowerBound && p <= upperBound);
+  if (filtered.length === 0) {
+    return Math.round(sorted.reduce((a, b) => a + b, 0) / n);
+  }
+
+  return Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
+}
+
 const querySchema = z.object({
   highWorld: z.string().optional(),
   highDataCenter: z.string().optional(),
@@ -148,20 +184,43 @@ export async function opportunityRoutes(app: FastifyInstance) {
       }
     }
 
-    const avgPrice = listingData.saleStats?.avgPrice ?? 0;
+    // Group sale records by data center
+    const dcPrices: Record<string, number[]> = {};
+    for (const sale of listingData.sales) {
+      const dc = worldDataCenters[sale.worldId];
+      if (!dc) continue;
+      if (!dcPrices[dc]) dcPrices[dc] = [];
+      dcPrices[dc].push(sale.pricePerUnit);
+    }
+
+    // Compute IQR-filtered average per data center
+    const dcAverages: Record<string, { avgPrice: number; count: number }> = {};
+    for (const [dc, prices] of Object.entries(dcPrices)) {
+      const avg = iqrAverage(prices);
+      if (avg !== null) {
+        dcAverages[dc] = { avgPrice: avg, count: prices.length };
+      }
+    }
+
+    // Fallback global IQR average for worlds/DCs with no sale data
+    const allPrices = listingData.sales.map((s) => s.pricePerUnit);
+    const globalAvg = iqrAverage(allPrices);
 
     const listings = listingData.listings
-      .map((l) => ({
-        worldId: l.worldId,
-        worldName: l.worldName,
-        dataCenter: worldDataCenters[l.worldId] ?? "Unknown",
-        pricePerUnit: l.pricePerUnit,
-        quantity: l.quantity,
-        recentAvgPrice: avgPrice,
-        discount: avgPrice - l.pricePerUnit,
-        discountPercent:
-          avgPrice > 0 ? Math.round(((avgPrice - l.pricePerUnit) / avgPrice) * 100) : 0,
-      }))
+      .map((l) => {
+        const dc = worldDataCenters[l.worldId] ?? "Unknown";
+        const dcAvg = dcAverages[dc]?.avgPrice ?? globalAvg ?? 0;
+        return {
+          worldId: l.worldId,
+          worldName: l.worldName,
+          dataCenter: dc,
+          pricePerUnit: l.pricePerUnit,
+          quantity: l.quantity,
+          recentAvgPrice: dcAvg,
+          discount: dcAvg - l.pricePerUnit,
+          discountPercent: dcAvg > 0 ? Math.round(((dcAvg - l.pricePerUnit) / dcAvg) * 100) : 0,
+        };
+      })
       .filter((l) => l.discount > 0)
       .sort((a, b) => b.discountPercent - a.discountPercent);
 
@@ -169,7 +228,11 @@ export async function opportunityRoutes(app: FastifyInstance) {
       itemId,
       item,
       listings,
-      saleStats: listingData.saleStats,
+      saleStats: {
+        avgPrice: globalAvg ?? 0,
+        count: listingData.saleStats.count,
+        perDataCenter: dcAverages,
+      },
     };
   });
 
