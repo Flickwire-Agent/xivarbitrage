@@ -21,8 +21,12 @@ export interface ArbitrageOpportunity {
   item: ItemDetails;
   low: WorldPrice;
   high: WorldPrice;
+  grossSpread: number;
+  grossSpreadPercent: number;
   spread: number;
   spreadPercent: number;
+  netBuyPrice: number;
+  netSellPrice: number;
   recentSales: number;
   averageSalePrice: number;
   velocityScore: number;

@@ -163,7 +163,14 @@ export class ArbitrageService {
       const high = highPrices.reduce((best, price) =>
         price.pricePerUnit > best.pricePerUnit ? price : best,
       );
-      const spread = high.pricePerUnit - low.pricePerUnit;
+      const grossSpread = high.pricePerUnit - low.pricePerUnit;
+      const grossSpreadPercent = low.pricePerUnit > 0 ? (grossSpread / low.pricePerUnit) * 100 : 0;
+
+      // FFXIV marketboard: 5% tax on purchases, 5% commission on sales
+      const netBuyPrice = low.pricePerUnit * (1 + config.marketBuyTaxRate);
+      const netSellPrice = high.pricePerUnit * (1 - config.marketSellTaxRate);
+      const spread = netSellPrice - netBuyPrice;
+      const spreadPercent = netBuyPrice > 0 ? (spread / netBuyPrice) * 100 : 0;
 
       if (spread <= 0) {
         return null;
@@ -179,8 +186,12 @@ export class ArbitrageService {
         item,
         low,
         high,
+        grossSpread,
+        grossSpreadPercent,
         spread,
-        spreadPercent: low.pricePerUnit > 0 ? (spread / low.pricePerUnit) * 100 : 0,
+        spreadPercent,
+        netBuyPrice,
+        netSellPrice,
         recentSales,
         averageSalePrice,
         velocityScore: recentSales * Math.max(1, averageSalePrice),

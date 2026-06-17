@@ -11,4 +11,6 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL,
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379",
   jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4),
+  marketBuyTaxRate: Number(process.env.MARKET_BUY_TAX_RATE ?? 0.05),
+  marketSellTaxRate: Number(process.env.MARKET_SELL_TAX_RATE ?? 0.05),
 };

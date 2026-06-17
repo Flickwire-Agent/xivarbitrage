@@ -26,7 +26,7 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
             <th>Item</th>
             <th>Buy from</th>
             <th>Sell to</th>
-            <th>Spread</th>
+            <th>Net spread</th>
             <th>Volume</th>
           </tr>
         </thead>
@@ -54,20 +54,25 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
                 </div>
               </td>
               <td>
-                <strong>{opportunity.low.pricePerUnit.toLocaleString()} gil</strong>
+                <strong>{opportunity.netBuyPrice.toLocaleString()} gil</strong>
                 <span>
                   {opportunity.low.worldName}, {opportunity.low.dataCenter}
+                  &ensp;(list {opportunity.low.pricePerUnit.toLocaleString()})
                 </span>
               </td>
               <td>
-                <strong>{opportunity.high.pricePerUnit.toLocaleString()} gil</strong>
+                <strong>{opportunity.netSellPrice.toLocaleString()} gil</strong>
                 <span>
                   {opportunity.high.worldName}, {opportunity.high.dataCenter}
+                  &ensp;(sale {opportunity.high.pricePerUnit.toLocaleString()})
                 </span>
               </td>
               <td>
                 <strong>{opportunity.spread.toLocaleString()} gil</strong>
-                <span>{opportunity.spreadPercent.toFixed(1)}%</span>
+                <span>
+                  {opportunity.spreadPercent.toFixed(1)}% net &ensp;(
+                  {opportunity.grossSpreadPercent.toFixed(1)}% gross)
+                </span>
               </td>
               <td>
                 <strong>{opportunity.recentSales.toLocaleString()}</strong>
