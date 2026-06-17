@@ -167,8 +167,8 @@ export class ArbitrageService {
       const grossSpreadPercent = low.pricePerUnit > 0 ? (grossSpread / low.pricePerUnit) * 100 : 0;
 
       // FFXIV marketboard: 5% tax on purchases, 5% commission on sales
-      const netBuyPrice = low.pricePerUnit * (1 + config.marketBuyTaxRate);
-      const netSellPrice = high.pricePerUnit * (1 - config.marketSellTaxRate);
+      const netBuyPrice = Math.round(low.pricePerUnit * (1 + config.marketBuyTaxRate));
+      const netSellPrice = Math.round(high.pricePerUnit * (1 - config.marketSellTaxRate));
       const spread = netSellPrice - netBuyPrice;
       const spreadPercent = netBuyPrice > 0 ? (spread / netBuyPrice) * 100 : 0;
 
