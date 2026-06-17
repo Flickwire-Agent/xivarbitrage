@@ -7,9 +7,9 @@ import type { EvaluateItemJob } from "./jobQueue.js";
 const { Pool } = pg;
 
 // Target regions for market scanning.
-// To re-enable additional regions, add them back to this array:
-//   "North-America" | "Europe" | "Oceania"
-const TARGET_REGIONS = ["Europe"];
+// Materia (Oceania) characters can data-center-travel to all regions,
+// so scanning all three covers every server reachable from Materia.
+const TARGET_REGIONS = ["North-America", "Europe", "Oceania"];
 
 export class JobScheduler {
   private db: pg.Pool;
