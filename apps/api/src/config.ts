@@ -13,4 +13,6 @@ export const config = {
   jobQueueConcurrency: Number(process.env.JOB_QUEUE_CONCURRENCY ?? 4),
   marketBuyTaxRate: Number(process.env.MARKET_BUY_TAX_RATE ?? 0.05),
   marketSellTaxRate: Number(process.env.MARKET_SELL_TAX_RATE ?? 0.05),
+  arbitrageMinSales: Number(process.env.ARBITRAGE_MIN_SALES ?? 2),
+  arbitrageMaxPriceRatio: Number(process.env.ARBITRAGE_MAX_PRICE_RATIO ?? 20),
 };

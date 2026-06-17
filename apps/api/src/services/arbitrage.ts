@@ -179,6 +179,24 @@ export class ArbitrageService {
       const recentSales = totalRecentSales;
       const averageSalePrice =
         dataPointCount > 0 ? Math.round(totalAveragePrice / dataPointCount) : 0;
+
+      // Gil laundering detection: filter out transactions where a normally
+      // worthless item is sold for a ridiculous price to move gil between characters
+      if (recentSales < config.arbitrageMinSales) {
+        return null;
+      }
+
+      const priceRatio =
+        averageSalePrice > 0
+          ? high.pricePerUnit / averageSalePrice
+          : low.pricePerUnit > 0
+            ? high.pricePerUnit / low.pricePerUnit
+            : 0;
+
+      if (priceRatio > config.arbitrageMaxPriceRatio) {
+        return null;
+      }
+
       const item = await this.xivapi.getItemDetails(itemId);
 
       return {
