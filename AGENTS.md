@@ -134,10 +134,10 @@ apps/
         jobQueue.ts, jobScheduler.ts, opportunityWorker.ts  (BullMQ)
       db/migrations.ts
       data/worlds.ts
-  web/            React SPA (Vite) — opportunity display, item history/bargains
+  web/            React SPA (Vite) — DC disparities, bargains, item history
     src/
       App.tsx, styles.css
-      components/  (OpportunityTable, SelectField, SaleHistoryView, SaleHistoryChart, ListingsPage, ItemPage, OpportunitiesPage)
+      components/  (DcDisparitiesPage, BargainsPage, ItemPage, ListingsPage, SaleHistoryView, SaleHistoryChart, SearchBox, SelectField)
 packages/
   shared/         Shared TypeScript types (ItemHistoryResponse, ListingsResponse, etc.)
 ```
@@ -170,8 +170,20 @@ ARBITRAGE_MAX_CONCURRENCY=4
 
 ### `GET /api/opportunities`
 
-Arbitrage opportunities (cached, refreshed every 15 min).
+Arbitrage opportunities (cached, refreshed every 15 min) — world-to-world arbitrage.
 Query params: `?limit=50&sort=best|spread|volume|velocity&highWorld=X&category=X&minSpread=500&includeHistory=true&refresh=true`
+
+### `GET /api/dc-disparities`
+
+DC average price disparities across all marketable items (cached, refreshed every 15 min).
+Query params: `?highDc=X&lowDc=X&region=X&sort=spread|spreadPercent&minSpread=1000`
+Returns all items from `marketable_items` — items without sale data show as "No sale data".
+
+### `GET /api/bargains`
+
+Items with current listings priced ≥20% below global IQR average price (cached, refreshed every 15 min).
+DC average comparison was removed — now uses global IQR average exclusively.
+Top 200 discounts, paginated. Query params: `?page=1&perPage=50`
 
 ### `GET /api/health`
 
@@ -187,7 +199,7 @@ Sale history for an item, with DC daily averages and world data center mappings.
 
 ### `GET /api/items/:itemId/listings`
 
-Current marketboard listings priced below 14-day average, sorted by discount %.
+Current marketboard listings priced below DC IQR average, sorted by discount %.
 
 ## Database Schema
 
@@ -195,6 +207,7 @@ Current marketboard listings priced below 14-day average, sorted by discount %.
 - **market_snapshots**: `(item_id, region, data jsonb, fetched_at PK composite)` — full Universalis responses
 - **sale_history**: `(id, item_id, world_id, price_per_unit, quantity, timestamp)` — individual sale records
 - **job_history**: `(id, job_id, item_id, region, status, error_message, completed_at)` — audit trail
+- **dc_item_averages**: `(item_id, data_center PK, avg_price, sale_count, computed_at)` — IQR-filtered DC averages, recomputed hourly
 
 ## Key Architectural Patterns
 
@@ -225,6 +238,7 @@ pnpm run -r --filter=@xiv-arbitrage/web build
 
 - **Arbitrage spread**: Low side = cheapest current listing (buy price); High side = highest recent _sold_ price (actual transactions, not listings)
 - **Universalis timestamps**: API returns seconds; `new Date(s * 1000)` required
-- **Routing**: react-router-dom v7 with URL search params for filters; lazy-loaded chunks (shell 236 kB, list 10 kB, detail 373 kB, listings 4 kB, bargains 3 kB)
-- **Bargains page** (`/bargains`): cross-item bargains cache refreshed every 15 min; queries all items with recent snapshots + sale history, groups by (item_id, data_center), applies IQR outlier exclusion, returns top 200 discounts
+- **Routing**: wouter with URL search params for filters; lazy-loaded chunks (shell 236 kB, disparities list 8 kB, detail 373 kB, listings 4 kB, bargains 4 kB)
+- **Disparities page** (`/`): DC average price disparities across all ~10k `marketable_items`, sorted by spread descending. Items without sale data show "No sale data". Items available in only one DC show its price without a disparity. Uses IQR-filtered DC averages from `dc_item_averages` table with minimum 1 sale per DC.
+- **Bargains page** (`/bargains`): items with current listings priced ≥20% below global IQR average price. Uses global IQR average exclusively (not per-DC average). Refreshed every 15 min, returns top 200.
 - **DC average lines**: `ComposedChart` with scatter (world sales) + Line (DC daily avg)
