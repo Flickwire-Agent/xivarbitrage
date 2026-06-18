@@ -1,18 +1,14 @@
-import pg from "pg";
+import { pool } from "./pool.js";
 
-const { Pool } = pg;
+export async function runMigrations(): Promise<void> {
+  if (!pool) {
+    console.log("No database configured, skipping migrations");
+    return;
+  }
 
-export async function runMigrations(connectionString: string): Promise<void> {
-  const pool = new Pool({
-    connectionString,
-    ssl: connectionString.includes("localhost") ? false : { rejectUnauthorized: false },
-  });
+  console.log("Starting database migrations...");
 
-  try {
-    console.log("Starting database migrations...");
-
-    // Create market_snapshots table
-    await pool.query(`
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS market_snapshots (
         item_id integer NOT NULL,
         region text NOT NULL,
@@ -21,17 +17,15 @@ export async function runMigrations(connectionString: string): Promise<void> {
         PRIMARY KEY (item_id, region)
       );
     `);
-    console.log("✓ Created market_snapshots table");
+  console.log("✓ Created market_snapshots table");
 
-    // Create index on fetched_at for cleanup queries
-    await pool.query(`
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS market_snapshots_fetched_at_idx
         ON market_snapshots (fetched_at);
     `);
-    console.log("✓ Created index on market_snapshots (fetched_at)");
+  console.log("✓ Created index on market_snapshots (fetched_at)");
 
-    // Create marketable_items table
-    await pool.query(`
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS marketable_items (
         item_id integer PRIMARY KEY,
         last_scanned timestamptz,
@@ -39,10 +33,9 @@ export async function runMigrations(connectionString: string): Promise<void> {
         created_at timestamptz NOT NULL DEFAULT now()
       );
     `);
-    console.log("✓ Created marketable_items table");
+  console.log("✓ Created marketable_items table");
 
-    // Create job_history table
-    await pool.query(`
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS job_history (
         id serial PRIMARY KEY,
         job_id text NOT NULL,
@@ -54,26 +47,29 @@ export async function runMigrations(connectionString: string): Promise<void> {
         created_at timestamptz NOT NULL DEFAULT now()
       );
     `);
-    console.log("✓ Created job_history table");
+  console.log("✓ Created job_history table");
 
-    // Index for job_history queries
-    await pool.query(`
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS job_history_status_idx
         ON job_history (status, completed_at DESC);
     `);
-    console.log("✓ Created index on job_history (status, completed_at)");
+  console.log("✓ Created index on job_history (status, completed_at)");
 
-    // Index for finding items by last_scanned
-    await pool.query(`
+  await pool.query(`
+      CREATE INDEX IF NOT EXISTS job_history_created_at_idx
+        ON job_history (created_at, status);
+    `);
+  console.log("✓ Created index on job_history (created_at, status)");
+
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS marketable_items_last_scanned_idx
         ON marketable_items (last_scanned NULLS FIRST);
     `);
-    console.log("✓ Created index on marketable_items (last_scanned)");
+  console.log("✓ Created index on marketable_items (last_scanned)");
 
-    // Create sale_history table for storing individual sale records
-    await pool.query(`
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS sale_history (
-        id bigserial,
+        id bigserial PRIMARY KEY,
         item_id integer NOT NULL,
         world_id integer NOT NULL,
         world_name text,
@@ -83,21 +79,27 @@ export async function runMigrations(connectionString: string): Promise<void> {
         fetched_at timestamptz NOT NULL DEFAULT now()
       );
     `);
-    console.log("✓ Created sale_history table");
+  console.log("✓ Created sale_history table");
 
-    await pool.query(`
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS sale_history_item_sold_idx
         ON sale_history (item_id, sold_at DESC);
     `);
-    console.log("✓ Created index on sale_history (item_id, sold_at)");
+  console.log("✓ Created index on sale_history (item_id, sold_at)");
 
-    await pool.query(`
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS sale_history_item_world_idx
         ON sale_history (item_id, world_id);
     `);
-    console.log("✓ Created index on sale_history (item_id, world_id)");
+  console.log("✓ Created index on sale_history (item_id, world_id)");
 
-    await pool.query(`
+  await pool.query(`
+      CREATE INDEX IF NOT EXISTS sale_history_sold_at_idx
+        ON sale_history (sold_at);
+    `);
+  console.log("✓ Created index on sale_history (sold_at)");
+
+  await pool.query(`
       DO $$ BEGIN
         IF NOT EXISTS (
           SELECT 1 FROM pg_constraint WHERE conname = 'sale_history_unique_sale'
@@ -107,12 +109,11 @@ export async function runMigrations(connectionString: string): Promise<void> {
         END IF;
       END $$;
     `);
-    console.log(
-      "✓ Added unique constraint on sale_history (item_id, world_id, price_per_unit, sold_at)",
-    );
+  console.log(
+    "✓ Added unique constraint on sale_history (item_id, world_id, price_per_unit, sold_at)",
+  );
 
-    // Create dc_item_averages table for pre-computed per-DC IQR averages
-    await pool.query(`
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS dc_item_averages (
         item_id integer NOT NULL,
         data_center text NOT NULL,
@@ -123,16 +124,13 @@ export async function runMigrations(connectionString: string): Promise<void> {
         PRIMARY KEY (item_id, data_center)
       );
     `);
-    console.log("✓ Created dc_item_averages table");
+  console.log("✓ Created dc_item_averages table");
 
-    await pool.query(`
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS idx_dc_item_averages_computed
         ON dc_item_averages (computed_at);
     `);
-    console.log("✓ Created index on dc_item_averages (computed_at)");
+  console.log("✓ Created index on dc_item_averages (computed_at)");
 
-    console.log("Database migrations completed successfully");
-  } finally {
-    await pool.end();
-  }
+  console.log("Database migrations completed successfully");
 }

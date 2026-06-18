@@ -44,7 +44,7 @@ if (existsSync(webDistPath)) {
 // Initialize database and background jobs
 if (config.databaseUrl) {
   try {
-    await runMigrations(config.databaseUrl);
+    await runMigrations();
     await initializeWorker();
 
     const scheduler = getScheduler();
