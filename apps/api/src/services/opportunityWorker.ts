@@ -3,10 +3,8 @@ import { config } from "../config.js";
 import { universalis } from "./universalis.js";
 import { marketSnapshotStore } from "./marketSnapshotStore.js";
 import { rateLimiter } from "./rateLimiter.js";
-import pg from "pg";
+import { pool } from "../db/pool.js";
 import type { EvaluateItemJob } from "./jobQueue.js";
-
-const { Pool } = pg;
 
 let worker: Worker<EvaluateItemJob> | null = null;
 
@@ -16,11 +14,6 @@ export async function initializeWorker(): Promise<void> {
     return;
   }
 
-  const db = new Pool({
-    connectionString: config.databaseUrl,
-    ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-  });
-
   worker = new Worker<EvaluateItemJob>(
     "arbitrage-opportunities",
     async (job) => {
@@ -28,18 +21,18 @@ export async function initializeWorker(): Promise<void> {
       const startTime = Date.now();
 
       try {
-        // Use rate limiter to respect Universalis API limits
         const data = await rateLimiter.schedule(() => universalis.getCurrentData(region, itemId));
 
         if (data) {
-          // Persist to database
           await marketSnapshotStore.upsert(region, itemId, data);
 
-          // Extract and store individual sale records for history graph
           await marketSnapshotStore.storeSales(itemId, data);
 
-          // Update job history
-          await db.query(
+          await pool.query("UPDATE marketable_items SET last_scanned = now() WHERE item_id = $1", [
+            itemId,
+          ]);
+
+          await pool.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
              VALUES ($1, $2, $3, $4, now(), now())`,
             [job.id, itemId, region, "completed"],
@@ -55,8 +48,7 @@ export async function initializeWorker(): Promise<void> {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
 
-        // Log job failure
-        await db.query(
+        await pool.query(
           `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)
            VALUES ($1, $2, $3, $4, $5, now())`,
           [job.id, itemId, region, "failed", errorMsg],
@@ -72,7 +64,7 @@ export async function initializeWorker(): Promise<void> {
       },
       concurrency: config.jobQueueConcurrency,
       maxStalledCount: 3,
-      stalledInterval: 30000, // Check for stalled jobs every 30 seconds
+      stalledInterval: 30000,
     },
   );
 
