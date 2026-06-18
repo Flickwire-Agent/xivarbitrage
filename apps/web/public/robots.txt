@@ -1,6 +1,5 @@
 User-agent: *
 Allow: /
-Allow: /api/opportunities
 Allow: /api/bargains
 Allow: /api/dc-disparities
 Allow: /api/items/

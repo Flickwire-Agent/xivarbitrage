@@ -1,6 +1,5 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { ArbitrageCache } from "../services/arbitrageCache.js";
 import { getQueueStats } from "../services/jobQueue.js";
 import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
 import { worldDcMapping } from "../services/worldDcMapping.js";
@@ -19,21 +18,6 @@ const dcDisparityQuerySchema = z.object({
   sort: z.enum(["spread", "spreadPercent"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   perPage: z.coerce.number().int().positive().max(200).optional(),
-});
-
-const querySchema = z.object({
-  highWorld: z.string().optional(),
-  highDataCenter: z.string().optional(),
-  category: z.string().optional(),
-  profile: z.enum(["all", "high-volume", "high-arbitrage"]).optional(),
-  minVolume: z.coerce.number().int().nonnegative().optional(),
-  minSpread: z.coerce.number().nonnegative().optional(),
-  sort: z.enum(["best", "spread", "spreadPercent", "volume", "velocity"]).optional(),
-  limit: z.coerce.number().int().positive().max(500).optional(),
-  refresh: z.coerce.boolean().optional(),
-  includeHistory: z.coerce.boolean().optional(),
-  page: z.coerce.number().int().positive().optional(),
-  perPage: z.coerce.number().int().positive().max(100).optional(),
 });
 
 async function checkDatabaseHealth(): Promise<boolean> {
@@ -84,10 +68,7 @@ function msUntilWednesdayMidnight(): number {
   return next.getTime() - now.getTime();
 }
 
-export async function opportunityRoutes(app: FastifyInstance) {
-  const arbitrage = new ArbitrageCache();
-  arbitrage.start();
-
+export async function apiRoutes(app: FastifyInstance) {
   await worldDcMapping.refresh();
 
   const { bargainsCache } = await import("../services/bargainsCache.js");
@@ -116,56 +97,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
     }
 
     return { ok: true, database: dbHealthy, redis: redisHealthy };
-  });
-
-  app.get("/opportunities", async (request) => {
-    const { refresh, includeHistory, ...filters } = querySchema.parse(request.query);
-    if (refresh) {
-      await arbitrage.refresh();
-    }
-
-    const response = await arbitrage.get(filters);
-
-    if (includeHistory && config.databaseUrl) {
-      try {
-        const itemIds = response.opportunities.map((o) => o.itemId);
-        if (itemIds.length > 0) {
-          const result = await pool.query<{
-            item_id: number;
-            fetched_at: string;
-            avg_price: number;
-          }>(
-            `SELECT item_id, fetched_at, (data->>'averagePrice')::numeric as avg_price
-             FROM market_snapshots
-             WHERE item_id = ANY($1::int[])
-               AND fetched_at > now() - interval '7 days'
-             ORDER BY fetched_at DESC`,
-            [itemIds],
-          );
-
-          const historyByItem = new Map<number, { timestamp: string; price: number }[]>();
-          for (const row of result.rows) {
-            let arr = historyByItem.get(row.item_id);
-            if (!arr) {
-              arr = [];
-              historyByItem.set(row.item_id, arr);
-            }
-            arr.push({
-              timestamp: row.fetched_at,
-              price: Math.round(Number(row.avg_price)),
-            });
-          }
-
-          for (const opportunity of response.opportunities) {
-            (opportunity as any).history = historyByItem.get(opportunity.itemId) ?? [];
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching historical data:", error);
-      }
-    }
-
-    return response;
   });
 
   app.get("/worlds", async () => {

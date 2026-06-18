@@ -80,7 +80,7 @@ export function App() {
             <a href="https://xivapi.com" rel="noopener noreferrer">
               XIVAPI
             </a>
-            <a href="/api/opportunities">API</a>
+            <a href="/api/dc-disparities">API</a>
             <a href="/llms.txt">AI Docs</a>
             <a
               href="https://github.com/Flickwire-Agent/xivarbitrage"

@@ -6,9 +6,8 @@
 
 XIV Arbitrage scans approximately 10,000 marketable Final Fantasy XIV items across 3 regions (NA, EU, OCE) on a 24-hour cycle. It identifies:
 
-- **Arbitrage opportunities**: Items where the cheapest current listing is significantly below the highest recent sold price on another world
-- **Market bargains**: Individual listings priced well below the data center average
-- **DC price disparities**: Items with large price differences between data centers
+- **DC price disparities**: Items with large price differences between data centers (main page)
+- **Market bargains**: Individual listings priced at least 20% below the global IQR average price
 
 Data refreshes every 15 minutes. All prices are in gil (FFXIV currency).
 
@@ -22,63 +21,24 @@ Agent guidance:
 - Prefer the JSON API over browser automation.
 - Cache-backed endpoints refresh every 15 minutes; poll no more than once every 15 minutes for routine checks.
 - Use pagination instead of repeatedly requesting broad result sets.
-- Do not use `refresh=true` for routine polling; it forces an immediate cache refresh.
 - Treat undocumented mutation or refresh endpoints as internal and do not call them.
 - Market data comes from community uploads and can include stale listings, outliers, or already-sold items; verify valuable trades in game before acting.
 
-### GET /api/opportunities
-
-Returns current arbitrage opportunities, cached and refreshed every 15 minutes.
-
-**Query parameters:**
-- `limit` (number, max 100): Legacy alias for `perPage` when `perPage` is omitted
-- `sort` (enum): `best`, `spread`, `spreadPercent`, `volume`, `velocity`
-- `highWorld` (string): Filter by sell-side world name
-- `highDataCenter` (string): Filter by sell-side data center
-- `category` (string): Filter by item category
-- `profile` (enum): `all`, `high-volume`, `high-arbitrage`
-- `minVolume` (number): Minimum recent sales count
-- `minSpread` (number): Minimum gil spread
-- `page` (number): Page number
-- `perPage` (number, max 100): Results per page
-- `includeHistory` (boolean): Include 7-day price history
-- `refresh` (boolean): Force cache refresh
-
-**Example:** `GET /api/opportunities?sort=best&limit=10`
-
-**Response shape:**
-```json
-{
-  "generatedAt": "2026-06-18T14:47:06.067Z",
-  "opportunities": [
-    {
-      "itemId": 22973,
-      "low": { "worldName": "Twintania", "dataCenter": "Light", "pricePerUnit": 44000000 },
-      "high": { "worldName": "Zodiark", "dataCenter": "Light", "pricePerUnit": 350000000 },
-      "spread": 286300000,
-      "spreadPercent": 619.7,
-      "recentSales": 300,
-      "updatedAt": "2026-06-18T14:47:06.013Z"
-    }
-  ],
-  "total": 6655,
-  "page": 1,
-  "perPage": 10,
-  "totalPages": 666
-}
-```
-
 ### GET /api/bargains
 
-Returns cross-item bargain listings — items listed significantly below their data center average price. Refreshed every 15 minutes.
+Returns items with current listings priced at least 20% below the global IQR average price. Refreshed every 15 minutes.
+
+**Query parameters:**
+- `page` (number): Page number
+- `perPage` (number, max 200): Results per page
 
 **Example:** `GET /api/bargains`
 
-**Response shape:** `{ "generatedAt": "...", "bargains": [{ "itemId": 5057, "worldName": "Omega", "dataCenter": "Chaos", "pricePerUnit": 1000, "recentAvgPrice": 2000, "discountPercent": 50 }] }`
+**Response shape:** `{ "generatedAt": "...", "bargains": [{ "itemId": 5057, "worldName": "Omega", "dataCenter": "Chaos", "pricePerUnit": 1000, "recentAvgPrice": 2000, "discountPercent": 50 }], "total": 1, "page": 1, "perPage": 50, "totalPages": 1 }`
 
 ### GET /api/dc-disparities
 
-Returns items with the largest price disparities between data centers.
+Returns DC average price disparities across all marketable items. Items without sale data show as "No sale data". Items with only one data center show the single price without a disparity. Refreshed every 15 minutes.
 
 **Query parameters:**
 - `highDc` (string): Filter by expensive data center
@@ -92,7 +52,7 @@ Returns items with the largest price disparities between data centers.
 
 **Example:** `GET /api/dc-disparities?sort=spread&region=NA`
 
-**Response shape:** `{ "generatedAt": "...", "disparities": [{ "itemId": 5057, "spread": 5000, "highDc": { "dataCenter": "Aether", "avgPrice": 9000 }, "lowDc": { "dataCenter": "Primal", "avgPrice": 4000 } }], "total": 1, "page": 1, "perPage": 50, "totalPages": 1 }`
+**Response shape:** `{ "generatedAt": "...", "disparities": [{ "itemId": 5057, "spread": 5000, "spreadPercent": 125, "highDc": { "dataCenter": "Aether", "region": "NA", "avgPrice": 9000, "saleCount": 15 }, "lowDc": { "dataCenter": "Primal", "region": "NA", "avgPrice": 4000, "saleCount": 12 }, "allDcs": [{ "dataCenter": "Aether", "avgPrice": 9000 }, { "dataCenter": "Primal", "avgPrice": 4000 }] }], "total": 1, "page": 1, "perPage": 50, "totalPages": 1 }`
 
 ### GET /api/items/:itemId/history
 
@@ -130,10 +90,10 @@ Returns background worker queue depth, scan progress, and 24-hour job statistics
 
 ## Key Concepts
 
-- **Arbitrage spread**: Low side = cheapest current listing (buy price); High side = highest recent sold price (actual transactions, not listings)
 - **Data Center (DC)**: A group of worlds/servers. Cross-world travel within a DC is free.
 - **Region**: A geographic grouping of data centers (NA, EU, OCE). Cross-region travel is not possible.
 - **IQR outlier exclusion**: Statistical method used to remove anomalous prices before computing averages
+- **Global IQR average**: IQR-filtered average computed across all sales worldwide, used as the reference price for bargains
 
 ## Data Sources
 
@@ -143,8 +103,7 @@ Returns background worker queue depth, scan progress, and 24-hour job statistics
 ## Web Interface
 
 The web interface at the root URL provides:
-- `/` — Arbitrage opportunities table with filters and sorting
-- `/bargains` — Cross-item bargain listings
-- `/dc-disparities` — Cross-data center price gap analysis
+- `/` — DC price disparities table across all marketable items
+- `/bargains` — Items with listings ≥20% below global IQR average price
 - `/items/:id` — Item sale history with charts
 - `/items/:id/listings` — Discounted current listings for an item

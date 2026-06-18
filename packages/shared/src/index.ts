@@ -1,11 +1,3 @@
-export interface WorldPrice {
-  worldId: number;
-  worldName: string;
-  dataCenter: string;
-  pricePerUnit: number;
-  quantity: number;
-}
-
 export interface ItemDetails {
   id: number;
   name: string;
@@ -14,38 +6,6 @@ export interface ItemDetails {
   category?: string;
   levelItem?: number;
   stackSize?: number;
-}
-
-export interface ArbitrageOpportunity {
-  itemId: number;
-  low: WorldPrice;
-  high: WorldPrice;
-  grossSpread: number;
-  grossSpreadPercent: number;
-  spread: number;
-  spreadPercent: number;
-  netBuyPrice: number;
-  netSellPrice: number;
-  recentSales: number;
-  averageSalePrice: number;
-  velocityScore: number;
-  profitScore: number;
-  updatedAt: string;
-}
-
-export type OpportunitySort = "best" | "spread" | "spreadPercent" | "volume" | "velocity";
-
-export interface OpportunityFilters {
-  highWorld?: string;
-  highDataCenter?: string;
-  category?: string;
-  profile?: "all" | "high-volume" | "high-arbitrage";
-  minVolume?: number;
-  minSpread?: number;
-  sort?: OpportunitySort;
-  limit?: number;
-  page?: number;
-  perPage?: number;
 }
 
 export interface SaleRecord {
@@ -149,19 +109,6 @@ export interface DcDisparityQuery {
 export interface DcDisparityResponse {
   generatedAt: string;
   disparities: DcDisparity[];
-  total: number;
-  page: number;
-  perPage: number;
-  totalPages: number;
-}
-
-export interface OpportunityResponse {
-  generatedAt: string;
-  filters: OpportunityFilters;
-  opportunities: ArbitrageOpportunity[];
-  worlds: string[];
-  dataCenters: string[];
-  categories: string[];
   total: number;
   page: number;
   perPage: number;

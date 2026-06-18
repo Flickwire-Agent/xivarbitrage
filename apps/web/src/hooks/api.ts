@@ -1,7 +1,5 @@
-import { useQuery, useQueryClient, useQueries } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import type {
-  OpportunityFilters,
-  OpportunityResponse,
   ItemHistoryResponse,
   ListingsResponse,
   BargainsResponse,
@@ -24,26 +22,6 @@ export function useWorlds() {
       return response.json() as Promise<WorldsResponse>;
     },
     staleTime: STALE_TIME_WORLDS,
-  });
-}
-
-export function useOpportunities(filters: OpportunityFilters, page: number) {
-  const queryKey = ["opportunities", filters, page];
-  return useQuery({
-    queryKey,
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== "" && value !== "all") {
-          params.set(key, String(value));
-        }
-      }
-      if (page > 1) params.set("page", String(page));
-      const response = await fetch(`/api/opportunities?${params.toString()}`);
-      if (!response.ok) throw new Error(`API returned ${response.status}`);
-      return response.json() as Promise<OpportunityResponse>;
-    },
-    staleTime: STALE_TIME_API,
   });
 }
 
@@ -127,24 +105,6 @@ export function useItemSearch(query: string) {
     enabled: query.length >= 2,
     staleTime: 5 * 60 * 1000,
   });
-}
-
-export function usePrefetchItemDetails() {
-  const queryClient = useQueryClient();
-  return (itemId: number) => {
-    queryClient.prefetchQuery({
-      queryKey: ["xivapi-item", itemId],
-      queryFn: () => fetchItemDetails(itemId),
-      staleTime: STALE_TIME_XIVAPI,
-    });
-  };
-}
-
-export function useInvalidateOpportunities() {
-  const queryClient = useQueryClient();
-  return () => {
-    queryClient.invalidateQueries({ queryKey: ["opportunities"] });
-  };
 }
 
 export function useBulkItemDetails(itemIds: number[]) {

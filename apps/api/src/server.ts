@@ -7,7 +7,7 @@ import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
 import { config } from "./config.js";
-import { opportunityRoutes } from "./routes/opportunities.js";
+import { apiRoutes } from "./routes/api.js";
 import { runMigrations } from "./db/migrations.js";
 import { getScheduler } from "./services/jobScheduler.js";
 import { initializeWorker, closeWorker } from "./services/opportunityWorker.js";
@@ -17,94 +17,6 @@ import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
 loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
 
 const schemas = {
-  WorldPrice: {
-    type: "object",
-    required: ["worldId", "worldName", "dataCenter", "pricePerUnit", "quantity"],
-    properties: {
-      worldId: { type: "integer" },
-      worldName: { type: "string" },
-      dataCenter: { type: "string" },
-      pricePerUnit: { type: "integer" },
-      quantity: { type: "integer" },
-    },
-  },
-  ArbitrageOpportunity: {
-    type: "object",
-    required: [
-      "itemId",
-      "low",
-      "high",
-      "grossSpread",
-      "grossSpreadPercent",
-      "spread",
-      "spreadPercent",
-      "netBuyPrice",
-      "netSellPrice",
-      "recentSales",
-      "averageSalePrice",
-      "velocityScore",
-      "profitScore",
-      "updatedAt",
-    ],
-    properties: {
-      itemId: { type: "integer" },
-      low: { $ref: "#/components/schemas/WorldPrice" },
-      high: { $ref: "#/components/schemas/WorldPrice" },
-      grossSpread: { type: "number" },
-      grossSpreadPercent: { type: "number" },
-      spread: { type: "number" },
-      spreadPercent: { type: "number" },
-      netBuyPrice: { type: "integer" },
-      netSellPrice: { type: "integer" },
-      recentSales: { type: "integer" },
-      averageSalePrice: { type: "integer" },
-      velocityScore: { type: "number" },
-      profitScore: { type: "number" },
-      updatedAt: { type: "string", format: "date-time" },
-      history: {
-        type: "array",
-        description: "Present only when includeHistory=true.",
-        items: {
-          type: "object",
-          required: ["timestamp", "price"],
-          properties: {
-            timestamp: { type: "string", format: "date-time" },
-            price: { type: "integer" },
-          },
-        },
-      },
-    },
-  },
-  OpportunityResponse: {
-    type: "object",
-    required: [
-      "generatedAt",
-      "filters",
-      "opportunities",
-      "worlds",
-      "dataCenters",
-      "categories",
-      "total",
-      "page",
-      "perPage",
-      "totalPages",
-    ],
-    properties: {
-      generatedAt: { type: "string", format: "date-time" },
-      filters: { type: "object", additionalProperties: true },
-      opportunities: {
-        type: "array",
-        items: { $ref: "#/components/schemas/ArbitrageOpportunity" },
-      },
-      worlds: { type: "array", items: { type: "string" } },
-      dataCenters: { type: "array", items: { type: "string" } },
-      categories: { type: "array", items: { type: "string" } },
-      total: { type: "integer" },
-      page: { type: "integer" },
-      perPage: { type: "integer" },
-      totalPages: { type: "integer" },
-    },
-  },
   BargainListing: {
     type: "object",
     required: [
@@ -351,7 +263,7 @@ app.addHook("onResponse", async (request, reply) => {
 
 apiUsageMonitor.start();
 
-await app.register(opportunityRoutes, {
+await app.register(apiRoutes, {
   prefix: "/api",
 });
 
@@ -363,7 +275,7 @@ app.get("/api/openapi.json", async (request, reply) => {
       title: "XIV Arbitrage API",
       version: "1.0.0",
       description:
-        "Find profitable arbitrage opportunities on the Final Fantasy XIV market board. Scans ~10,000 items across NA, EU, and OCE regions. Cache-backed endpoints refresh every 15 minutes; agents should avoid force refreshes for routine polling.",
+        "DC price disparities and market bargains on the Final Fantasy XIV market board. Scans ~10,000 items across NA, EU, and OCE regions. Cache-backed endpoints refresh every 15 minutes.",
     },
     servers: [{ url: baseUrl }],
     externalDocs: {
@@ -371,58 +283,11 @@ app.get("/api/openapi.json", async (request, reply) => {
       url: `${baseUrl}/llms.txt`,
     },
     paths: {
-      "/api/opportunities": {
-        get: {
-          summary: "Arbitrage opportunities",
-          description: "Current arbitrage opportunities, cached and refreshed every 15 minutes.",
-          parameters: [
-            {
-              name: "limit",
-              in: "query",
-              description: "Legacy alias for perPage when perPage is omitted.",
-              schema: { type: "integer", minimum: 1, maximum: 100 },
-            },
-            {
-              name: "sort",
-              in: "query",
-              schema: {
-                type: "string",
-                enum: ["best", "spread", "spreadPercent", "volume", "velocity"],
-              },
-            },
-            { name: "highWorld", in: "query", schema: { type: "string" } },
-            { name: "highDataCenter", in: "query", schema: { type: "string" } },
-            { name: "category", in: "query", schema: { type: "string" } },
-            {
-              name: "profile",
-              in: "query",
-              schema: { type: "string", enum: ["all", "high-volume", "high-arbitrage"] },
-            },
-            { name: "minVolume", in: "query", schema: { type: "integer" } },
-            { name: "minSpread", in: "query", schema: { type: "number" } },
-            { name: "page", in: "query", schema: { type: "integer" } },
-            { name: "perPage", in: "query", schema: { type: "integer", maximum: 100 } },
-            { name: "includeHistory", in: "query", schema: { type: "boolean" } },
-            {
-              name: "refresh",
-              in: "query",
-              description: "Force a cache refresh. Do not use for routine polling.",
-              schema: { type: "boolean" },
-            },
-          ],
-          responses: {
-            "200": jsonResponse(
-              "Paginated list of arbitrage opportunities",
-              "#/components/schemas/OpportunityResponse",
-            ),
-            "400": jsonResponse("Invalid query parameters", "#/components/schemas/ErrorResponse"),
-          },
-        },
-      },
       "/api/bargains": {
         get: {
           summary: "Market bargains",
-          description: "Items listed significantly below their data center average price.",
+          description:
+            "Items with current listings priced at least 20% below the global IQR average price.",
           responses: {
             "200": jsonResponse(
               "List of bargain listings",
@@ -434,7 +299,8 @@ app.get("/api/openapi.json", async (request, reply) => {
       "/api/dc-disparities": {
         get: {
           summary: "Data center price disparities",
-          description: "Items with the largest price differences between data centers.",
+          description:
+            "DC average price disparities across all marketable items. Items without sale data show no info.",
           parameters: [
             { name: "highDc", in: "query", schema: { type: "string" } },
             { name: "lowDc", in: "query", schema: { type: "string" } },

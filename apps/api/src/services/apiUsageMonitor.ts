@@ -173,7 +173,6 @@ class ApiUsageMonitor {
     }
 
     const knownEndpoints = [
-      "/api/opportunities",
       "/api/bargains",
       "/api/dc-disparities",
       "/api/items/:itemId/history",

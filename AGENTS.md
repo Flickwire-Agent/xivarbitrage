@@ -168,11 +168,6 @@ ARBITRAGE_MAX_CONCURRENCY=4
 
 ## API Endpoints
 
-### `GET /api/opportunities`
-
-Arbitrage opportunities (cached, refreshed every 15 min) — world-to-world arbitrage.
-Query params: `?limit=50&sort=best|spread|volume|velocity&highWorld=X&category=X&minSpread=500&includeHistory=true&refresh=true`
-
 ### `GET /api/dc-disparities`
 
 DC average price disparities across all marketable items (cached, refreshed every 15 min).
@@ -216,7 +211,7 @@ Current marketboard listings priced below DC IQR average, sorted by discount %.
 - **Cache-then-query**: In-memory cache refreshed every 15 min from DB; <50ms response
 - **Job queue**: BullMQ distributes 30,000 jobs (10k items × 3 regions) over 24h; 4 concurrent workers, 3 retries with exponential backoff
 - **Import extensions**: Always use `.js` extensions in TS imports (ESM requirement)
-- **Logging prefixes**: `[Worker]`, `[JobScheduler]`, `[BullMQ]`, `[ArbitrageCache]`
+- **Logging prefixes**: `[Worker]`, `[JobScheduler]`, `[BullMQ]`, `[BargainsCache]`, `[DcDisparityCache]`
 
 ## Conventions
 
