@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { NavLink, Route, Routes } from "react-router-dom";
+import { Link, Route, Switch } from "wouter";
 
 const OpportunitiesPage = lazy(() =>
   import("./components/OpportunitiesPage.js").then((m) => ({ default: m.OpportunitiesPage })),
@@ -38,25 +38,26 @@ export function App() {
       <nav className="srOnly" aria-label="Site navigation">
         <ul>
           <li>
-            <NavLink to="/">Arbitrage Opportunities</NavLink>
+            <Link href="/">Arbitrage Opportunities</Link>
           </li>
           <li>
-            <NavLink to="/bargains">Market Bargains</NavLink>
+            <Link href="/bargains">Market Bargains</Link>
           </li>
           <li>
-            <NavLink to="/dc-disparities">DC Price Disparities</NavLink>
+            <Link href="/dc-disparities">DC Price Disparities</Link>
           </li>
         </ul>
       </nav>
       <main className="appShell" id="main-content" aria-label="XIV Arbitrage application">
         <Suspense fallback={<PageFallback />}>
-          <Routes>
-            <Route path="/" element={<OpportunitiesPage />} />
-            <Route path="/bargains" element={<BargainsPage />} />
-            <Route path="/dc-disparities" element={<DcDisparitiesPage />} />
-            <Route path="/items/:itemId" element={<ItemPage />} />
-            <Route path="/items/:itemId/listings" element={<ListingsPage />} />
-          </Routes>
+          <Switch>
+            <Route path="/" component={OpportunitiesPage} />
+            <Route path="/bargains" component={BargainsPage} />
+            <Route path="/dc-disparities" component={DcDisparitiesPage} />
+            <Route path="/items/:itemId/listings" component={ListingsPage} />
+            <Route path="/items/:itemId" component={ItemPage} />
+            <Route component={OpportunitiesPage} />
+          </Switch>
         </Suspense>
       </main>
       <footer className="srOnly">

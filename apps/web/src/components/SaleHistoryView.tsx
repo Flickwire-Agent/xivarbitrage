@@ -1,10 +1,13 @@
 import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
-import { useMemo, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { useWorlds } from "../hooks/api.js";
-import { SaleHistoryChart } from "./SaleHistoryChart.js";
 import type { ItemDetails } from "../lib/xivapi.js";
+
+const SaleHistoryChart = lazy(() =>
+  import("./SaleHistoryChart.js").then((m) => ({ default: m.SaleHistoryChart })),
+);
 
 interface EnrichedItemHistoryResponse extends ItemHistoryResponse {
   item: ItemDetails;
@@ -20,7 +23,7 @@ function getUniversalisUrl(itemId: number): string {
 }
 
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
-  const location = useLocation();
+  const [location] = useLocation();
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
   const { data: worldsData } = useWorlds();
 
@@ -66,7 +69,14 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
           </button>
           <div className="itemDetailTitle">
             {data.item.iconUrl ? (
-              <img src={data.item.iconUrl} alt="" className="itemDetailIcon" loading="lazy" />
+              <img
+                src={data.item.iconUrl}
+                alt=""
+                width="48"
+                height="48"
+                className="itemDetailIcon"
+                loading="lazy"
+              />
             ) : null}
             <div>
               <h1>{data.item.name}</h1>
@@ -89,23 +99,22 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
       </section>
 
       <nav className="itemTabs" role="tablist" aria-label="Item details">
-        <NavLink
-          to={`/items/${data.itemId}`}
-          end
-          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        <Link
+          href={`/items/${data.itemId}`}
+          className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           role="tab"
-          aria-selected={location.pathname === `/items/${data.itemId}`}
+          aria-selected={location === `/items/${data.itemId}`}
         >
           History
-        </NavLink>
-        <NavLink
-          to={`/items/${data.itemId}/listings`}
-          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        </Link>
+        <Link
+          href={`/items/${data.itemId}/listings`}
+          className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           role="tab"
-          aria-selected={location.pathname === `/items/${data.itemId}/listings`}
+          aria-selected={location === `/items/${data.itemId}/listings`}
         >
           Listings
-        </NavLink>
+        </Link>
       </nav>
 
       {saleStats ? (
@@ -171,11 +180,19 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
       </section>
 
       <section className="chartShell" aria-label="Sale history chart">
-        <SaleHistoryChart
-          sales={data.sales}
-          visibleWorlds={visibleWorlds}
-          worldIdToDc={worldIdToDc}
-        />
+        <Suspense
+          fallback={
+            <div className="notice" role="status" aria-live="polite">
+              Loading chart…
+            </div>
+          }
+        >
+          <SaleHistoryChart
+            sales={data.sales}
+            visibleWorlds={visibleWorlds}
+            worldIdToDc={worldIdToDc}
+          />
+        </Suspense>
       </section>
     </div>
   );

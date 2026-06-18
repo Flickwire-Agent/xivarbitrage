@@ -1,6 +1,6 @@
 import type { ArbitrageOpportunity } from "@xiv-arbitrage/shared";
 import type { ItemDetails } from "../lib/xivapi.js";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 
 interface EnrichedOpportunity extends ArbitrageOpportunity {
   item: ItemDetails;
@@ -12,7 +12,7 @@ interface OpportunityTableProps {
 }
 
 export function OpportunityTable({ opportunities, isLoading }: OpportunityTableProps) {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   if (isLoading && opportunities.length === 0) {
     return (
       <div className="notice" role="status" aria-live="polite">
@@ -45,7 +45,13 @@ export function OpportunityTable({ opportunities, isLoading }: OpportunityTableP
               <td>
                 <div className="itemCell">
                   {opportunity.item.iconUrl ? (
-                    <img src={opportunity.item.iconUrl} alt="" loading="lazy" />
+                    <img
+                      src={opportunity.item.iconUrl}
+                      alt=""
+                      width="42"
+                      height="42"
+                      loading="lazy"
+                    />
                   ) : null}
                   <div>
                     <button

@@ -1,7 +1,7 @@
 import type { ItemListing } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
-import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "wouter";
 import { useItemDetails, useItemListings } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 
@@ -11,8 +11,7 @@ function getUniversalisUrl(itemId: number): string {
 
 export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const [location, navigate] = useLocation();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
 
@@ -58,7 +57,14 @@ export function ListingsPage() {
             <span>Back</span>
           </button>
           {itemDetails?.iconUrl ? (
-            <img src={itemDetails.iconUrl} alt="" className="itemDetailIcon" loading="lazy" />
+            <img
+              src={itemDetails.iconUrl}
+              alt=""
+              width="48"
+              height="48"
+              className="itemDetailIcon"
+              loading="lazy"
+            />
           ) : null}
           <div>
             <h1>{itemDetails?.name ?? "Loading..."}</h1>
@@ -80,23 +86,22 @@ export function ListingsPage() {
       </section>
 
       <nav className="itemTabs" role="tablist" aria-label="Item details">
-        <NavLink
-          to={`/items/${itemId}`}
-          end
-          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        <Link
+          href={`/items/${itemId}`}
+          className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           role="tab"
-          aria-selected={location.pathname === `/items/${itemId}`}
+          aria-selected={location === `/items/${itemId}`}
         >
           History
-        </NavLink>
-        <NavLink
-          to={`/items/${itemId}/listings`}
-          className={({ isActive }) => `itemTab${isActive ? " active" : ""}`}
+        </Link>
+        <Link
+          href={`/items/${itemId}/listings`}
+          className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           role="tab"
-          aria-selected={location.pathname === `/items/${itemId}/listings`}
+          aria-selected={location === `/items/${itemId}/listings`}
         >
           Listings
-        </NavLink>
+        </Link>
       </nav>
 
       {error ? (

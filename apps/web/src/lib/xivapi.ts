@@ -48,7 +48,7 @@ export async function fetchItemDetails(itemId: number): Promise<ItemDetails> {
     fields: XivApiItemFields;
   };
 
-  const iconPath = data.fields.Icon?.path_hr1 ?? data.fields.Icon?.path;
+  const iconPath = data.fields.Icon?.path ?? data.fields.Icon?.path_hr1;
   return {
     id: data.row_id,
     name: data.fields.Name ?? `Item ${itemId}`,
@@ -72,7 +72,7 @@ export async function searchItems(query: string): Promise<ItemDetails[]> {
 
   const data = (await response.json()) as { results?: XivApiSearchResult[] };
   return (data.results ?? []).map((r) => {
-    const iconPath = r.fields.Icon?.path_hr1 ?? r.fields.Icon?.path;
+    const iconPath = r.fields.Icon?.path ?? r.fields.Icon?.path_hr1;
     return {
       id: r.row_id,
       name: r.fields.Name ?? `Item ${r.row_id}`,

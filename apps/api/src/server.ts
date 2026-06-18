@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
 import Fastify from "fastify";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ZodError } from "zod";
 import { config } from "./config.js";
@@ -552,6 +552,18 @@ if (existsSync(webDistPath)) {
   await app.register(staticFiles, {
     root: webDistPath,
     wildcard: false,
+    cacheControl: false,
+    setHeaders: (res, filePath) => {
+      // Vite emits hashed asset filenames like index-Bm8n5KMu.js.
+      // These can be cached forever because the content hash changes on every build.
+      if (/-[A-Za-z0-9_-]{8,}\.(js|css)(\.map)?$/.test(basename(filePath))) {
+        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+      } else {
+        // index.html and other non-hashed files must never be long-cached so
+        // users always pick up a fresh build on their next visit.
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+      }
+    },
   });
 
   app.setNotFoundHandler((request, reply) => {

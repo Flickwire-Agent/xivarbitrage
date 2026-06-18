@@ -1,14 +1,13 @@
 import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
-import { useParams } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useParams } from "wouter";
 import { useItemDetails, useItemHistory } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SaleHistoryView } from "./SaleHistoryView.js";
 
 export function ItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
 

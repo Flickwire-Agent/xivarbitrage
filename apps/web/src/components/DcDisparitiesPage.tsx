@@ -9,7 +9,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -18,7 +18,10 @@ import { SelectField } from "./SelectField.js";
 const PAGE_SIZE = 50;
 
 export function DcDisparitiesPage() {
-  const navigate = useNavigate();
+  useEffect(() => {
+    document.title = "DC Price Disparities | XIV Arbitrage";
+  }, []);
+  const [, navigate] = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
 
@@ -149,13 +152,13 @@ export function DcDisparitiesPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <NavLink to="/" className="iconButton" aria-label="View arbitrage opportunities">
+          <Link href="/" className="iconButton" aria-label="View arbitrage opportunities">
             <span>Arbitrage</span>
-          </NavLink>
-          <NavLink to="/bargains" className="iconButton" aria-label="View market bargains">
+          </Link>
+          <Link href="/bargains" className="iconButton" aria-label="View market bargains">
             <TrendingUp size={16} aria-hidden="true" />
             <span>Bargains</span>
-          </NavLink>
+          </Link>
           <a
             href="https://github.com/Flickwire-Agent/xivarbitrage"
             target="_blank"
@@ -283,7 +286,9 @@ export function DcDisparitiesPage() {
                   >
                     <td>
                       <div className="itemCell">
-                        {d.item.iconUrl ? <img src={d.item.iconUrl} alt="" loading="lazy" /> : null}
+                        {d.item.iconUrl ? (
+                          <img src={d.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
+                        ) : null}
                         <div>
                           <button
                             type="button"

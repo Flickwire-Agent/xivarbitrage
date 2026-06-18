@@ -69,6 +69,12 @@
     </script>
   </head>
   <body>
+    <div id="root">
+      <main class="appShell" id="main-content" aria-label="XIV Arbitrage application">
+        <h1>XIV Arbitrage</h1>
+        <p class="notice" role="status" aria-live="polite">Loading market data…</p>
+      </main>
+    </div>
     <noscript>
       <div
         style="padding: 2rem; max-width: 600px; margin: 0 auto; font-family: system-ui, sans-serif"
@@ -92,7 +98,6 @@
         </ul>
       </div>
     </noscript>
-    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

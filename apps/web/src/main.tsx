@@ -1,17 +1,15 @@
-import React from "react";
+import { createElement } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient.js";
-import { App } from "./App.js";
 import "./styles.css";
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    window.setTimeout(() => {
+      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    }, 3000);
+  });
+}
+
+void import("./ClientApp.js").then(({ ClientApp }) => {
+  createRoot(document.getElementById("root")!).render(createElement(ClientApp));
+});

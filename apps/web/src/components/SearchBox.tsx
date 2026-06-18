@@ -1,11 +1,11 @@
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "wouter";
 import { useItemSearch } from "../hooks/api.js";
 import type { ItemDetails } from "../lib/xivapi.js";
 
 export function SearchBox() {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
@@ -115,7 +115,14 @@ export function SearchBox() {
               onMouseEnter={() => setSelectedIndex(i)}
             >
               {item.iconUrl ? (
-                <img src={item.iconUrl} alt="" className="searchResultIcon" loading="lazy" />
+                <img
+                  src={item.iconUrl}
+                  alt=""
+                  width="32"
+                  height="32"
+                  className="searchResultIcon"
+                  loading="lazy"
+                />
               ) : null}
               <div className="searchResultInfo">
                 <strong>{item.name}</strong>

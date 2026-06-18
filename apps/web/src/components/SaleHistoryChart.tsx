@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { SaleRecord } from "@xiv-arbitrage/shared";
 import {
   CartesianGrid,
@@ -56,6 +57,27 @@ const SCATTER_COLORS = [
 
 const DC_LINE_COLORS = ["#d62828", "#003049", "#7209b7", "#f77f00", "#1a936f", "#560bad"];
 
+function safeString(v: unknown): string {
+  return String(v ?? "");
+}
+
+function computeDailyAverages(dcSales: SaleRecord[]): { soldAt: string; pricePerUnit: number }[] {
+  const byDate = new Map<string, number[]>();
+  for (const sale of dcSales) {
+    const day = sale.soldAt.slice(0, 10);
+    const prices = byDate.get(day) ?? [];
+    prices.push(sale.pricePerUnit);
+    byDate.set(day, prices);
+  }
+
+  return [...byDate.entries()]
+    .map(([day, prices]) => ({
+      soldAt: day,
+      pricePerUnit: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+    }))
+    .sort((a, b) => a.soldAt.localeCompare(b.soldAt));
+}
+
 interface SaleHistoryChartProps {
   sales: SaleRecord[];
   visibleWorlds: Set<string>;
@@ -63,55 +85,47 @@ interface SaleHistoryChartProps {
 }
 
 export function SaleHistoryChart({ sales, visibleWorlds, worldIdToDc }: SaleHistoryChartProps) {
-  const byWorld = new Map<string, SaleRecord[]>();
-  for (const sale of sales) {
-    const group = byWorld.get(sale.worldName) ?? [];
-    group.push(sale);
-    byWorld.set(sale.worldName, group);
-  }
-
-  const worlds = [...byWorld.keys()].sort();
-  const worldColor = new Map<string, string>();
-  worlds.forEach((world, i) => worldColor.set(world, SCATTER_COLORS[i % SCATTER_COLORS.length]!));
-
-  const byDc = new Map<string, SaleRecord[]>();
-  for (const sale of sales) {
-    const dc = worldIdToDc[sale.worldId];
-    if (!dc) continue;
-    const group = byDc.get(dc) ?? [];
-    group.push(sale);
-    byDc.set(dc, group);
-  }
-
-  function safeString(v: unknown): string {
-    return String(v ?? "");
-  }
-
-  function computeDailyAverages(dcSales: SaleRecord[]): { soldAt: string; pricePerUnit: number }[] {
-    const byDate = new Map<string, number[]>();
-    for (const sale of dcSales) {
-      const day = sale.soldAt.slice(0, 10);
-      const prices = byDate.get(day) ?? [];
-      prices.push(sale.pricePerUnit);
-      byDate.set(day, prices);
+  const { byWorld, worlds, worldColor, dcs, dcDailyAverages, dcColor } = useMemo(() => {
+    const nextByWorld = new Map<string, SaleRecord[]>();
+    for (const sale of sales) {
+      const group = nextByWorld.get(sale.worldName) ?? [];
+      group.push(sale);
+      nextByWorld.set(sale.worldName, group);
     }
 
-    return [...byDate.entries()]
-      .map(([day, prices]) => ({
-        soldAt: day,
-        pricePerUnit: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
-      }))
-      .sort((a, b) => a.soldAt.localeCompare(b.soldAt));
-  }
+    const nextWorlds = [...nextByWorld.keys()].sort();
+    const nextWorldColor = new Map<string, string>();
+    nextWorlds.forEach((world, i) =>
+      nextWorldColor.set(world, SCATTER_COLORS[i % SCATTER_COLORS.length]!),
+    );
 
-  const dcDailyAverages = new Map<string, ReturnType<typeof computeDailyAverages>>();
-  const dcs = [...byDc.keys()].sort();
-  for (const dc of dcs) {
-    dcDailyAverages.set(dc, computeDailyAverages(byDc.get(dc)!));
-  }
+    const nextByDc = new Map<string, SaleRecord[]>();
+    for (const sale of sales) {
+      const dc = worldIdToDc[sale.worldId];
+      if (!dc) continue;
+      const group = nextByDc.get(dc) ?? [];
+      group.push(sale);
+      nextByDc.set(dc, group);
+    }
 
-  const dcColor = new Map<string, string>();
-  dcs.forEach((dc, i) => dcColor.set(dc, DC_LINE_COLORS[i % DC_LINE_COLORS.length]!));
+    const nextDcs = [...nextByDc.keys()].sort();
+    const nextDcDailyAverages = new Map<string, ReturnType<typeof computeDailyAverages>>();
+    for (const dc of nextDcs) {
+      nextDcDailyAverages.set(dc, computeDailyAverages(nextByDc.get(dc)!));
+    }
+
+    const nextDcColor = new Map<string, string>();
+    nextDcs.forEach((dc, i) => nextDcColor.set(dc, DC_LINE_COLORS[i % DC_LINE_COLORS.length]!));
+
+    return {
+      byWorld: nextByWorld,
+      worlds: nextWorlds,
+      worldColor: nextWorldColor,
+      dcs: nextDcs,
+      dcDailyAverages: nextDcDailyAverages,
+      dcColor: nextDcColor,
+    };
+  }, [sales, worldIdToDc]);
 
   return (
     <div

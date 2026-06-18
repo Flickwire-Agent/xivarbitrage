@@ -1,5 +1,5 @@
 import { ExternalLink, Moon, Sun } from "lucide-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "wouter";
 import { useBargains, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -7,7 +7,7 @@ import type { BargainListing } from "@xiv-arbitrage/shared";
 import { useEffect, useMemo } from "react";
 
 export function BargainsPage() {
-  const navigate = useNavigate();
+  const [, navigate] = useLocation();
   const { isDarkMode, toggleDarkMode } = useUiStore();
 
   useEffect(() => {
@@ -36,16 +36,16 @@ export function BargainsPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <NavLink to="/" className="iconButton" aria-label="View arbitrage opportunities">
+          <Link href="/" className="iconButton" aria-label="View arbitrage opportunities">
             <span>Arbitrage</span>
-          </NavLink>
-          <NavLink
-            to="/dc-disparities"
+          </Link>
+          <Link
+            href="/dc-disparities"
             className="iconButton"
             aria-label="View data center price disparities"
           >
             <span>DC Gaps</span>
-          </NavLink>
+          </Link>
           <a
             href="https://github.com/Flickwire-Agent/xivarbitrage"
             target="_blank"
@@ -110,7 +110,7 @@ export function BargainsPage() {
                     <td>
                       <div className="itemCell">
                         {b.item.iconUrl ? (
-                          <img src={b.item.iconUrl} alt="" className="miniIcon" loading="lazy" />
+                          <img src={b.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
                         ) : null}
                         <div>
                           <strong>{b.item.name}</strong>
