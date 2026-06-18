@@ -11,6 +11,7 @@ import { runMigrations } from "./db/migrations.js";
 import { getScheduler } from "./services/jobScheduler.js";
 import { initializeWorker, closeWorker } from "./services/opportunityWorker.js";
 import { closeQueue } from "./services/jobQueue.js";
+import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
 
 loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
 
@@ -21,6 +22,29 @@ const app = Fastify({
 await app.register(cors, {
   origin: true,
 });
+
+app.addHook("onResponse", async (request, reply) => {
+  const url = request.raw.url ?? "";
+  if (!url.startsWith("/api/")) return;
+  if (url === "/api/monitoring/usage") return;
+
+  const forwarded = request.headers["x-forwarded-for"];
+  const ip =
+    typeof forwarded === "string" ? (forwarded.split(",")[0]?.trim() ?? request.ip) : request.ip;
+
+  apiUsageMonitor.record({
+    ip,
+    endpoint: url,
+    method: request.method,
+    statusCode: reply.statusCode,
+    responseTimeMs: reply.elapsedTime,
+    userAgent: (request.headers["user-agent"] as string) ?? "",
+    origin: (request.headers["origin"] as string) ?? (request.headers["referer"] as string) ?? "",
+    timestamp: Date.now(),
+  });
+});
+
+apiUsageMonitor.start();
 
 await app.register(opportunityRoutes, {
   prefix: "/api",
@@ -130,6 +154,27 @@ app.get("/api/openapi.json", async (request, reply) => {
           responses: { "200": { description: "Queue depth and scan progress" } },
         },
       },
+      "/api/monitoring/usage": {
+        get: {
+          summary: "API usage monitoring",
+          description:
+            "Third-party API consumption metrics. Tracks requests by IP, endpoint, status code, and response time over configurable time windows.",
+          parameters: [
+            {
+              name: "hours",
+              in: "query",
+              schema: { type: "integer", minimum: 1, maximum: 168, default: 24 },
+              description: "Number of hours to look back (max 168 = 7 days)",
+            },
+          ],
+          responses: {
+            "200": {
+              description:
+                "Usage summary with per-hour request counts, top endpoints, top consumers by IP, status code distribution, and average response times",
+            },
+          },
+        },
+      },
     },
   });
 });
@@ -206,6 +251,7 @@ if (config.databaseUrl) {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   app.log.info("SIGTERM received, shutting down gracefully...");
+  apiUsageMonitor.stop();
   await closeWorker();
   await closeQueue();
   if (scheduler) {
@@ -217,6 +263,7 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
   app.log.info("SIGINT received, shutting down gracefully...");
+  apiUsageMonitor.stop();
   await closeWorker();
   await closeQueue();
   if (scheduler) {

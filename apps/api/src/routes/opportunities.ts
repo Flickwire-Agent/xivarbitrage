@@ -8,6 +8,7 @@ import { config } from "../config.js";
 import { iqrAverage } from "../services/stats.js";
 import pool from "../db/pool.js";
 import { createClient } from "redis";
+import { apiUsageMonitor } from "../services/apiUsageMonitor.js";
 
 const dcDisparityQuerySchema = z.object({
   highDc: z.string().optional(),
@@ -313,5 +314,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }
+  });
+
+  app.get("/monitoring/usage", async (request) => {
+    const hoursBack = Math.min(168, Math.max(1, Number((request.query as any).hours ?? 24)));
+    return apiUsageMonitor.getSummary(hoursBack);
   });
 }
