@@ -21,10 +21,22 @@ export function iqrAverage(prices: number[]): number | null {
   const lowerBound = q1 - 1.5 * iqr;
   const upperBound = q3 + 1.5 * iqr;
   const filtered = sorted.filter((p) => p >= lowerBound && p <= upperBound);
+  let result;
   if (filtered.length === 0) {
-    return Math.round(sorted.reduce((a, b) => a + b, 0) / n);
+    result = Math.round(sorted.reduce((a, b) => a + b, 0) / n);
+  } else {
+    result = Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
   }
-  return Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
+
+  // Guard against wash trades: when the IQR mean is >5x the median,
+  // the IQR bounds were inflated by extreme outliers and the mean is
+  // still skewed. Fall back to the median (robust to any outlier).
+  const med = median(sorted);
+  if (med > 0 && result / med > 5) {
+    return Math.round(med);
+  }
+
+  return result;
 }
 
 export interface DcItemAverage {

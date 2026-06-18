@@ -71,14 +71,16 @@ function msUntilWednesdayMidnight(): number {
 export async function apiRoutes(app: FastifyInstance) {
   await worldDcMapping.refresh();
 
+  const { dcAverageStore } = await import("../services/dcAverageStore.js");
+  dcAverageStore.start();
+  // Wait for at least one average recompute before populating caches
+  await dcAverageStore.recompute();
+
   const { bargainsCache } = await import("../services/bargainsCache.js");
   bargainsCache.start();
 
   const { dcDisparityCache } = await import("../services/dcDisparityCache.js");
   dcDisparityCache.start();
-
-  const { dcAverageStore } = await import("../services/dcAverageStore.js");
-  dcAverageStore.start();
 
   const refreshTimer = setTimeout(async () => {
     await worldDcMapping.refresh();
