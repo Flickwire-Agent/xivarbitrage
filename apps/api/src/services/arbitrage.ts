@@ -78,14 +78,20 @@ export class ArbitrageService {
         }
       }
 
-      const opportunities: (ArbitrageOpportunity | null)[] = await Promise.all(
-        itemsToEvaluate.map(({ item_id: itemId, regions: regionsStr }) => {
-          const regions =
-            typeof regionsStr === "string" ? JSON.parse(regionsStr) : (regionsStr as string[]);
-          const snapshots = snapshotMap.get(itemId) ?? [];
-          return this.evaluateItemFromSnapshots(itemId, regions, snapshots, worldById);
-        }),
-      );
+      const opportunities: (ArbitrageOpportunity | null)[] = [];
+      const chunkSize = 100;
+      for (let i = 0; i < itemsToEvaluate.length; i += chunkSize) {
+        const chunk = itemsToEvaluate.slice(i, i + chunkSize);
+        const chunkResults = await Promise.all(
+          chunk.map(({ item_id: itemId, regions: regionsStr }) => {
+            const regions =
+              typeof regionsStr === "string" ? JSON.parse(regionsStr) : (regionsStr as string[]);
+            const snapshots = snapshotMap.get(itemId) ?? [];
+            return this.evaluateItemFromSnapshots(itemId, regions, snapshots, worldById);
+          }),
+        );
+        opportunities.push(...chunkResults);
+      }
 
       return opportunities.filter((opp): opp is ArbitrageOpportunity => opp !== null);
     } catch (error) {
