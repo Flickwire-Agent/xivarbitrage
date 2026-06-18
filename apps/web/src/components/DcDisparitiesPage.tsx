@@ -304,7 +304,9 @@ export function DcDisparitiesPage() {
                           </span>
                         </td>
                         <td>
-                          <span className="cellSubtext">Only one DC</span>
+                          <span className="cellSubtext">
+                            {d.allDcs.length > 1 ? "Insufficient data" : "Only one DC"}
+                          </span>
                         </td>
                         <td>
                           <span className="cellSubtext">—</span>

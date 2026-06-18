@@ -167,6 +167,46 @@ export class DcDisparityCache {
       const spread = highDc.avgPrice - lowDc.avgPrice;
       const spreadPercent = lowDc.avgPrice > 0 ? Math.round((spread / lowDc.avgPrice) * 100) : 0;
 
+      // Wash-trade / outlier guard: if the price ratio between high and low DC is
+      // extreme (>= 10x) and one side has very few sales, the spread is unreliable.
+      // Downgrade to single-DC using the DC with the most sales data.
+      const MIN_SALES_THRESHOLD = 5;
+      const MAX_REASONABLE_RATIO = 10;
+      const priceRatio = lowDc.avgPrice > 0 ? highDc.avgPrice / lowDc.avgPrice : Infinity;
+
+      if (
+        priceRatio >= MAX_REASONABLE_RATIO &&
+        (highDc.saleCount < MIN_SALES_THRESHOLD || lowDc.saleCount < MIN_SALES_THRESHOLD)
+      ) {
+        const bestDc = dcAverages.reduce((best, dc) => (dc.saleCount > best.saleCount ? dc : best));
+        allDisparities.push({
+          itemId,
+          spread: 0,
+          spreadPercent: 0,
+          highDc: {
+            dataCenter: bestDc.dataCenter,
+            region: bestDc.region,
+            avgPrice: bestDc.avgPrice,
+            saleCount: bestDc.saleCount,
+          },
+          lowDc: {
+            dataCenter: bestDc.dataCenter,
+            region: bestDc.region,
+            avgPrice: bestDc.avgPrice,
+            saleCount: bestDc.saleCount,
+          },
+          allDcs: dcAverages
+            .map((a) => ({
+              dataCenter: a.dataCenter,
+              region: a.region,
+              avgPrice: a.avgPrice,
+              saleCount: a.saleCount,
+            }))
+            .sort((a, b) => b.avgPrice - a.avgPrice),
+        });
+        continue;
+      }
+
       const allDcs: DcPriceInfo[] = dcAverages
         .map((a) => ({
           dataCenter: a.dataCenter,
