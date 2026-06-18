@@ -6,7 +6,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ## Critical
 
-### 1. Consolidate to a single shared `pg.Pool` singleton
+### 1. [DONE] Consolidate to a single shared `pg.Pool` singleton
 
 **Problem:** 11 separate `new Pool()` instances across every service file, each defaulting to `max: 10` connections. The app can open up to 110 PostgreSQL connections simultaneously, exhausting connection limits on Railway/hobby-tier Postgres (typically 10-25 connections).
 
@@ -20,7 +20,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 2. Fix N+1 query in `ArbitrageService.scanOpportunitiesFromDb()`
+### 2. [DONE] Fix N+1 query in `ArbitrageService.scanOpportunitiesFromDb()`
 
 **Problem:** `arbitrage.ts:51-104` fetches up to 10,000 item IDs, then fires a separate `SELECT` per item to load snapshots. That's ~10,000 sequential database round-trips every 15-minute cache refresh.
 
@@ -34,7 +34,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 3. Eliminate pool create/destroy per HTTP request
+### 3. [DONE] Eliminate pool create/destroy per HTTP request
 
 **Problem:** `routes/opportunities.ts` creates a new `pg.Pool`, runs a single query, then calls `pool.end()` on every call to `/health`, `/items/:id/history`, and `/worker/status`. Pool creation involves DNS, TCP handshake, TLS, and Postgres auth (100-500ms overhead per request).
 
@@ -47,7 +47,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 4. Fix `last_scanned` never being updated
+### 4. [DONE] Fix `last_scanned` never being updated
 
 **Problem:** `marketable_items.last_scanned` is indexed and used for scheduling (`ORDER BY last_scanned NULLS FIRST`) and status reporting, but no code ever writes to it. Scheduling order is effectively random, and the worker status endpoint always reports 0% scanned.
 
@@ -60,7 +60,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 5. Fix N+1 query in `?includeHistory=true` route handler
+### 5. [DONE] Fix N+1 query in `?includeHistory=true` route handler
 
 **Problem:** `routes/opportunities.ts:115-137` iterates over each opportunity (up to 50) and fires an individual `SELECT` query for price history per item.
 
@@ -76,7 +76,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ## High
 
-### 6. Add primary key to `sale_history`
+### 6. [DONE] Add primary key to `sale_history`
 
 **Problem:** `sale_history.id` is `bigserial` but has no `PRIMARY KEY` constraint. The table lacks a clustered index, making sequential scans slower and preventing efficient cursor-based pagination.
 
@@ -88,7 +88,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 7. Add retention policy for `job_history`
+### 7. [DONE] Add retention policy for `job_history`
 
 **Problem:** Every job (~30,000 per cycle) inserts a row. No cleanup exists. Table grows unbounded, degrading the worker status query and consuming disk.
 
@@ -101,7 +101,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 8. Add missing index on `sale_history.sold_at`
+### 8. [DONE] Add missing index on `sale_history.sold_at`
 
 **Problem:** The hourly prune (`DELETE FROM sale_history WHERE sold_at < now() - 30 days`) cannot use the composite index `(item_id, sold_at)` since it doesn't filter on `item_id`. Results in a full sequential scan.
 
@@ -113,7 +113,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 9. Add missing index on `job_history.created_at`
+### 9. [DONE] Add missing index on `job_history.created_at`
 
 **Problem:** The worker status query (`WHERE created_at > now() - 24h GROUP BY status`) has no usable index. The existing index is on `(status, completed_at DESC)`.
 
@@ -125,7 +125,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 10. Remove double rate limiting
+### 10. [DONE] Remove double rate limiting
 
 **Problem:** `UniversalisClient` has its own `RateLimiter` (`universalis.ts:39`), and `opportunityWorker.ts:32` wraps every call in the singleton `rateLimiter`. Each API call passes through two limiters, potentially halving throughput.
 
@@ -138,7 +138,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 11. Fix `dc_item_averages` DELETE-then-INSERT race condition
+### 11. [DONE] Fix `dc_item_averages` DELETE-then-INSERT race condition
 
 **Problem:** `dcAverageStore.ts:127` wipes the entire table with `DELETE FROM dc_item_averages`, then re-inserts in batches. Concurrent reads during this window return empty results.
 
@@ -152,7 +152,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 12. Use `queue.addBulk()` instead of sequential `queue.add()`
+### 12. [DONE] Use `queue.addBulk()` instead of sequential `queue.add()`
 
 **Problem:** `jobScheduler.ts:231-238` adds 30,000 jobs one at a time with `await queue.add()`. Each call is a separate Redis round-trip (~1ms each = ~30 seconds total).
 
@@ -180,7 +180,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 14. Add LRU eviction to unbounded in-memory caches
+### 14. [DONE] Add LRU eviction to unbounded in-memory caches
 
 **Problem:** `xivapi.ts:26` (`Map<number, ItemDetails>`) and `routes/opportunities.ts:149` (`Map<string, results>`) grow indefinitely with no eviction policy.
 
@@ -206,7 +206,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 16. Remove duplicate migration logic from `marketSnapshotStore.init()`
+### 16. [DONE] Remove duplicate migration logic from `marketSnapshotStore.init()`
 
 **Problem:** `marketSnapshotStore.ts:39-77` re-runs CREATE TABLE/INDEX statements already handled by `migrations.ts`. Runs on every first query after process start.
 
@@ -219,7 +219,7 @@ Ranked by impact. Each item includes the problem, remediation approach, and expe
 
 ---
 
-### 17. Fix Redis health check connection overhead
+### 17. [DONE] Fix Redis health check connection overhead
 
 **Problem:** `routes/opportunities.ts:59-70` dynamically imports `redis`, creates a new client, connects, pings, and disconnects on every `/health` request.
 
