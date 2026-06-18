@@ -287,7 +287,7 @@ app.get("/api/openapi.json", async (request, reply) => {
         get: {
           summary: "Market bargains",
           description:
-            "Items with current listings priced at least 20% below the global IQR average price.",
+            "Items with current listings priced at least 20% below the global IQR average price. Collapsed to one entry per item showing the cheapest listing.",
           responses: {
             "200": jsonResponse(
               "List of bargain listings",

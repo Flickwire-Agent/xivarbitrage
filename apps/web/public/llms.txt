@@ -26,7 +26,7 @@ Agent guidance:
 
 ### GET /api/bargains
 
-Returns items with current listings priced at least 20% below the global IQR average price. Refreshed every 15 minutes.
+Returns items with current listings priced at least 20% below the global IQR average price. Collapsed to one entry per item showing the cheapest listing across all worlds. Refreshed every 15 minutes.
 
 **Query parameters:**
 - `page` (number): Page number

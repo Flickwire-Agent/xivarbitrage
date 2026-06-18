@@ -81,7 +81,7 @@ export class BargainsCache {
     }
 
     const batchSize = 250;
-    const allBargains: BargainListing[] = [];
+    const bestPerItem = new Map<number, BargainListing>();
 
     for (let i = 0; i < allItemIds.length; i += batchSize) {
       const batch = allItemIds.slice(i, i + batchSize);
@@ -101,6 +101,8 @@ export class BargainsCache {
         const globalAvg = globalIqrByItem.get(row.item_id) ?? null;
         if (!globalAvg || globalAvg <= 0) continue;
 
+        let bestForItem: BargainListing | undefined;
+
         for (const listing of itemListings) {
           if (!listing.pricePerUnit || listing.pricePerUnit <= 0) continue;
           const worldId = listing.worldID ?? 0;
@@ -111,23 +113,30 @@ export class BargainsCache {
           const discountPercent = Math.round((discount / globalAvg) * 100);
           if (discountPercent < 20) continue;
 
-          allBargains.push({
-            itemId: row.item_id,
-            worldId,
-            worldName: listing.worldName ?? "Unknown",
-            dataCenter: dc,
-            pricePerUnit: listing.pricePerUnit,
-            quantity: listing.quantity,
-            recentAvgPrice: globalAvg,
-            discount,
-            discountPercent,
-          });
+          if (!bestForItem || listing.pricePerUnit < bestForItem.pricePerUnit) {
+            bestForItem = {
+              itemId: row.item_id,
+              worldId,
+              worldName: listing.worldName ?? "Unknown",
+              dataCenter: dc,
+              pricePerUnit: listing.pricePerUnit,
+              quantity: listing.quantity,
+              recentAvgPrice: globalAvg,
+              discount,
+              discountPercent,
+            };
+          }
+        }
+
+        if (bestForItem) {
+          bestPerItem.set(row.item_id, bestForItem);
         }
       }
     }
 
+    const allBargains = [...bestPerItem.values()];
     allBargains.sort((a, b) => b.discountPercent - a.discountPercent);
-    return allBargains.slice(0, 200);
+    return allBargains;
   }
 }
 
