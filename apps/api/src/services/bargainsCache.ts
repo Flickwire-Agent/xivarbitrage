@@ -5,6 +5,7 @@ import { XivApiClient } from "./xivapi.js";
 import { UniversalisClient } from "./universalis.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { iqrAverage } from "./stats.js";
+import { dcAverageStore } from "./dcAverageStore.js";
 
 export class BargainsCache {
   private latest: BargainListing[] = [];
@@ -57,6 +58,17 @@ export class BargainsCache {
       } catch {}
     }
 
+    const dcAverages = await dcAverageStore.getAverages();
+    const dcAvgLookup = new Map<number, Map<string, number>>();
+    for (const avg of dcAverages) {
+      let byDc = dcAvgLookup.get(avg.itemId);
+      if (!byDc) {
+        byDc = new Map();
+        dcAvgLookup.set(avg.itemId, byDc);
+      }
+      byDc.set(avg.dataCenter, avg.avgPrice);
+    }
+
     const itemResult = await pool.query<{ item_id: number }>(
       `SELECT DISTINCT s.item_id
        FROM market_snapshots s
@@ -71,28 +83,26 @@ export class BargainsCache {
 
     const salesResult = await pool.query<{
       item_id: number;
-      world_id: number;
       price_per_unit: number;
     }>(
-      `SELECT item_id, world_id, price_per_unit
+      `SELECT item_id, price_per_unit
        FROM sale_history
        WHERE item_id = ANY($1::int[]) AND sold_at > now() - interval '30 days'`,
       [allItemIds],
     );
 
-    const salesByItemWorld = new Map<number, Map<number, number[]>>();
+    const globalIqrByItem = new Map<number, number | null>();
+    const pricesByItem = new Map<number, number[]>();
     for (const row of salesResult.rows) {
-      let byWorld = salesByItemWorld.get(row.item_id);
-      if (!byWorld) {
-        byWorld = new Map();
-        salesByItemWorld.set(row.item_id, byWorld);
-      }
-      let prices = byWorld.get(row.world_id);
+      let prices = pricesByItem.get(row.item_id);
       if (!prices) {
         prices = [];
-        byWorld.set(row.world_id, prices);
+        pricesByItem.set(row.item_id, prices);
       }
       prices.push(row.price_per_unit);
+    }
+    for (const [itemId, prices] of pricesByItem) {
+      globalIqrByItem.set(itemId, iqrAverage(prices));
     }
 
     const batchSize = 250;
@@ -114,29 +124,8 @@ export class BargainsCache {
         const itemListings = row.data.listings;
         if (!itemListings?.length) continue;
 
-        const worldSales = salesByItemWorld.get(row.item_id);
-        if (!worldSales) continue;
-
-        const dcPrices = new Map<string, number[]>();
-        for (const [worldId, prices] of worldSales) {
-          const dc = this.worldDataCenters[worldId];
-          if (!dc) continue;
-          let arr = dcPrices.get(dc);
-          if (!arr) {
-            arr = [];
-            dcPrices.set(dc, arr);
-          }
-          arr.push(...prices);
-        }
-
-        const dcAvg = new Map<string, number>();
-        for (const [dc, prices] of dcPrices) {
-          const avg = iqrAverage(prices);
-          if (avg !== null && prices.length >= 7) dcAvg.set(dc, avg);
-        }
-
-        const allPrices = [...worldSales.values()].flat();
-        const globalIqr = iqrAverage(allPrices);
+        const itemDcAvg = dcAvgLookup.get(row.item_id);
+        const globalIqr = globalIqrByItem.get(row.item_id) ?? null;
 
         let item = itemCache.get(row.item_id);
         if (!item) {
@@ -152,7 +141,7 @@ export class BargainsCache {
           if (!listing.pricePerUnit || listing.pricePerUnit <= 0) continue;
           const worldId = listing.worldID ?? 0;
           const dc = this.worldDataCenters[worldId] ?? "Unknown";
-          const avg = dcAvg.get(dc) ?? globalIqr ?? 0;
+          const avg = itemDcAvg?.get(dc) ?? globalIqr ?? 0;
           if (avg <= 0) continue;
 
           const discount = avg - listing.pricePerUnit;
