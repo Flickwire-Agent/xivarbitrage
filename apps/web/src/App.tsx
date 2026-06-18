@@ -13,6 +13,9 @@ const ListingsPage = lazy(() =>
 const BargainsPage = lazy(() =>
   import("./components/BargainsPage.js").then((m) => ({ default: m.BargainsPage })),
 );
+const DcDisparitiesPage = lazy(() =>
+  import("./components/DcDisparitiesPage.js").then((m) => ({ default: m.DcDisparitiesPage })),
+);
 
 function PageFallback() {
   return (
@@ -37,6 +40,7 @@ export function App() {
           <Routes>
             <Route path="/" element={<OpportunitiesPage />} />
             <Route path="/bargains" element={<BargainsPage />} />
+            <Route path="/dc-disparities" element={<DcDisparitiesPage />} />
             <Route path="/items/:itemId" element={<ItemPage />} />
             <Route path="/items/:itemId/listings" element={<ListingsPage />} />
           </Routes>

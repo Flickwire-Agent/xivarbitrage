@@ -860,6 +860,49 @@ a:hover {
   color: #a3b3c5;
 }
 
+.dcTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-width: 420px;
+}
+
+.dcTag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: #eef2f7;
+  color: #3d4c5e;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .dcTag {
+  background: #1e2d3d;
+  color: #a3b3c5;
+}
+
+.dcTagHigh {
+  background: #d4f0e8;
+  color: #0d6b5a;
+}
+
+:root[data-theme="dark"] .dcTagHigh {
+  background: #0f2e26;
+  color: #6ee7b7;
+}
+
+.dcTagLow {
+  background: #fde8e6;
+  color: #9b2c20;
+}
+
+:root[data-theme="dark"] .dcTagLow {
+  background: #3a1e1b;
+  color: #f0a098;
+}
+
 .recharts-legend-item-text {
   color: #e1e8f0 !important;
 }

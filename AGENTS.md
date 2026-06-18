@@ -114,6 +114,7 @@ pnpm workspace monorepo for finding FFXIV item arbitrage opportunities across wo
 - **Process**: pm2 manages `xivarbitrage` (runs `apps/api/dist/server.js`)
 - **After API update**: `pnpm run -r --filter=@xiv-arbitrage/api build` then `pm2 restart xivarbitrage`
 - **After web update**: `pnpm run -r --filter=@xiv-arbitrage/web build` (served statically by API)
+- **Redeploy rule**: After ANY build step, always run `pm2 restart xivarbitrage` to redeploy. This applies to both API and web builds since the API serves the web statically.
 - **Host**: Railway.app (alternative), auto-deploys on `git push`
 - **Health**: `GET /api/health` returns `{ ok, database, redis }`
 - **Worker status**: `GET /api/worker/status` shows queue depth, completion %, 24h stats

@@ -70,17 +70,25 @@ export class UniversalisClient {
 
   private async fetchJson<T>(path: string): Promise<T> {
     return this.limiter.schedule(async () => {
-      const response = await fetch(`${config.universalisBaseUrl}${path}`, {
-        headers: {
-          "User-Agent": "xiv-arbitrage/0.1.0",
-        },
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
-      if (!response.ok) {
-        throw new Error(`Universalis request failed: ${response.status} ${response.statusText}`);
+      try {
+        const response = await fetch(`${config.universalisBaseUrl}${path}`, {
+          headers: {
+            "User-Agent": "xiv-arbitrage/0.1.0",
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Universalis request failed: ${response.status} ${response.statusText}`);
+        }
+
+        return (await response.json()) as T;
+      } finally {
+        clearTimeout(timeout);
       }
-
-      return (await response.json()) as T;
     });
   }
 }

@@ -111,6 +111,26 @@ export async function runMigrations(connectionString: string): Promise<void> {
       "✓ Added unique constraint on sale_history (item_id, world_id, price_per_unit, sold_at)",
     );
 
+    // Create dc_item_averages table for pre-computed per-DC IQR averages
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS dc_item_averages (
+        item_id integer NOT NULL,
+        data_center text NOT NULL,
+        region text NOT NULL,
+        avg_price integer NOT NULL,
+        sale_count integer NOT NULL,
+        computed_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (item_id, data_center)
+      );
+    `);
+    console.log("✓ Created dc_item_averages table");
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_dc_item_averages_computed
+        ON dc_item_averages (computed_at);
+    `);
+    console.log("✓ Created index on dc_item_averages (computed_at)");
+
     console.log("Database migrations completed successfully");
   } finally {
     await pool.end();

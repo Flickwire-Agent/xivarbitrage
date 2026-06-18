@@ -65,6 +65,13 @@ export function BargainsPage() {
           <NavLink to="/" className="iconButton" aria-label="View arbitrage opportunities">
             <span>Arbitrage</span>
           </NavLink>
+          <NavLink
+            to="/dc-disparities"
+            className="iconButton"
+            aria-label="View data center price disparities"
+          >
+            <span>DC Gaps</span>
+          </NavLink>
           <a
             href="https://github.com/Flickwire-Agent/xivarbitrage"
             target="_blank"

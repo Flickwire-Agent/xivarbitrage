@@ -6,45 +6,21 @@ import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
 import { universalis } from "../services/universalis.js";
 import { XivApiClient } from "../services/xivapi.js";
 import { config } from "../config.js";
+import { iqrAverage } from "../services/stats.js";
 import pg from "pg";
 
+const dcDisparityQuerySchema = z.object({
+  highDc: z.string().optional(),
+  lowDc: z.string().optional(),
+  minSpread: z.coerce.number().nonnegative().optional(),
+  minSpreadPercent: z.coerce.number().nonnegative().optional(),
+  region: z.string().optional(),
+  sort: z.enum(["spread", "spreadPercent", "item"]).optional(),
+  page: z.coerce.number().int().positive().optional(),
+  perPage: z.coerce.number().int().positive().max(200).optional(),
+});
+
 const { Pool } = pg;
-
-function median(sorted: number[]): number {
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1]! + sorted[mid]!) / 2;
-  }
-  return sorted[mid]!;
-}
-
-/** Compute IQR-filtered average from an array of prices. */
-function iqrAverage(prices: number[]): number | null {
-  if (prices.length === 0) return null;
-  if (prices.length <= 3) {
-    return Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-  }
-
-  const sorted = [...prices].sort((a, b) => a - b);
-  const n = sorted.length;
-
-  const lowerHalf = sorted.slice(0, Math.floor(n / 2));
-  const upperHalf = sorted.slice(Math.ceil(n / 2));
-
-  const q1 = median(lowerHalf);
-  const q3 = median(upperHalf);
-  const iqr = q3 - q1;
-
-  const lowerBound = q1 - 1.5 * iqr;
-  const upperBound = q3 + 1.5 * iqr;
-
-  const filtered = sorted.filter((p) => p >= lowerBound && p <= upperBound);
-  if (filtered.length === 0) {
-    return Math.round(sorted.reduce((a, b) => a + b, 0) / n);
-  }
-
-  return Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
-}
 
 const querySchema = z.object({
   highWorld: z.string().optional(),
@@ -99,6 +75,12 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
   const { bargainsCache } = await import("../services/bargainsCache.js");
   bargainsCache.start();
+
+  const { dcDisparityCache } = await import("../services/dcDisparityCache.js");
+  dcDisparityCache.start();
+
+  const { dcAverageStore } = await import("../services/dcAverageStore.js");
+  dcAverageStore.start();
 
   app.get("/health", async (request, reply) => {
     const dbHealthy = await checkDatabaseHealth();
@@ -258,7 +240,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
     const dcAverages: Record<string, { avgPrice: number; count: number }> = {};
     for (const [dc, prices] of Object.entries(dcPrices)) {
       const avg = iqrAverage(prices);
-      if (avg !== null) {
+      if (avg !== null && prices.length >= 7) {
         dcAverages[dc] = { avgPrice: avg, count: prices.length };
       }
     }
@@ -299,6 +281,11 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
   app.get("/bargains", async () => {
     return bargainsCache.get();
+  });
+
+  app.get("/dc-disparities", async (request) => {
+    const query = dcDisparityQuerySchema.parse(request.query);
+    return dcDisparityCache.get(query);
   });
 
   app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {

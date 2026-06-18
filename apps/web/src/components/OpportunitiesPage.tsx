@@ -164,6 +164,14 @@ export function OpportunitiesPage() {
             <TrendingUp size={16} aria-hidden="true" />
             <span>Bargains</span>
           </NavLink>
+          <NavLink
+            to="/dc-disparities"
+            className="iconButton"
+            aria-label="View data center price disparities"
+          >
+            <TrendingUp size={16} aria-hidden="true" />
+            <span>DC Gaps</span>
+          </NavLink>
           <a
             href="https://github.com/Flickwire-Agent/xivarbitrage"
             target="_blank"

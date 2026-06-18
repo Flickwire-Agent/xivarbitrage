@@ -2,39 +2,11 @@ import type { BargainListing, ItemDetails } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import pg from "pg";
 import { XivApiClient } from "./xivapi.js";
-import { universalis } from "./universalis.js";
+import { UniversalisClient } from "./universalis.js";
 import type { UniversalisMarketData } from "./universalis.js";
+import { iqrAverage } from "./stats.js";
 
 const { Pool } = pg;
-
-function median(sorted: number[]): number {
-  const mid = Math.floor(sorted.length / 2);
-  if (sorted.length % 2 === 0) {
-    return (sorted[mid - 1]! + sorted[mid]!) / 2;
-  }
-  return sorted[mid]!;
-}
-
-function iqrAverage(prices: number[]): number | null {
-  if (prices.length === 0) return null;
-  if (prices.length <= 3) {
-    return Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
-  }
-  const sorted = [...prices].sort((a, b) => a - b);
-  const n = sorted.length;
-  const lowerHalf = sorted.slice(0, Math.floor(n / 2));
-  const upperHalf = sorted.slice(Math.ceil(n / 2));
-  const q1 = median(lowerHalf);
-  const q3 = median(upperHalf);
-  const iqr = q3 - q1;
-  const lowerBound = q1 - 1.5 * iqr;
-  const upperBound = q3 + 1.5 * iqr;
-  const filtered = sorted.filter((p) => p >= lowerBound && p <= upperBound);
-  if (filtered.length === 0) {
-    return Math.round(sorted.reduce((a, b) => a + b, 0) / n);
-  }
-  return Math.round(filtered.reduce((a, b) => a + b, 0) / filtered.length);
-}
 
 export class BargainsCache {
   private latest: BargainListing[] = [];
@@ -42,6 +14,7 @@ export class BargainsCache {
   private refreshPromise: Promise<void> | null = null;
   private pool: pg.Pool | null;
   private xivapi = new XivApiClient();
+  private universalis = new UniversalisClient();
   private worldDataCenters: Record<number, string> = {};
 
   constructor() {
@@ -64,7 +37,7 @@ export class BargainsCache {
   }
 
   async refresh(): Promise<void> {
-    if (this.refreshPromise) return;
+    if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.scan()
       .then((bargains) => {
         this.latest = bargains;
@@ -86,7 +59,7 @@ export class BargainsCache {
     // Build world → data center mapping
     if (Object.keys(this.worldDataCenters).length === 0) {
       try {
-        const dcs = await universalis.getDataCenters();
+        const dcs = await this.universalis.getDataCenters();
         for (const dc of dcs) {
           for (const wid of dc.worlds) {
             this.worldDataCenters[wid] = dc.name;
@@ -102,7 +75,7 @@ export class BargainsCache {
       `SELECT DISTINCT s.item_id
        FROM market_snapshots s
        WHERE s.fetched_at > now() - interval '24 hours'
-         AND EXISTS (SELECT 1 FROM sale_history h WHERE h.item_id = s.item_id AND h.sold_at > now() - interval '14 days')
+          AND EXISTS (SELECT 1 FROM sale_history h WHERE h.item_id = s.item_id AND h.sold_at > now() - interval '30 days')
        LIMIT 3000`,
     );
 
@@ -118,7 +91,7 @@ export class BargainsCache {
     }>(
       `SELECT item_id, world_id, price_per_unit
        FROM sale_history
-       WHERE item_id = ANY($1::int[]) AND sold_at > now() - interval '14 days'`,
+       WHERE item_id = ANY($1::int[]) AND sold_at > now() - interval '30 days'`,
       [allItemIds],
     );
 
@@ -178,7 +151,7 @@ export class BargainsCache {
         const dcAvg = new Map<string, number>();
         for (const [dc, prices] of dcPrices) {
           const avg = iqrAverage(prices);
-          if (avg !== null) dcAvg.set(dc, avg);
+          if (avg !== null && prices.length >= 7) dcAvg.set(dc, avg);
         }
 
         // All-world fallback (for worlds without DC mapping or DC without sales)

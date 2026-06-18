@@ -190,7 +190,7 @@ export class MarketSnapshotStore {
         SELECT world_id, world_name, price_per_unit, quantity, sold_at
         FROM sale_history
         WHERE item_id = $1
-          AND sold_at > now() - interval '14 days'
+           AND sold_at > now() - interval '30 days'
         ORDER BY sold_at ASC
       `,
       [itemId],
@@ -222,7 +222,7 @@ export class MarketSnapshotStore {
       this.pool.query<{ world_id: number; price_per_unit: number }>(
         `SELECT world_id, price_per_unit
          FROM sale_history
-         WHERE item_id = $1 AND sold_at > now() - interval '14 days'`,
+         WHERE item_id = $1 AND sold_at > now() - interval '30 days'`,
         [itemId],
       ),
     ]);
@@ -252,7 +252,7 @@ export class MarketSnapshotStore {
 
     await this.init();
     const result = await this.pool.query(
-      `DELETE FROM sale_history WHERE sold_at < now() - interval '14 days'`,
+      `DELETE FROM sale_history WHERE sold_at < now() - interval '30 days'`,
     );
 
     return result.rowCount ?? 0;

@@ -34,11 +34,17 @@ export class XivApiClient {
     const url = new URL(`${config.xivapiBaseUrl}/sheet/Item/${itemId}`);
     url.searchParams.set("fields", "Name,Description,Icon,ItemUICategory.Name,LevelItem,StackSize");
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch(url, {
       headers: {
         "User-Agent": "xiv-arbitrage/0.1.0",
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       throw new Error(`XIVAPI item request failed: ${response.status} ${response.statusText}`);

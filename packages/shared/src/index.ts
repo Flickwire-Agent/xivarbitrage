@@ -105,6 +105,43 @@ export interface ListingsResponse {
   } | null;
 }
 
+export interface DcPriceInfo {
+  dataCenter: string;
+  region: string;
+  avgPrice: number;
+  saleCount: number;
+}
+
+export interface DcDisparity {
+  itemId: number;
+  item: ItemDetails;
+  spread: number;
+  spreadPercent: number;
+  highDc: DcPriceInfo;
+  lowDc: DcPriceInfo;
+  allDcs: DcPriceInfo[];
+}
+
+export interface DcDisparityQuery {
+  highDc?: string;
+  lowDc?: string;
+  minSpread?: number;
+  minSpreadPercent?: number;
+  region?: string;
+  sort?: "spread" | "spreadPercent" | "item";
+  page?: number;
+  perPage?: number;
+}
+
+export interface DcDisparityResponse {
+  generatedAt: string;
+  disparities: DcDisparity[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+}
+
 export interface OpportunityResponse {
   generatedAt: string;
   filters: OpportunityFilters;
