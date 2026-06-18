@@ -11,7 +11,7 @@ import {
   Sun,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Link, useSearchParams } from "wouter";
 import { useInvalidateOpportunities, useOpportunities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
@@ -20,14 +20,11 @@ import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 
 const DEFAULT_PAGE_SIZE = 50;
-const INITIAL_ITEM_DETAIL_COUNT = 12;
-const FULL_ITEM_DETAIL_DELAY_MS = 10_000;
 
 export function OpportunitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const invalidateOpportunities = useInvalidateOpportunities();
-  const [itemDetailLimit, setItemDetailLimit] = useState(0);
 
   useEffect(() => {
     document.title = "XIV Arbitrage — FFXIV Market Board Arbitrage Finder";
@@ -54,39 +51,7 @@ export function OpportunitiesPage() {
     () => data?.opportunities.map((o) => o.itemId) ?? [],
     [data?.opportunities],
   );
-  const visibleItemIds = useMemo(
-    () => itemIds.slice(0, itemDetailLimit),
-    [itemDetailLimit, itemIds],
-  );
-  const itemDetails = useBulkItemDetails(visibleItemIds);
-
-  useEffect(() => {
-    if (itemIds.length === 0) return;
-
-    const windowWithIdle = window as typeof window & {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-      cancelIdleCallback?: (handle: number) => void;
-    };
-
-    const firstBatchCount = Math.min(INITIAL_ITEM_DETAIL_COUNT, itemIds.length);
-    const fallback = window.setTimeout(() => setItemDetailLimit(firstBatchCount), 2500);
-    const idleHandle = windowWithIdle.requestIdleCallback?.(
-      () => {
-        window.clearTimeout(fallback);
-        setItemDetailLimit(firstBatchCount);
-      },
-      { timeout: 2500 },
-    );
-    const fullBatch = window.setTimeout(() => {
-      setItemDetailLimit(itemIds.length);
-    }, FULL_ITEM_DETAIL_DELAY_MS);
-
-    return () => {
-      window.clearTimeout(fallback);
-      window.clearTimeout(fullBatch);
-      if (idleHandle !== undefined) windowWithIdle.cancelIdleCallback?.(idleHandle);
-    };
-  }, [itemIds.length]);
+  const itemDetails = useBulkItemDetails(itemIds);
 
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ?? 1;

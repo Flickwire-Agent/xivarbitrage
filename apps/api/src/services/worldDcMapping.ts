@@ -17,6 +17,25 @@ export interface WorldDcMapping {
 
 const TARGET_REGIONS = new Set(["North-America", "Europe", "Oceania"]);
 
+function sortedRecord<T>(record: Record<string | number, T>): Record<string, T> {
+  return Object.fromEntries(Object.entries(record).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+function comparableMapping(mapping: WorldDcMapping): Omit<WorldDcMapping, "updatedAt"> {
+  return {
+    worldIdToDc: sortedRecord(mapping.worldIdToDc),
+    dcRegions: sortedRecord(mapping.dcRegions),
+    worlds: [...mapping.worlds].sort((a, b) => a.id - b.id),
+    dataCenters: [...mapping.dataCenters].sort(),
+    regions: [...mapping.regions].sort(),
+  };
+}
+
+function hasRealMappingChanges(previous: WorldDcMapping | null, next: WorldDcMapping): boolean {
+  if (!previous) return true;
+  return JSON.stringify(comparableMapping(previous)) !== JSON.stringify(comparableMapping(next));
+}
+
 export class WorldDcMappingService {
   private universalis = new UniversalisClient();
   private mapping: WorldDcMapping | null = null;
@@ -57,16 +76,17 @@ export class WorldDcMappingService {
     const worldIdToDc: Record<number, string> = {};
     const dcRegions: Record<string, string> = {};
     const worlds: WorldDcMapping["worlds"] = [];
+    const sortedDataCenters = [...dataCenters].sort((a, b) => a.name.localeCompare(b.name));
 
-    for (const dc of dataCenters) {
+    for (const dc of sortedDataCenters) {
       dcRegions[dc.name] = dc.region;
-      for (const worldId of dc.worlds) {
+      for (const worldId of [...dc.worlds].sort((a, b) => a - b)) {
         worldIdToDc[worldId] = dc.name;
       }
     }
 
-    for (const dc of dataCenters.filter((dc) => TARGET_REGIONS.has(dc.region))) {
-      for (const worldId of dc.worlds) {
+    for (const dc of sortedDataCenters.filter((dc) => TARGET_REGIONS.has(dc.region))) {
+      for (const worldId of [...dc.worlds].sort((a, b) => a - b)) {
         worlds.push({
           id: worldId,
           name: worldNames.get(worldId) ?? `World ${worldId}`,
@@ -79,11 +99,20 @@ export class WorldDcMappingService {
     const mapping: WorldDcMapping = {
       worldIdToDc,
       dcRegions,
-      worlds,
-      dataCenters: [...new Set(dataCenters.map((dc) => dc.name))].sort(),
-      regions: [...new Set(dataCenters.map((dc) => dc.region))].sort(),
+      worlds: worlds.sort((a, b) => a.id - b.id),
+      dataCenters: [...new Set(sortedDataCenters.map((dc) => dc.name))].sort(),
+      regions: [...new Set(sortedDataCenters.map((dc) => dc.region))].sort(),
       updatedAt: new Date().toISOString(),
     };
+
+    const previous = this.mapping ?? (await this.loadFromFile());
+    if (!hasRealMappingChanges(previous, mapping)) {
+      this.mapping = previous;
+      console.log(
+        `[WorldDcMapping] Refreshed ${worlds.length} worlds, ${mapping.dataCenters.length} DCs (unchanged)`,
+      );
+      return;
+    }
 
     this.mapping = mapping;
     await this.saveToFile(mapping);
@@ -104,7 +133,7 @@ export class WorldDcMappingService {
   private async saveToFile(mapping: WorldDcMapping): Promise<void> {
     const dir = path.dirname(CACHE_FILE);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(CACHE_FILE, JSON.stringify(mapping, null, 2), "utf-8");
+    await fs.writeFile(CACHE_FILE, `${JSON.stringify(mapping, null, 2)}\n`, "utf-8");
   }
 }
 

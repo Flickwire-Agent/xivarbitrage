@@ -1,8 +1,10 @@
 import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
+import type { CSSProperties } from "react";
 import { lazy, Suspense, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useWorlds } from "../hooks/api.js";
+import { getDataCenterLineColor, getDataCenterWorldColor } from "../lib/chartColors.js";
 import type { ItemDetails } from "../lib/xivapi.js";
 
 const SaleHistoryChart = lazy(() =>
@@ -25,6 +27,7 @@ function getUniversalisUrl(itemId: number): string {
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
   const [location] = useLocation();
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
+  const [hiddenDcs, setHiddenDcs] = useState(() => new Set<string>());
   const { data: worldsData } = useWorlds();
 
   const saleStats = useMemo(() => {
@@ -45,6 +48,42 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
     return map;
   }, [worldsData]);
 
+  const { dcs, worldsByDc, worldToDc, worldColors } = useMemo(() => {
+    const nextWorldToDc = new Map<string, string>();
+    for (const sale of data.sales) {
+      nextWorldToDc.set(sale.worldName, worldIdToDc[sale.worldId] ?? "Unknown");
+    }
+
+    const nextWorldsByDc = new Map<string, string[]>();
+    for (const world of data.worlds) {
+      const dc = nextWorldToDc.get(world) ?? "Unknown";
+      const worlds = nextWorldsByDc.get(dc) ?? [];
+      worlds.push(world);
+      nextWorldsByDc.set(dc, worlds);
+    }
+
+    const nextDcs = [...nextWorldsByDc.keys()].sort();
+    const nextWorldColors = new Map<string, string>();
+    nextDcs.forEach((dc, dcIndex) => {
+      const worlds = nextWorldsByDc.get(dc)!.sort();
+      worlds.forEach((world, worldIndex) => {
+        nextWorldColors.set(world, getDataCenterWorldColor(dcIndex, worldIndex));
+      });
+    });
+
+    return {
+      dcs: nextDcs,
+      worldsByDc: nextWorldsByDc,
+      worldToDc: nextWorldToDc,
+      worldColors: nextWorldColors,
+    };
+  }, [data.sales, data.worlds, worldIdToDc]);
+
+  const visibleDcs = useMemo(
+    () => new Set(dcs.filter((dc) => !hiddenDcs.has(dc))),
+    [dcs, hiddenDcs],
+  );
+
   function toggleWorld(world: string) {
     setVisibleWorlds((prev) => {
       const next = new Set(prev);
@@ -57,7 +96,48 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
     });
   }
 
+  function toggleDataCenterLine(dc: string) {
+    setHiddenDcs((prev) => {
+      const next = new Set(prev);
+      if (next.has(dc)) {
+        next.delete(dc);
+      } else {
+        next.add(dc);
+      }
+      return next;
+    });
+  }
+
+  function toggleDataCenterWorlds(dc: string) {
+    const dcWorlds = worldsByDc.get(dc) ?? [];
+    const dcHidden = dcWorlds.every((world) => !visibleWorlds.has(world));
+    setVisibleWorlds((prev) => {
+      const next = new Set(prev);
+      for (const world of dcWorlds) {
+        if (dcHidden) {
+          next.add(world);
+        } else {
+          next.delete(world);
+        }
+      }
+      return next;
+    });
+  }
+
+  function toggleAllDataCenterLines() {
+    if (dcs.every((dc) => hiddenDcs.has(dc))) {
+      setHiddenDcs(new Set());
+    } else {
+      setHiddenDcs(new Set(dcs));
+    }
+  }
+
+  function colorStyle(color: string) {
+    return { "--tag-color": color } as CSSProperties;
+  }
+
   const allHidden = data.worlds.every((w) => !visibleWorlds.has(w));
+  const allDcsHidden = dcs.every((dc) => hiddenDcs.has(dc));
 
   return (
     <div>
@@ -148,6 +228,33 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
 
       <section className="chartShell" aria-label="Server filter">
         <div className="chartServerFilter">
+          <span className="chartServerFilterLabel">Data center lines</span>
+          <button
+            type="button"
+            className="chartToggleAll"
+            onClick={toggleAllDataCenterLines}
+            aria-label={allDcsHidden ? "Show all data center lines" : "Hide all data center lines"}
+          >
+            {allDcsHidden ? "Show all" : "Hide all"}
+          </button>
+        </div>
+        <div className="chartServerTags" role="group" aria-label="Toggle data center lines">
+          {dcs.map((dc, dcIndex) => (
+            <button
+              key={dc}
+              type="button"
+              className="serverTag dataCenterTag"
+              style={colorStyle(getDataCenterLineColor(dcIndex))}
+              onClick={() => toggleDataCenterLine(dc)}
+              aria-pressed={!hiddenDcs.has(dc)}
+            >
+              <span className="chartSwatch" aria-hidden="true" />
+              {dc} line
+            </button>
+          ))}
+        </div>
+
+        <div className="chartServerFilter">
           <span className="chartServerFilterLabel">Servers</span>
           <button
             type="button"
@@ -164,18 +271,53 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
             {allHidden ? "Show all" : "Hide all"}
           </button>
         </div>
-        <div className="chartServerTags" role="group" aria-label="Toggle server visibility">
-          {data.worlds.map((world) => (
-            <button
-              key={world}
-              type="button"
-              className={`serverTag${visibleWorlds.has(world) ? "" : ""}`}
-              onClick={() => toggleWorld(world)}
-              aria-pressed={visibleWorlds.has(world)}
-            >
-              {world}
-            </button>
-          ))}
+        <div className="chartDcGroups">
+          {dcs.map((dc, dcIndex) => {
+            const dcWorlds = worldsByDc.get(dc) ?? [];
+            const dcHidden = dcWorlds.every((world) => !visibleWorlds.has(world));
+
+            return (
+              <div className="chartDcGroup" key={dc}>
+                <div className="chartDcGroupHeader">
+                  <span>
+                    <span
+                      className="chartSwatch"
+                      style={colorStyle(getDataCenterLineColor(dcIndex))}
+                      aria-hidden="true"
+                    />
+                    {dc}
+                  </span>
+                  <button
+                    type="button"
+                    className="chartToggleAll"
+                    onClick={() => toggleDataCenterWorlds(dc)}
+                    aria-label={`${dcHidden ? "Show" : "Hide"} ${dc} servers`}
+                  >
+                    {dcHidden ? "Show servers" : "Hide servers"}
+                  </button>
+                </div>
+                <div
+                  className="chartServerTags"
+                  role="group"
+                  aria-label={`Toggle ${dc} server visibility`}
+                >
+                  {dcWorlds.map((world) => (
+                    <button
+                      key={world}
+                      type="button"
+                      className="serverTag"
+                      style={colorStyle(worldColors.get(world) ?? getDataCenterLineColor(dcIndex))}
+                      onClick={() => toggleWorld(world)}
+                      aria-pressed={visibleWorlds.has(world)}
+                    >
+                      <span className="chartSwatch" aria-hidden="true" />
+                      {world}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -190,7 +332,9 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
           <SaleHistoryChart
             sales={data.sales}
             visibleWorlds={visibleWorlds}
+            visibleDcs={visibleDcs}
             worldIdToDc={worldIdToDc}
+            worldToDc={worldToDc}
           />
         </Suspense>
       </section>
