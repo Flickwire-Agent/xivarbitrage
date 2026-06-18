@@ -1,30 +1,20 @@
 import type { BargainListing, ItemDetails } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
-import pg from "pg";
+import pool from "../db/pool.js";
 import { XivApiClient } from "./xivapi.js";
 import { UniversalisClient } from "./universalis.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { iqrAverage } from "./stats.js";
 
-const { Pool } = pg;
-
 export class BargainsCache {
   private latest: BargainListing[] = [];
   private generatedAt = "";
   private refreshPromise: Promise<void> | null = null;
-  private pool: pg.Pool | null;
   private xivapi = new XivApiClient();
   private universalis = new UniversalisClient();
   private worldDataCenters: Record<number, string> = {};
 
-  constructor() {
-    this.pool = config.databaseUrl
-      ? new Pool({
-          connectionString: config.databaseUrl,
-          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-        })
-      : null;
-  }
+  constructor() {}
 
   start() {
     void this.refresh();
@@ -54,9 +44,8 @@ export class BargainsCache {
   }
 
   private async scan(): Promise<BargainListing[]> {
-    if (!this.pool) return [];
+    if (!config.databaseUrl) return [];
 
-    // Build world → data center mapping
     if (Object.keys(this.worldDataCenters).length === 0) {
       try {
         const dcs = await this.universalis.getDataCenters();
@@ -65,13 +54,10 @@ export class BargainsCache {
             this.worldDataCenters[wid] = dc.name;
           }
         }
-      } catch {
-        // Will retry next refresh
-      }
+      } catch {}
     }
 
-    // Get items that have both recent data and sale records
-    const itemResult = await this.pool.query<{ item_id: number }>(
+    const itemResult = await pool.query<{ item_id: number }>(
       `SELECT DISTINCT s.item_id
        FROM market_snapshots s
        WHERE s.fetched_at > now() - interval '24 hours'
@@ -83,8 +69,7 @@ export class BargainsCache {
 
     const allItemIds = itemResult.rows.map((r) => r.item_id);
 
-    // Get all sale records for these items
-    const salesResult = await this.pool.query<{
+    const salesResult = await pool.query<{
       item_id: number;
       world_id: number;
       price_per_unit: number;
@@ -95,7 +80,6 @@ export class BargainsCache {
       [allItemIds],
     );
 
-    // Group sales by (item_id, world_id)
     const salesByItemWorld = new Map<number, Map<number, number[]>>();
     for (const row of salesResult.rows) {
       let byWorld = salesByItemWorld.get(row.item_id);
@@ -111,7 +95,6 @@ export class BargainsCache {
       prices.push(row.price_per_unit);
     }
 
-    // Process items in batches, loading snapshots
     const batchSize = 250;
     const allBargains: BargainListing[] = [];
     const itemCache = new Map<number, ItemDetails>();
@@ -119,7 +102,7 @@ export class BargainsCache {
     for (let i = 0; i < allItemIds.length; i += batchSize) {
       const batch = allItemIds.slice(i, i + batchSize);
 
-      const snapResult = await this.pool.query<{ item_id: number; data: UniversalisMarketData }>(
+      const snapResult = await pool.query<{ item_id: number; data: UniversalisMarketData }>(
         `SELECT DISTINCT ON (item_id) item_id, data
          FROM market_snapshots
          WHERE item_id = ANY($1::int[])
@@ -134,7 +117,6 @@ export class BargainsCache {
         const worldSales = salesByItemWorld.get(row.item_id);
         if (!worldSales) continue;
 
-        // Group world sales by data center
         const dcPrices = new Map<string, number[]>();
         for (const [worldId, prices] of worldSales) {
           const dc = this.worldDataCenters[worldId];
@@ -147,18 +129,15 @@ export class BargainsCache {
           arr.push(...prices);
         }
 
-        // Compute IQR average per DC
         const dcAvg = new Map<string, number>();
         for (const [dc, prices] of dcPrices) {
           const avg = iqrAverage(prices);
           if (avg !== null && prices.length >= 7) dcAvg.set(dc, avg);
         }
 
-        // All-world fallback (for worlds without DC mapping or DC without sales)
         const allPrices = [...worldSales.values()].flat();
         const globalIqr = iqrAverage(allPrices);
 
-        // Fetch item details once
         let item = itemCache.get(row.item_id);
         if (!item) {
           try {
@@ -195,7 +174,6 @@ export class BargainsCache {
       }
     }
 
-    // Sort by discount percent descending, limit to top 200
     allBargains.sort((a, b) => b.discountPercent - a.discountPercent);
     return allBargains.slice(0, 200);
   }
