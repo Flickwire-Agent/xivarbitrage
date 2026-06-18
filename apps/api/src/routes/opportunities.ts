@@ -7,7 +7,8 @@ import { universalis } from "../services/universalis.js";
 import { XivApiClient } from "../services/xivapi.js";
 import { config } from "../config.js";
 import { iqrAverage } from "../services/stats.js";
-import pg from "pg";
+import pool from "../db/pool.js";
+import { createClient } from "redis";
 
 const dcDisparityQuerySchema = z.object({
   highDc: z.string().optional(),
@@ -19,8 +20,6 @@ const dcDisparityQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
   perPage: z.coerce.number().int().positive().max(200).optional(),
 });
-
-const { Pool } = pg;
 
 const querySchema = z.object({
   highWorld: z.string().optional(),
@@ -43,28 +42,35 @@ async function checkDatabaseHealth(): Promise<boolean> {
   }
 
   try {
-    const pool = new Pool({
-      connectionString: config.databaseUrl,
-      ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-    });
-
     const result = await pool.query("SELECT NOW()");
-    await pool.end();
     return !!result.rows[0];
   } catch {
     return false;
   }
 }
 
+const redisClient = createClient({ url: config.redisUrl });
+redisClient.on("error", () => {});
+let redisConnected = false;
+redisClient
+  .connect()
+  .then(() => {
+    redisConnected = true;
+  })
+  .catch(() => {
+    redisConnected = false;
+  });
+
 async function checkRedisHealth(): Promise<boolean> {
   try {
-    const { createClient } = await import("redis");
-    const client = createClient({ url: config.redisUrl });
-    await client.connect();
-    await client.ping();
-    await client.disconnect();
+    if (!redisConnected) {
+      await redisClient.connect();
+      redisConnected = true;
+    }
+    await redisClient.ping();
     return true;
   } catch {
+    redisConnected = false;
     return false;
   }
 }
@@ -103,40 +109,40 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     const response = await arbitrage.get(filters);
 
-    // If historical data is requested, fetch recent price history for each opportunity
     if (includeHistory && config.databaseUrl) {
       try {
-        const pool = new Pool({
-          connectionString: config.databaseUrl,
-          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-        });
-
-        // Fetch historical data for each item
-        for (const opportunity of response.opportunities) {
+        const itemIds = response.opportunities.map((o) => o.itemId);
+        if (itemIds.length > 0) {
           const result = await pool.query<{
+            item_id: number;
             fetched_at: string;
             avg_price: number;
           }>(
-            `
-            SELECT 
-              fetched_at,
-              (data->>'averagePrice')::numeric as avg_price
-            FROM market_snapshots
-            WHERE item_id = $1
-              AND fetched_at > now() - interval '7 days'
-            ORDER BY fetched_at DESC
-            LIMIT 168
-            `,
-            [opportunity.itemId],
+            `SELECT item_id, fetched_at, (data->>'averagePrice')::numeric as avg_price
+             FROM market_snapshots
+             WHERE item_id = ANY($1::int[])
+               AND fetched_at > now() - interval '7 days'
+             ORDER BY fetched_at DESC`,
+            [itemIds],
           );
 
-          (opportunity as any).history = result.rows.map((row) => ({
-            timestamp: row.fetched_at,
-            price: Math.round(Number(row.avg_price)),
-          }));
-        }
+          const historyByItem = new Map<number, { timestamp: string; price: number }[]>();
+          for (const row of result.rows) {
+            let arr = historyByItem.get(row.item_id);
+            if (!arr) {
+              arr = [];
+              historyByItem.set(row.item_id, arr);
+            }
+            arr.push({
+              timestamp: row.fetched_at,
+              price: Math.round(Number(row.avg_price)),
+            });
+          }
 
-        await pool.end();
+          for (const opportunity of response.opportunities) {
+            (opportunity as any).history = historyByItem.get(opportunity.itemId) ?? [];
+          }
+        }
       } catch (error) {
         console.error("Error fetching historical data:", error);
       }
@@ -197,6 +203,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
       const result = { results };
       searchCache.set(q, result);
+      if (searchCache.size > 500) {
+        const keys = Array.from(searchCache.keys());
+        for (let i = 0; i < 250; i++) searchCache.delete(keys[i]!);
+      }
       return result;
     } catch {
       return reply.status(502).send({ error: "Search failed" });
@@ -329,12 +339,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
         return { error: "Database not configured" };
       }
 
-      const pool = new Pool({
-        connectionString: config.databaseUrl,
-        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-      });
-
-      // Get item and job statistics
       const [itemStats, jobStats, lastScan] = await Promise.all([
         pool.query<{ count: string; scanned: string }>(
           `SELECT 
@@ -352,8 +356,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
           `SELECT MAX(last_scanned) as last_scanned FROM marketable_items`,
         ),
       ]);
-
-      await pool.end();
 
       const totalItems = parseInt(itemStats.rows[0]?.count ?? "0", 10);
       const scannedItems = parseInt(itemStats.rows[0]?.scanned ?? "0", 10);

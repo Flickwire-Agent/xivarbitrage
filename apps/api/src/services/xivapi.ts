@@ -65,6 +65,10 @@ export class XivApiClient {
     };
 
     this.cache.set(itemId, item);
+    if (this.cache.size > 15000) {
+      const keys = Array.from(this.cache.keys());
+      for (let i = 0; i < 7500; i++) this.cache.delete(keys[i]!);
+    }
     return item;
   }
 }

@@ -5,28 +5,17 @@ import type {
   ItemDetails,
 } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
-import pg from "pg";
 import { XivApiClient } from "./xivapi.js";
 import { dcAverageStore } from "./dcAverageStore.js";
 import type { DcItemAverage } from "./stats.js";
-
-const { Pool } = pg;
 
 export class DcDisparityCache {
   private latest: DcDisparity[] = [];
   private generatedAt = "";
   private refreshPromise: Promise<void> | null = null;
-  private pool: pg.Pool | null;
   private xivapi = new XivApiClient();
 
-  constructor() {
-    this.pool = config.databaseUrl
-      ? new Pool({
-          connectionString: config.databaseUrl,
-          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-        })
-      : null;
-  }
+  constructor() {}
 
   start() {
     void this.refresh();
