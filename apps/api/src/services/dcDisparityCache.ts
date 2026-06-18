@@ -1,4 +1,4 @@
-import type { DcDisparity, DcDisparityQuery, DcPriceInfo } from "@xiv-arbitrage/shared";
+import type { DcDisparity, DcDisparityQuery } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import { dcAverageStore } from "./dcAverageStore.js";
 import pool from "../db/pool.js";
@@ -150,35 +150,34 @@ export class DcDisparityCache {
         continue;
       }
 
-      let highDc: DcItemAverage | null = null;
-      let lowDc: DcItemAverage | null = null;
-
-      for (const dcAverage of dcAverages) {
-        if (!highDc || dcAverage.avgPrice > highDc.avgPrice) {
-          highDc = dcAverage;
-        }
-        if (!lowDc || dcAverage.avgPrice < lowDc.avgPrice) {
-          lowDc = dcAverage;
-        }
-      }
-
-      if (!highDc || !lowDc) continue;
+      const sorted = [...dcAverages].sort((a, b) => b.avgPrice - a.avgPrice);
+      const highDc = sorted.at(0)!;
+      const lowDc = sorted.at(-1)!;
+      const secondHighDc = sorted.length > 1 ? sorted.at(1) : null;
+      const secondLowDc = sorted.length > 1 ? sorted.at(-2) : null;
 
       const spread = highDc.avgPrice - lowDc.avgPrice;
       const spreadPercent = lowDc.avgPrice > 0 ? Math.round((spread / lowDc.avgPrice) * 100) : 0;
 
-      // Wash-trade / outlier guard: if the price ratio between high and low DC is
-      // extreme (>= 10x) and one side has very few sales, the spread is unreliable.
-      // Downgrade to single-DC using the DC with the most sales data.
-      const MIN_SALES_THRESHOLD = 5;
+      // Wash-trade / outlier guard: downgrade to single-DC (the DC with the most
+      // sales) when the spread is unreliable. Three heuristics detect this:
+      //   1) price ratio >=10x between high and low AND either side has <5 sales
+      //   2) high DC avg is >=10x the second-highest DC (cross-DC inconsistency)
+      //   3) low DC avg is <=1/10th the second-lowest DC (cross-DC inconsistency)
       const MAX_REASONABLE_RATIO = 10;
       const priceRatio = lowDc.avgPrice > 0 ? highDc.avgPrice / lowDc.avgPrice : Infinity;
+      const highVsSecond =
+        secondHighDc && secondHighDc.avgPrice > 0 ? highDc.avgPrice / secondHighDc.avgPrice : 0;
+      const lowVsSecond =
+        secondLowDc && lowDc.avgPrice > 0 ? secondLowDc.avgPrice / lowDc.avgPrice : 0;
 
-      if (
-        priceRatio >= MAX_REASONABLE_RATIO &&
-        (highDc.saleCount < MIN_SALES_THRESHOLD || lowDc.saleCount < MIN_SALES_THRESHOLD)
-      ) {
-        const bestDc = dcAverages.reduce((best, dc) => (dc.saleCount > best.saleCount ? dc : best));
+      const isUnreliable =
+        (priceRatio >= MAX_REASONABLE_RATIO && (highDc.saleCount < 5 || lowDc.saleCount < 5)) ||
+        highVsSecond >= MAX_REASONABLE_RATIO ||
+        lowVsSecond >= MAX_REASONABLE_RATIO;
+
+      if (isUnreliable) {
+        const bestDc = sorted.reduce((best, dc) => (dc.saleCount > best.saleCount ? dc : best));
         allDisparities.push({
           itemId,
           spread: 0,
@@ -195,26 +194,15 @@ export class DcDisparityCache {
             avgPrice: bestDc.avgPrice,
             saleCount: bestDc.saleCount,
           },
-          allDcs: dcAverages
-            .map((a) => ({
-              dataCenter: a.dataCenter,
-              region: a.region,
-              avgPrice: a.avgPrice,
-              saleCount: a.saleCount,
-            }))
-            .sort((a, b) => b.avgPrice - a.avgPrice),
+          allDcs: sorted.map((a) => ({
+            dataCenter: a.dataCenter,
+            region: a.region,
+            avgPrice: a.avgPrice,
+            saleCount: a.saleCount,
+          })),
         });
         continue;
       }
-
-      const allDcs: DcPriceInfo[] = dcAverages
-        .map((a) => ({
-          dataCenter: a.dataCenter,
-          region: a.region,
-          avgPrice: a.avgPrice,
-          saleCount: a.saleCount,
-        }))
-        .sort((a, b) => b.avgPrice - a.avgPrice);
 
       allDisparities.push({
         itemId,
@@ -232,7 +220,12 @@ export class DcDisparityCache {
           avgPrice: lowDc.avgPrice,
           saleCount: lowDc.saleCount,
         },
-        allDcs,
+        allDcs: sorted.map((a) => ({
+          dataCenter: a.dataCenter,
+          region: a.region,
+          avgPrice: a.avgPrice,
+          saleCount: a.saleCount,
+        })),
       });
     }
 
