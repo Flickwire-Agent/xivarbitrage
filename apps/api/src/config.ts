@@ -2,6 +2,7 @@ export const config = {
   port: Number(process.env.PORT ?? 4000),
   universalisBaseUrl: process.env.UNIVERSALIS_BASE_URL ?? "https://universalis.app/api/v2",
   xivapiBaseUrl: process.env.XIVAPI_BASE_URL ?? "https://v2.xivapi.com/api",
+  xivapiApiKey: process.env.XIVAPI_API_KEY ?? "",
   universalisRequestsPerSecond: Number(process.env.UNIVERSALIS_REQS_PER_SECOND ?? 20),
   arbitrageRefreshMinutes: Number(process.env.ARBITRAGE_REFRESH_MINUTES ?? 15),
   marketSnapshotFreshHours: Number(process.env.MARKET_SNAPSHOT_FRESH_HOURS ?? 6),

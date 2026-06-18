@@ -138,5 +138,22 @@ export async function runMigrations(): Promise<void> {
     `);
   console.log("✓ Created index on dc_item_averages (computed_at)");
 
+  await pool.query(`
+      CREATE TABLE IF NOT EXISTS xivapi_cache (
+        cache_key text PRIMARY KEY,
+        data jsonb NOT NULL,
+        category text NOT NULL DEFAULT 'item',
+        created_at timestamptz NOT NULL DEFAULT now(),
+        expires_at timestamptz NOT NULL
+      );
+    `);
+  console.log("✓ Created xivapi_cache table");
+
+  await pool.query(`
+      CREATE INDEX IF NOT EXISTS xivapi_cache_expires_idx
+        ON xivapi_cache (expires_at);
+    `);
+  console.log("✓ Created index on xivapi_cache (expires_at)");
+
   console.log("Database migrations completed successfully");
 }

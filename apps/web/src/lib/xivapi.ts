@@ -1,4 +1,5 @@
-const XIVAPI_BASE_URL = "https://v2.xivapi.com/api";
+const XIVAPI_ASSET_URL = "https://v2.xivapi.com/api";
+const XIVAPI_PROXY_BASE_URL = "/api/xivapi";
 
 export interface XivApiItemFields {
   Name?: string;
@@ -31,11 +32,11 @@ export interface ItemDetails {
 
 function buildIconUrl(iconPath: string | undefined): string | undefined {
   if (!iconPath) return undefined;
-  return `${XIVAPI_BASE_URL}/asset?path=${encodeURIComponent(iconPath)}&format=png`;
+  return `${XIVAPI_ASSET_URL}/asset?path=${encodeURIComponent(iconPath)}&format=png`;
 }
 
 export async function fetchItemDetails(itemId: number): Promise<ItemDetails> {
-  const url = new URL(`${XIVAPI_BASE_URL}/sheet/Item/${itemId}`);
+  const url = new URL(`${XIVAPI_PROXY_BASE_URL}/sheet/Item/${itemId}`);
   url.searchParams.set("fields", "Name,Icon,ItemUICategory.Name");
 
   const response = await fetch(url);
@@ -58,7 +59,7 @@ export async function fetchItemDetails(itemId: number): Promise<ItemDetails> {
 }
 
 export async function searchItems(query: string): Promise<ItemDetails[]> {
-  const url = new URL(`${XIVAPI_BASE_URL}/search`);
+  const url = new URL(`${XIVAPI_PROXY_BASE_URL}/search`);
   const sanitized = query.replace(/["\\]/g, "").trim();
   url.searchParams.set("query", `Name~"${sanitized}"`);
   url.searchParams.set("sheets", "Item");

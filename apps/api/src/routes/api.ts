@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { xivapiProxy } from "../services/xivapiProxy.js";
 import { getQueueStats } from "../services/jobQueue.js";
 import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
 import { worldDcMapping } from "../services/worldDcMapping.js";
@@ -259,6 +260,38 @@ export async function apiRoutes(app: FastifyInstance) {
       };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  app.get<{ Params: { itemId: string } }>("/xivapi/sheet/Item/:itemId", async (request, reply) => {
+    const itemId = Number(request.params.itemId);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+      return reply.status(400).send({ error: "Invalid item ID" });
+    }
+    const fields =
+      ((request.query as Record<string, string>).fields as string | undefined) ??
+      "Name,Icon,ItemUICategory.Name";
+    try {
+      return await xivapiProxy.fetchSheetItem(itemId, fields);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return reply.status(502).send({ error: msg });
+    }
+  });
+
+  app.get("/xivapi/search", async (request, reply) => {
+    const rawQuery = request.query as Record<string, string | string[]>;
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(rawQuery)) {
+      if (typeof value === "string") {
+        params.set(key, value);
+      }
+    }
+    try {
+      return await xivapiProxy.fetchSearch(params);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return reply.status(502).send({ error: msg });
     }
   });
 
