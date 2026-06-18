@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { NavLink, Route, Routes } from "react-router-dom";
 
 const OpportunitiesPage = lazy(() =>
   import("./components/OpportunitiesPage.js").then((m) => ({ default: m.OpportunitiesPage })),
@@ -35,6 +35,19 @@ export function App() {
       >
         Skip to main content
       </a>
+      <nav className="srOnly" aria-label="Site navigation">
+        <ul>
+          <li>
+            <NavLink to="/">Arbitrage Opportunities</NavLink>
+          </li>
+          <li>
+            <NavLink to="/bargains">Market Bargains</NavLink>
+          </li>
+          <li>
+            <NavLink to="/dc-disparities">DC Price Disparities</NavLink>
+          </li>
+        </ul>
+      </nav>
       <main className="appShell" id="main-content" aria-label="XIV Arbitrage application">
         <Suspense fallback={<PageFallback />}>
           <Routes>
@@ -46,6 +59,36 @@ export function App() {
           </Routes>
         </Suspense>
       </main>
+      <footer className="srOnly">
+        <p>XIV Arbitrage — FFXIV Market Board Arbitrage Finder</p>
+        <p>
+          Market data from{" "}
+          <a href="https://universalis.app" rel="noopener noreferrer">
+            Universalis
+          </a>
+          . Item data from{" "}
+          <a href="https://xivapi.com" rel="noopener noreferrer">
+            XIVAPI
+          </a>
+          .
+        </p>
+        <nav aria-label="API documentation">
+          <ul>
+            <li>
+              <a href="/api/opportunities">Arbitrage API</a>
+            </li>
+            <li>
+              <a href="/api/bargains">Bargains API</a>
+            </li>
+            <li>
+              <a href="/api/dc-disparities">DC Disparities API</a>
+            </li>
+            <li>
+              <a href="/llms.txt">AI Agent Docs</a>
+            </li>
+          </ul>
+        </nav>
+      </footer>
     </>
   );
 }

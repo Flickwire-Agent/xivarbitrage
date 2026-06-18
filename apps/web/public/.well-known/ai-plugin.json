@@ -1,0 +1,18 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "XIV Arbitrage",
+  "name_for_model": "xiv_arbitrage",
+  "description_for_human": "Find profitable FFXIV market board arbitrage opportunities across worlds and data centers.",
+  "description_for_model": "A tool for finding arbitrage opportunities on the Final Fantasy XIV market board. Scans ~10,000 items across NA, EU, and OCE regions. Provides endpoints for arbitrage opportunities, bargains (items listed below DC average), cross-DC price disparities, item sale history, and current discounted listings. All prices in gil. No authentication required.",
+  "api": {
+    "type": "openapi",
+    "url": "https://xivarbitrage.projects.blueskye.co.uk/api/openapi.json",
+    "is_user_authenticated": false
+  },
+  "auth": {
+    "type": "none"
+  },
+  "logo_url": "https://xivarbitrage.projects.blueskye.co.uk/manifest-icon.png",
+  "contact_email": "agent@blueskye.co.uk",
+  "legal_info_url": "https://github.com/Flickwire-Agent/xivarbitrage"
+}

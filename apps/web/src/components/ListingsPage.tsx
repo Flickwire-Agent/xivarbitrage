@@ -1,5 +1,6 @@
 import type { ItemListing } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
+import { useEffect } from "react";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useItemDetails, useItemListings } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
@@ -17,6 +18,12 @@ export function ListingsPage() {
 
   const { data, isLoading, error } = useItemListings(id);
   const { data: itemDetails } = useItemDetails(id);
+
+  useEffect(() => {
+    document.title = itemDetails
+      ? `${itemDetails.name} — Listings | XIV Arbitrage`
+      : "Item Listings | XIV Arbitrage";
+  }, [itemDetails]);
 
   if (!itemId) {
     return <div className="notice error">No item specified</div>;

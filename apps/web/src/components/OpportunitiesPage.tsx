@@ -11,7 +11,7 @@ import {
   Sun,
   TrendingUp,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
 import { useInvalidateOpportunities, useOpportunities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
@@ -25,6 +25,10 @@ export function OpportunitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const invalidateOpportunities = useInvalidateOpportunities();
+
+  useEffect(() => {
+    document.title = "XIV Arbitrage — FFXIV Market Board Arbitrage Finder";
+  }, []);
 
   const filters: OpportunityFilters = useMemo(
     () => ({

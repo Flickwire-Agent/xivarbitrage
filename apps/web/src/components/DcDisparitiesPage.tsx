@@ -8,7 +8,7 @@ import {
   Sun,
   TrendingUp,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
@@ -21,6 +21,10 @@ export function DcDisparitiesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
+
+  useEffect(() => {
+    document.title = "DC Price Disparities | XIV Arbitrage";
+  }, []);
 
   const highDc = searchParams.get("highDc") ?? "";
   const lowDc = searchParams.get("lowDc") ?? "";

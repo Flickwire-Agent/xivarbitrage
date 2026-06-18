@@ -4,11 +4,15 @@ import { useBargains, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 export function BargainsPage() {
   const navigate = useNavigate();
   const { isDarkMode, toggleDarkMode } = useUiStore();
+
+  useEffect(() => {
+    document.title = "Market Bargains | XIV Arbitrage";
+  }, []);
 
   const { data, isLoading, error } = useBargains();
 

@@ -1,0 +1,112 @@
+# XIV Arbitrage
+
+> FFXIV Market Board arbitrage finder. Discovers profitable trading opportunities across worlds, data centers, and regions using real-time market data from Universalis.
+
+## What this site does
+
+XIV Arbitrage scans approximately 10,000 marketable Final Fantasy XIV items across 3 regions (NA, EU, OCE) on a 24-hour cycle. It identifies:
+
+- **Arbitrage opportunities**: Items where the cheapest current listing is significantly below the highest recent sold price on another world
+- **Market bargains**: Individual listings priced well below the data center average
+- **DC price disparities**: Items with large price differences between data centers
+
+Data refreshes every 15 minutes. All prices are in gil (FFXIV currency).
+
+## API Documentation
+
+Base URL: `https://xivarbitrage.projects.blueskye.co.uk`
+
+All endpoints return JSON. No authentication required. Rate limiting applies.
+
+### GET /api/opportunities
+
+Returns current arbitrage opportunities, cached and refreshed every 15 minutes.
+
+**Query parameters:**
+- `limit` (number, max 500): Number of results
+- `sort` (enum): `best`, `spread`, `spreadPercent`, `volume`, `velocity`
+- `highWorld` (string): Filter by sell-side world name
+- `highDataCenter` (string): Filter by sell-side data center
+- `category` (string): Filter by item category
+- `profile` (enum): `all`, `high-volume`, `high-arbitrage`
+- `minVolume` (number): Minimum recent sales count
+- `minSpread` (number): Minimum gil spread
+- `page` (number): Page number
+- `perPage` (number, max 100): Results per page
+- `includeHistory` (boolean): Include 7-day price history
+- `refresh` (boolean): Force cache refresh
+
+**Example:** `GET /api/opportunities?sort=best&limit=10`
+
+### GET /api/bargains
+
+Returns cross-item bargain listings — items listed significantly below their data center average price. Refreshed every 15 minutes.
+
+**Example:** `GET /api/bargains`
+
+### GET /api/dc-disparities
+
+Returns items with the largest price disparities between data centers.
+
+**Query parameters:**
+- `highDc` (string): Filter by expensive data center
+- `lowDc` (string): Filter by cheap data center
+- `region` (string): Filter by region (NA, EU, OCE)
+- `sort` (enum): `spread`, `spreadPercent`
+- `minSpread` (number): Minimum gil spread
+- `minSpreadPercent` (number): Minimum percentage spread
+- `page` (number): Page number
+- `perPage` (number, max 200): Results per page
+
+**Example:** `GET /api/dc-disparities?sort=spread&region=NA`
+
+### GET /api/items/:itemId/history
+
+Returns sale history for a specific item, including per-world transaction data.
+
+**Example:** `GET /api/items/5057/history`
+
+### GET /api/items/:itemId/listings
+
+Returns current market board listings for an item that are priced below the 14-day data center average, sorted by discount percentage.
+
+**Example:** `GET /api/items/5057/listings`
+
+### GET /api/worlds
+
+Returns the complete world, data center, and region mapping used by the game.
+
+**Example:** `GET /api/worlds`
+
+### GET /api/health
+
+Returns service health status including database and Redis connectivity.
+
+**Example:** `GET /api/health`
+
+### GET /api/worker/status
+
+Returns background worker queue depth, scan progress, and 24-hour job statistics.
+
+**Example:** `GET /api/worker/status`
+
+## Key Concepts
+
+- **Arbitrage spread**: Low side = cheapest current listing (buy price); High side = highest recent sold price (actual transactions, not listings)
+- **Data Center (DC)**: A group of worlds/servers. Cross-world travel within a DC is free.
+- **Region**: A geographic grouping of data centers (NA, EU, OCE). Cross-region travel is not possible.
+- **IQR outlier exclusion**: Statistical method used to remove anomalous prices before computing averages
+
+## Data Sources
+
+- Market data: [Universalis](https://universalis.app) — community-uploaded FFXIV market board data
+- Item metadata: [XIVAPI](https://xivapi.com) — Final Fantasy XIV game data API
+
+## Web Interface
+
+The web interface at the root URL provides:
+- `/` — Arbitrage opportunities table with filters and sorting
+- `/bargains` — Cross-item bargain listings
+- `/dc-disparities` — Cross-data center price gap analysis
+- `/items/:id` — Item sale history with charts
+- `/items/:id/listings` — Discounted current listings for an item

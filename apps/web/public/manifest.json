@@ -1,0 +1,19 @@
+{
+  "name": "XIV Arbitrage",
+  "short_name": "XIV Arb",
+  "description": "Find profitable arbitrage opportunities on the Final Fantasy XIV market board across worlds, data centers, and regions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "categories": ["finance", "games"],
+  "lang": "en-GB",
+  "icons": [
+    {
+      "src": "/manifest-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

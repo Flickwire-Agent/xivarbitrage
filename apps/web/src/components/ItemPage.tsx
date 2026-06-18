@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +14,12 @@ export function ItemPage() {
 
   const { data, isLoading, error } = useItemHistory(id);
   const { data: itemDetails } = useItemDetails(id);
+
+  useEffect(() => {
+    document.title = itemDetails
+      ? `${itemDetails.name} — Sale History | XIV Arbitrage`
+      : "Item History | XIV Arbitrage";
+  }, [itemDetails]);
 
   if (!itemId) {
     return (
