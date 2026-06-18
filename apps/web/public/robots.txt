@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
-Disallow: /api/
+Allow: /api/opportunities
+Allow: /api/bargains
+Allow: /api/dc-disparities
+Allow: /api/items/
+Allow: /api/worlds
+Allow: /api/health
+Allow: /api/worker/status
+Disallow: /api/monitoring/
 
 Sitemap: https://xivarbitrage.projects.blueskye.co.uk/sitemap.xml

@@ -16,14 +16,22 @@ Data refreshes every 15 minutes. All prices are in gil (FFXIV currency).
 
 Base URL: `https://xivarbitrage.projects.blueskye.co.uk`
 
-All endpoints return JSON. No authentication required. Rate limiting applies.
+All documented endpoints return JSON. No authentication required.
+
+Agent guidance:
+- Prefer the JSON API over browser automation.
+- Cache-backed endpoints refresh every 15 minutes; poll no more than once every 15 minutes for routine checks.
+- Use pagination instead of repeatedly requesting broad result sets.
+- Do not use `refresh=true` for routine polling; it forces an immediate cache refresh.
+- Treat undocumented mutation or refresh endpoints as internal and do not call them.
+- Market data comes from community uploads and can include stale listings, outliers, or already-sold items; verify valuable trades in game before acting.
 
 ### GET /api/opportunities
 
 Returns current arbitrage opportunities, cached and refreshed every 15 minutes.
 
 **Query parameters:**
-- `limit` (number, max 500): Number of results
+- `limit` (number, max 100): Legacy alias for `perPage` when `perPage` is omitted
 - `sort` (enum): `best`, `spread`, `spreadPercent`, `volume`, `velocity`
 - `highWorld` (string): Filter by sell-side world name
 - `highDataCenter` (string): Filter by sell-side data center
@@ -38,11 +46,35 @@ Returns current arbitrage opportunities, cached and refreshed every 15 minutes.
 
 **Example:** `GET /api/opportunities?sort=best&limit=10`
 
+**Response shape:**
+```json
+{
+  "generatedAt": "2026-06-18T14:47:06.067Z",
+  "opportunities": [
+    {
+      "itemId": 22973,
+      "low": { "worldName": "Twintania", "dataCenter": "Light", "pricePerUnit": 44000000 },
+      "high": { "worldName": "Zodiark", "dataCenter": "Light", "pricePerUnit": 350000000 },
+      "spread": 286300000,
+      "spreadPercent": 619.7,
+      "recentSales": 300,
+      "updatedAt": "2026-06-18T14:47:06.013Z"
+    }
+  ],
+  "total": 6655,
+  "page": 1,
+  "perPage": 10,
+  "totalPages": 666
+}
+```
+
 ### GET /api/bargains
 
 Returns cross-item bargain listings — items listed significantly below their data center average price. Refreshed every 15 minutes.
 
 **Example:** `GET /api/bargains`
+
+**Response shape:** `{ "generatedAt": "...", "bargains": [{ "itemId": 5057, "worldName": "Omega", "dataCenter": "Chaos", "pricePerUnit": 1000, "recentAvgPrice": 2000, "discountPercent": 50 }] }`
 
 ### GET /api/dc-disparities
 
@@ -60,17 +92,23 @@ Returns items with the largest price disparities between data centers.
 
 **Example:** `GET /api/dc-disparities?sort=spread&region=NA`
 
+**Response shape:** `{ "generatedAt": "...", "disparities": [{ "itemId": 5057, "spread": 5000, "highDc": { "dataCenter": "Aether", "avgPrice": 9000 }, "lowDc": { "dataCenter": "Primal", "avgPrice": 4000 } }], "total": 1, "page": 1, "perPage": 50, "totalPages": 1 }`
+
 ### GET /api/items/:itemId/history
 
 Returns sale history for a specific item, including per-world transaction data.
 
 **Example:** `GET /api/items/5057/history`
 
+**Response shape:** `{ "itemId": 5057, "sales": [{ "worldName": "Omega", "pricePerUnit": 1000, "quantity": 1, "soldAt": "..." }], "worlds": ["Omega"] }`
+
 ### GET /api/items/:itemId/listings
 
 Returns current market board listings for an item that are priced below the 14-day data center average, sorted by discount percentage.
 
 **Example:** `GET /api/items/5057/listings`
+
+**Response shape:** `{ "itemId": 5057, "listings": [{ "worldName": "Omega", "dataCenter": "Chaos", "pricePerUnit": 1000, "recentAvgPrice": 2000, "discountPercent": 50 }], "saleStats": { "avgPrice": 2000, "count": 12, "perDataCenter": {} } }`
 
 ### GET /api/worlds
 

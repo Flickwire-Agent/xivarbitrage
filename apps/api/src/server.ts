@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ZodError } from "zod";
 import { config } from "./config.js";
 import { opportunityRoutes } from "./routes/opportunities.js";
 import { runMigrations } from "./db/migrations.js";
@@ -15,12 +16,316 @@ import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
 
 loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
 
+const schemas = {
+  WorldPrice: {
+    type: "object",
+    required: ["worldId", "worldName", "dataCenter", "pricePerUnit", "quantity"],
+    properties: {
+      worldId: { type: "integer" },
+      worldName: { type: "string" },
+      dataCenter: { type: "string" },
+      pricePerUnit: { type: "integer" },
+      quantity: { type: "integer" },
+    },
+  },
+  ArbitrageOpportunity: {
+    type: "object",
+    required: [
+      "itemId",
+      "low",
+      "high",
+      "grossSpread",
+      "grossSpreadPercent",
+      "spread",
+      "spreadPercent",
+      "netBuyPrice",
+      "netSellPrice",
+      "recentSales",
+      "averageSalePrice",
+      "velocityScore",
+      "profitScore",
+      "updatedAt",
+    ],
+    properties: {
+      itemId: { type: "integer" },
+      low: { $ref: "#/components/schemas/WorldPrice" },
+      high: { $ref: "#/components/schemas/WorldPrice" },
+      grossSpread: { type: "number" },
+      grossSpreadPercent: { type: "number" },
+      spread: { type: "number" },
+      spreadPercent: { type: "number" },
+      netBuyPrice: { type: "integer" },
+      netSellPrice: { type: "integer" },
+      recentSales: { type: "integer" },
+      averageSalePrice: { type: "integer" },
+      velocityScore: { type: "number" },
+      profitScore: { type: "number" },
+      updatedAt: { type: "string", format: "date-time" },
+      history: {
+        type: "array",
+        description: "Present only when includeHistory=true.",
+        items: {
+          type: "object",
+          required: ["timestamp", "price"],
+          properties: {
+            timestamp: { type: "string", format: "date-time" },
+            price: { type: "integer" },
+          },
+        },
+      },
+    },
+  },
+  OpportunityResponse: {
+    type: "object",
+    required: [
+      "generatedAt",
+      "filters",
+      "opportunities",
+      "worlds",
+      "dataCenters",
+      "categories",
+      "total",
+      "page",
+      "perPage",
+      "totalPages",
+    ],
+    properties: {
+      generatedAt: { type: "string", format: "date-time" },
+      filters: { type: "object", additionalProperties: true },
+      opportunities: {
+        type: "array",
+        items: { $ref: "#/components/schemas/ArbitrageOpportunity" },
+      },
+      worlds: { type: "array", items: { type: "string" } },
+      dataCenters: { type: "array", items: { type: "string" } },
+      categories: { type: "array", items: { type: "string" } },
+      total: { type: "integer" },
+      page: { type: "integer" },
+      perPage: { type: "integer" },
+      totalPages: { type: "integer" },
+    },
+  },
+  BargainListing: {
+    type: "object",
+    required: [
+      "itemId",
+      "worldId",
+      "worldName",
+      "dataCenter",
+      "pricePerUnit",
+      "quantity",
+      "recentAvgPrice",
+      "discount",
+      "discountPercent",
+    ],
+    properties: {
+      itemId: { type: "integer" },
+      worldId: { type: "integer" },
+      worldName: { type: "string" },
+      dataCenter: { type: "string" },
+      pricePerUnit: { type: "integer" },
+      quantity: { type: "integer" },
+      recentAvgPrice: { type: "number" },
+      discount: { type: "number" },
+      discountPercent: { type: "integer" },
+    },
+  },
+  BargainsResponse: {
+    type: "object",
+    required: ["generatedAt", "bargains"],
+    properties: {
+      generatedAt: { type: "string", format: "date-time" },
+      bargains: { type: "array", items: { $ref: "#/components/schemas/BargainListing" } },
+    },
+  },
+  DcPriceInfo: {
+    type: "object",
+    required: ["dataCenter", "region", "avgPrice", "saleCount"],
+    properties: {
+      dataCenter: { type: "string" },
+      region: { type: "string" },
+      avgPrice: { type: "number" },
+      saleCount: { type: "integer" },
+    },
+  },
+  DcDisparity: {
+    type: "object",
+    required: ["itemId", "spread", "spreadPercent", "highDc", "lowDc", "allDcs"],
+    properties: {
+      itemId: { type: "integer" },
+      spread: { type: "number" },
+      spreadPercent: { type: "number" },
+      highDc: { $ref: "#/components/schemas/DcPriceInfo" },
+      lowDc: { $ref: "#/components/schemas/DcPriceInfo" },
+      allDcs: { type: "array", items: { $ref: "#/components/schemas/DcPriceInfo" } },
+    },
+  },
+  DcDisparityResponse: {
+    type: "object",
+    required: ["generatedAt", "disparities", "total", "page", "perPage", "totalPages"],
+    properties: {
+      generatedAt: { type: "string", format: "date-time" },
+      disparities: { type: "array", items: { $ref: "#/components/schemas/DcDisparity" } },
+      total: { type: "integer" },
+      page: { type: "integer" },
+      perPage: { type: "integer" },
+      totalPages: { type: "integer" },
+    },
+  },
+  SaleRecord: {
+    type: "object",
+    required: ["worldId", "worldName", "pricePerUnit", "quantity", "soldAt"],
+    properties: {
+      worldId: { type: "integer" },
+      worldName: { type: "string" },
+      pricePerUnit: { type: "integer" },
+      quantity: { type: "integer" },
+      soldAt: { type: "string", format: "date-time" },
+    },
+  },
+  ItemHistoryResponse: {
+    type: "object",
+    required: ["itemId", "sales", "worlds"],
+    properties: {
+      itemId: { type: "integer" },
+      sales: { type: "array", items: { $ref: "#/components/schemas/SaleRecord" } },
+      worlds: { type: "array", items: { type: "string" } },
+    },
+  },
+  ItemListing: {
+    type: "object",
+    required: [
+      "worldId",
+      "worldName",
+      "dataCenter",
+      "pricePerUnit",
+      "quantity",
+      "recentAvgPrice",
+      "discount",
+      "discountPercent",
+    ],
+    properties: {
+      worldId: { type: "integer" },
+      worldName: { type: "string" },
+      dataCenter: { type: "string" },
+      pricePerUnit: { type: "integer" },
+      quantity: { type: "integer" },
+      recentAvgPrice: { type: "number" },
+      discount: { type: "number" },
+      discountPercent: { type: "integer" },
+    },
+  },
+  ListingsResponse: {
+    type: "object",
+    required: ["itemId", "listings", "saleStats"],
+    properties: {
+      itemId: { type: "integer" },
+      listings: { type: "array", items: { $ref: "#/components/schemas/ItemListing" } },
+      saleStats: {
+        type: "object",
+        required: ["avgPrice", "count", "perDataCenter"],
+        properties: {
+          avgPrice: { type: "number" },
+          count: { type: "integer" },
+          perDataCenter: {
+            type: "object",
+            additionalProperties: {
+              type: "object",
+              required: ["avgPrice", "count"],
+              properties: {
+                avgPrice: { type: "number" },
+                count: { type: "integer" },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  WorldInfo: {
+    type: "object",
+    required: ["id", "name", "dataCenter", "region"],
+    properties: {
+      id: { type: "integer" },
+      name: { type: "string" },
+      dataCenter: { type: "string" },
+      region: { type: "string" },
+    },
+  },
+  WorldsResponse: {
+    type: "object",
+    required: ["worlds", "dataCenters", "regions", "worldIdToDc", "updatedAt"],
+    properties: {
+      worlds: { type: "array", items: { $ref: "#/components/schemas/WorldInfo" } },
+      dataCenters: { type: "array", items: { type: "string" } },
+      regions: { type: "array", items: { type: "string" } },
+      worldIdToDc: { type: "object", additionalProperties: { type: "string" } },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+  HealthResponse: {
+    type: "object",
+    required: ["ok", "database", "redis"],
+    properties: {
+      ok: { type: "boolean" },
+      database: { type: "boolean" },
+      redis: { type: "boolean" },
+    },
+  },
+  WorkerStatusResponse: {
+    type: "object",
+    properties: {
+      queue: { type: "object", additionalProperties: true },
+      items: { type: "object", additionalProperties: true },
+      jobs24h: { type: "object", additionalProperties: { type: "integer" } },
+      lastFullScan: { type: "string", format: "date-time" },
+      error: { type: "string" },
+    },
+  },
+  UsageResponse: {
+    type: "object",
+    additionalProperties: true,
+  },
+  ErrorResponse: {
+    type: "object",
+    required: ["error"],
+    properties: {
+      error: { type: "string" },
+    },
+  },
+} as const;
+
+function jsonResponse(description: string, schemaRef: string) {
+  return {
+    description,
+    content: {
+      "application/json": {
+        schema: { $ref: schemaRef },
+      },
+    },
+  };
+}
+
 const app = Fastify({
   logger: true,
 });
 
 await app.register(cors, {
   origin: true,
+});
+
+app.setErrorHandler((error, request, reply) => {
+  if (error instanceof ZodError) {
+    return reply.status(400).send({ error: error.issues.map((issue) => issue.message).join(", ") });
+  }
+
+  app.log.error(error);
+  const responseError = error as Error & { statusCode?: number };
+  const statusCode =
+    responseError.statusCode && responseError.statusCode >= 400 ? responseError.statusCode : 500;
+  return reply
+    .status(statusCode)
+    .send({ error: statusCode === 500 ? "Internal server error" : responseError.message });
 });
 
 app.addHook("onResponse", async (request, reply) => {
@@ -58,16 +363,25 @@ app.get("/api/openapi.json", async (request, reply) => {
       title: "XIV Arbitrage API",
       version: "1.0.0",
       description:
-        "Find profitable arbitrage opportunities on the Final Fantasy XIV market board. Scans ~10,000 items across NA, EU, and OCE regions.",
+        "Find profitable arbitrage opportunities on the Final Fantasy XIV market board. Scans ~10,000 items across NA, EU, and OCE regions. Cache-backed endpoints refresh every 15 minutes; agents should avoid force refreshes for routine polling.",
     },
     servers: [{ url: baseUrl }],
+    externalDocs: {
+      description: "AI agent usage guide",
+      url: `${baseUrl}/llms.txt`,
+    },
     paths: {
       "/api/opportunities": {
         get: {
           summary: "Arbitrage opportunities",
           description: "Current arbitrage opportunities, cached and refreshed every 15 minutes.",
           parameters: [
-            { name: "limit", in: "query", schema: { type: "integer", maximum: 500 } },
+            {
+              name: "limit",
+              in: "query",
+              description: "Legacy alias for perPage when perPage is omitted.",
+              schema: { type: "integer", minimum: 1, maximum: 100 },
+            },
             {
               name: "sort",
               in: "query",
@@ -89,15 +403,32 @@ app.get("/api/openapi.json", async (request, reply) => {
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "perPage", in: "query", schema: { type: "integer", maximum: 100 } },
             { name: "includeHistory", in: "query", schema: { type: "boolean" } },
+            {
+              name: "refresh",
+              in: "query",
+              description: "Force a cache refresh. Do not use for routine polling.",
+              schema: { type: "boolean" },
+            },
           ],
-          responses: { "200": { description: "Paginated list of arbitrage opportunities" } },
+          responses: {
+            "200": jsonResponse(
+              "Paginated list of arbitrage opportunities",
+              "#/components/schemas/OpportunityResponse",
+            ),
+            "400": jsonResponse("Invalid query parameters", "#/components/schemas/ErrorResponse"),
+          },
         },
       },
       "/api/bargains": {
         get: {
           summary: "Market bargains",
           description: "Items listed significantly below their data center average price.",
-          responses: { "200": { description: "List of bargain listings" } },
+          responses: {
+            "200": jsonResponse(
+              "List of bargain listings",
+              "#/components/schemas/BargainsResponse",
+            ),
+          },
         },
       },
       "/api/dc-disparities": {
@@ -118,14 +449,26 @@ app.get("/api/openapi.json", async (request, reply) => {
             { name: "page", in: "query", schema: { type: "integer" } },
             { name: "perPage", in: "query", schema: { type: "integer", maximum: 200 } },
           ],
-          responses: { "200": { description: "Paginated list of DC price disparities" } },
+          responses: {
+            "200": jsonResponse(
+              "Paginated list of DC price disparities",
+              "#/components/schemas/DcDisparityResponse",
+            ),
+            "400": jsonResponse("Invalid query parameters", "#/components/schemas/ErrorResponse"),
+          },
         },
       },
       "/api/items/{itemId}/history": {
         get: {
           summary: "Item sale history",
           parameters: [{ name: "itemId", in: "path", required: true, schema: { type: "integer" } }],
-          responses: { "200": { description: "Sale history for the item" } },
+          responses: {
+            "200": jsonResponse(
+              "Sale history for the item",
+              "#/components/schemas/ItemHistoryResponse",
+            ),
+            "400": jsonResponse("Invalid item ID", "#/components/schemas/ErrorResponse"),
+          },
         },
       },
       "/api/items/{itemId}/listings": {
@@ -133,25 +476,41 @@ app.get("/api/openapi.json", async (request, reply) => {
           summary: "Item listings below average",
           description: "Current listings priced below the 14-day data center average.",
           parameters: [{ name: "itemId", in: "path", required: true, schema: { type: "integer" } }],
-          responses: { "200": { description: "Discounted listings for the item" } },
+          responses: {
+            "200": jsonResponse(
+              "Discounted listings for the item",
+              "#/components/schemas/ListingsResponse",
+            ),
+            "400": jsonResponse("Invalid item ID", "#/components/schemas/ErrorResponse"),
+          },
         },
       },
       "/api/worlds": {
         get: {
           summary: "World/DC/region mapping",
-          responses: { "200": { description: "Complete world mapping" } },
+          responses: {
+            "200": jsonResponse("Complete world mapping", "#/components/schemas/WorldsResponse"),
+          },
         },
       },
       "/api/health": {
         get: {
           summary: "Health check",
-          responses: { "200": { description: "Service health status" } },
+          responses: {
+            "200": jsonResponse("Service health status", "#/components/schemas/HealthResponse"),
+            "503": jsonResponse("Dependency outage", "#/components/schemas/ErrorResponse"),
+          },
         },
       },
       "/api/worker/status": {
         get: {
           summary: "Worker status",
-          responses: { "200": { description: "Queue depth and scan progress" } },
+          responses: {
+            "200": jsonResponse(
+              "Queue depth and scan progress",
+              "#/components/schemas/WorkerStatusResponse",
+            ),
+          },
         },
       },
       "/api/monitoring/usage": {
@@ -168,14 +527,15 @@ app.get("/api/openapi.json", async (request, reply) => {
             },
           ],
           responses: {
-            "200": {
-              description:
-                "Usage summary with per-hour request counts, top endpoints, top consumers by IP, status code distribution, and average response times",
-            },
+            "200": jsonResponse(
+              "Usage summary with per-hour request counts, top endpoints, top consumers by IP, status code distribution, and average response times",
+              "#/components/schemas/UsageResponse",
+            ),
           },
         },
       },
     },
+    components: { schemas },
   });
 });
 

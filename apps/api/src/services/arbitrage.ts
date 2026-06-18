@@ -232,7 +232,7 @@ export class ArbitrageService {
     const sorted = this.sort(filtered, filters.sort ?? "best");
 
     const page = Math.max(1, filters.page ?? 1);
-    const perPage = Math.min(100, Math.max(1, filters.perPage ?? 50));
+    const perPage = Math.min(100, Math.max(1, filters.perPage ?? filters.limit ?? 50));
     const total = sorted.length;
     const totalPages = Math.max(1, Math.ceil(total / perPage));
     const clampedPage = Math.min(page, totalPages);
