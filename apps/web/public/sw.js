@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE = `static-${CACHE_VERSION}`;
 const STATIC_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
 
@@ -40,16 +40,19 @@ async function cacheFirst(request) {
 
   const response = await fetch(request);
   if (isCacheableResponse(response)) {
-    const headers = new Headers(response.headers);
+    const responseForCache = response.clone();
+    const headers = new Headers(responseForCache.headers);
     headers.set("x-sw-fetched-at", String(Date.now()));
-    await cache.put(
-      request,
-      new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      }),
-    );
+    await cache
+      .put(
+        request,
+        new Response(responseForCache.body, {
+          status: responseForCache.status,
+          statusText: responseForCache.statusText,
+          headers,
+        }),
+      )
+      .catch(() => undefined);
   }
   return response;
 }
