@@ -5,32 +5,18 @@ import type {
   WorldPrice,
 } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
-import pg from "pg";
+import { pool } from "../db/pool.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { WorldCatalog } from "./worldCatalog.js";
 import { XivApiClient } from "./xivapi.js";
 
-const { Pool } = pg;
-
 export class ArbitrageService {
-  private db: pg.Pool | null = null;
   private worldCatalog: WorldCatalog;
   private xivapi: XivApiClient;
 
   constructor(worldCatalog?: WorldCatalog, xivapi?: XivApiClient) {
     this.worldCatalog = worldCatalog || new WorldCatalog();
     this.xivapi = xivapi || new XivApiClient();
-
-    if (config.databaseUrl) {
-      this.db = new Pool({
-        connectionString: config.databaseUrl,
-        ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-      });
-      this.db.on("error", (error) => {
-        console.error(`ArbitrageService: Unexpected database pool error: ${error}`);
-        // Don't crash the app; log and continue. The pool will attempt to reconnect.
-      });
-    }
   }
 
   async findOpportunities(filters: OpportunityFilters): Promise<OpportunityResponse> {
@@ -39,16 +25,14 @@ export class ArbitrageService {
   }
 
   async scanOpportunitiesFromDb(): Promise<ArbitrageOpportunity[]> {
-    if (!this.db) {
-      // Fallback if database is not configured
+    if (!pool) {
       return [];
     }
 
     try {
       const worldById = await this.worldCatalog.getWorldById();
 
-      // Get all items that have recent market data
-      const result = await this.db.query<{ item_id: number; regions: string }>(
+      const result = await pool.query<{ item_id: number; regions: string }>(
         `
         SELECT 
           item_id,
@@ -66,11 +50,40 @@ export class ArbitrageService {
         return [];
       }
 
+      const itemIds = itemsToEvaluate.map((r) => r.item_id);
+      const snapshotMap = new Map<number, { data: UniversalisMarketData; region: string }[]>();
+
+      const batchSize = 500;
+      for (let i = 0; i < itemIds.length; i += batchSize) {
+        const batch = itemIds.slice(i, i + batchSize);
+        const batchResult = await pool.query<{
+          item_id: number;
+          data: UniversalisMarketData;
+          region: string;
+        }>(
+          `SELECT item_id, data, region
+           FROM market_snapshots
+           WHERE item_id = ANY($1::int[])
+             AND fetched_at > now() - interval '24 hours'`,
+          [batch],
+        );
+
+        for (const row of batchResult.rows) {
+          let entries = snapshotMap.get(row.item_id);
+          if (!entries) {
+            entries = [];
+            snapshotMap.set(row.item_id, entries);
+          }
+          entries.push({ data: row.data, region: row.region });
+        }
+      }
+
       const opportunities: (ArbitrageOpportunity | null)[] = await Promise.all(
         itemsToEvaluate.map(({ item_id: itemId, regions: regionsStr }) => {
           const regions =
             typeof regionsStr === "string" ? JSON.parse(regionsStr) : (regionsStr as string[]);
-          return this.evaluateItemFromDb(itemId, regions, worldById);
+          const snapshots = snapshotMap.get(itemId) ?? [];
+          return this.evaluateItemFromSnapshots(itemId, regions, snapshots, worldById);
         }),
       );
 
@@ -81,40 +94,24 @@ export class ArbitrageService {
     }
   }
 
-  private async evaluateItemFromDb(
+  private async evaluateItemFromSnapshots(
     itemId: number,
     regions: string[],
+    snapshots: { data: UniversalisMarketData; region: string }[],
     worldById: Map<number, { name: string; dataCenter: string }>,
   ): Promise<ArbitrageOpportunity | null> {
-    if (!this.db) return null;
-
     try {
-      // Get recent market data for this item across all regions
-      const result = await this.db.query<{ data: UniversalisMarketData; region: string }>(
-        `
-        SELECT data, region
-        FROM market_snapshots
-        WHERE item_id = $1
-          AND region = ANY($2::text[])
-          AND fetched_at > now() - interval '24 hours'
-        ORDER BY fetched_at DESC
-        LIMIT 100
-        `,
-        [itemId, regions],
-      );
-
-      if (result.rows.length === 0) {
+      if (snapshots.length === 0) {
         return null;
       }
 
-      // Aggregate prices across all recent snapshots
       const allListingPrices = new Map<number, WorldPrice>();
       const allSoldPrices = new Map<number, WorldPrice>();
       let totalRecentSales = 0;
       let totalAveragePrice = 0;
       let dataPointCount = 0;
 
-      for (const { data } of result.rows) {
+      for (const { data } of snapshots) {
         const listingPrices = this.extractWorldPrices(data, worldById);
 
         for (const price of listingPrices) {
@@ -146,9 +143,6 @@ export class ArbitrageService {
         }
       }
 
-      // Low side: cheapest listing price (what you pay to buy)
-      // High side: highest sold price per world (actual transactions, not wishful listings)
-      // Fall back to listing prices for the high side if no sales data is available
       const lowPrices = [...allListingPrices.values()];
       const highPrices =
         allSoldPrices.size > 0 ? [...allSoldPrices.values()] : [...allListingPrices.values()];
@@ -166,7 +160,6 @@ export class ArbitrageService {
       const grossSpread = high.pricePerUnit - low.pricePerUnit;
       const grossSpreadPercent = low.pricePerUnit > 0 ? (grossSpread / low.pricePerUnit) * 100 : 0;
 
-      // FFXIV marketboard: 5% tax on purchases, 5% commission on sales
       const netBuyPrice = Math.round(low.pricePerUnit * (1 + config.marketBuyTaxRate));
       const netSellPrice = Math.round(high.pricePerUnit * (1 - config.marketSellTaxRate));
       const spread = netSellPrice - netBuyPrice;
@@ -180,8 +173,6 @@ export class ArbitrageService {
       const averageSalePrice =
         dataPointCount > 0 ? Math.round(totalAveragePrice / dataPointCount) : 0;
 
-      // Gil laundering detection: filter out transactions where a normally
-      // worthless item is sold for a ridiculous price to move gil between characters
       if (recentSales < config.arbitrageMinSales) {
         return null;
       }
@@ -300,12 +291,6 @@ export class ArbitrageService {
     return [...byWorld.values()];
   }
 
-  /**
-   * Extracts the highest sold price per world from recentHistory.
-   * Using sold prices (actual transactions) rather than listing prices
-   * (asking prices) for the high side of the spread filters out
-   * unrealistic listings that will never sell.
-   */
   private extractSoldPrices(
     market: UniversalisMarketData,
     worldById: Map<number, { name: string; dataCenter: string }>,
