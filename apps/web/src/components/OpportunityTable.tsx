@@ -1,8 +1,13 @@
 import type { ArbitrageOpportunity } from "@xiv-arbitrage/shared";
+import type { ItemDetails } from "../lib/xivapi.js";
 import { useNavigate } from "react-router-dom";
 
+interface EnrichedOpportunity extends ArbitrageOpportunity {
+  item: ItemDetails;
+}
+
 interface OpportunityTableProps {
-  opportunities: ArbitrageOpportunity[];
+  opportunities: EnrichedOpportunity[];
   isLoading: boolean;
 }
 

@@ -1,4 +1,4 @@
-import type { OpportunityFilters, OpportunityResponse } from "@xiv-arbitrage/shared";
+import type { OpportunityFilters } from "@xiv-arbitrage/shared";
 import {
   ArrowDownUp,
   ChevronLeft,
@@ -11,8 +11,10 @@ import {
   Sun,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { NavLink, useSearchParams } from "react-router-dom";
+import { useInvalidateOpportunities, useOpportunities, useBulkItemDetails } from "../hooks/api.js";
+import { useUiStore } from "../stores/uiStore.js";
 import { OpportunityTable } from "./OpportunityTable.js";
 import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
@@ -21,23 +23,8 @@ const DEFAULT_PAGE_SIZE = 50;
 
 export function OpportunitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<OpportunityResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("darkMode") === "true" ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
-    localStorage.setItem("darkMode", String(isDarkMode));
-  }, [isDarkMode]);
+  const { isDarkMode, toggleDarkMode } = useUiStore();
+  const invalidateOpportunities = useInvalidateOpportunities();
 
   const filters: OpportunityFilters = useMemo(
     () => ({
@@ -54,61 +41,31 @@ export function OpportunitiesPage() {
 
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const { data, isLoading, error } = useOpportunities(filters, page);
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined && value !== "" && value !== "all") {
-          params.set(key, String(value));
-        }
-      }
-      if (page > 1) {
-        params.set("page", String(page));
-      }
-
-      try {
-        const response = await fetch(`/api/opportunities?${params.toString()}`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`API returned ${response.status}`);
-        }
-
-        setData((await response.json()) as OpportunityResponse);
-      } catch (loadError) {
-        if (!controller.signal.aborted) {
-          setError(loadError instanceof Error ? loadError.message : "Unable to load opportunities");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => controller.abort();
-  }, [filters, page]);
+  const itemIds = useMemo(
+    () => data?.opportunities.map((o) => o.itemId) ?? [],
+    [data?.opportunities],
+  );
+  const itemDetails = useBulkItemDetails(itemIds);
 
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ?? 1;
-  const opportunities = data?.opportunities ?? [];
+
+  const opportunities = useMemo(() => {
+    if (!data) return [];
+    return data.opportunities.map((o) => ({
+      ...o,
+      item: itemDetails.get(o.itemId) ?? { id: o.itemId, name: `Item ${o.itemId}` },
+    }));
+  }, [data, itemDetails]);
 
   const summary = useMemo(() => {
     if (!data) return { best: null, count: 0, totalVolume: 0 };
-    const best = data.opportunities[0];
-    const totalVolume = data.opportunities.reduce(
-      (sum, opportunity) => sum + opportunity.recentSales,
-      0,
-    );
+    const best = opportunities[0];
+    const totalVolume = data.opportunities.reduce((sum, o) => sum + o.recentSales, 0);
     return { best, count: data.total, totalVolume };
-  }, [data]);
+  }, [data, opportunities]);
 
   function updateFilter<K extends keyof OpportunityFilters>(key: K, value: OpportunityFilters[K]) {
     setSearchParams((prev) => {
@@ -182,18 +139,14 @@ export function OpportunitiesPage() {
             <ExternalLink size={18} aria-hidden="true" />
             <span>GitHub</span>
           </a>
-          <button
-            className="iconButton"
-            type="button"
-            onClick={() => setSearchParams((prev) => new URLSearchParams(prev))}
-          >
+          <button className="iconButton" type="button" onClick={() => invalidateOpportunities()}>
             <RefreshCw size={18} aria-hidden="true" />
             <span>Refresh</span>
           </button>
           <button
             className="iconButton"
             type="button"
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleDarkMode}
             aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDarkMode ? (
@@ -280,7 +233,7 @@ export function OpportunitiesPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error}
+          {error instanceof Error ? error.message : "Unable to load opportunities"}
         </div>
       ) : null}
       <OpportunityTable opportunities={opportunities} isLoading={isLoading} />

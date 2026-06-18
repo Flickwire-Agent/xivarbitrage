@@ -4,7 +4,6 @@ import { ArbitrageCache } from "../services/arbitrageCache.js";
 import { getQueueStats } from "../services/jobQueue.js";
 import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
 import { universalis } from "../services/universalis.js";
-import { XivApiClient } from "../services/xivapi.js";
 import { config } from "../config.js";
 import { iqrAverage } from "../services/stats.js";
 import pool from "../db/pool.js";
@@ -16,7 +15,7 @@ const dcDisparityQuerySchema = z.object({
   minSpread: z.coerce.number().nonnegative().optional(),
   minSpreadPercent: z.coerce.number().nonnegative().optional(),
   region: z.string().optional(),
-  sort: z.enum(["spread", "spreadPercent", "item"]).optional(),
+  sort: z.enum(["spread", "spreadPercent"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   perPage: z.coerce.number().int().positive().max(200).optional(),
 });
@@ -151,68 +150,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
     return response;
   });
 
-  // In-memory cache for XIVAPI search results (no need to re-query same term)
-  const searchCache = new Map<
-    string,
-    { results: { id: number; name: string; iconUrl?: string; category?: string }[] }
-  >();
-
-  app.get("/items/search", async (request, reply) => {
-    const { q } = z.object({ q: z.string().min(1).max(100) }).parse(request.query);
-    const cached = searchCache.get(q);
-    if (cached) return cached;
-
-    try {
-      const sanitized = q.replace(/["\\]/g, "").trim();
-      const url = new URL(`${config.xivapiBaseUrl}/search`);
-      url.searchParams.set("query", `Name~"${sanitized}"`);
-      url.searchParams.set("sheets", "Item");
-      url.searchParams.set("fields", "Name,Icon,ItemUICategory.Name");
-      url.searchParams.set("limit", "20");
-
-      const response = await fetch(url, {
-        headers: { "User-Agent": "xiv-arbitrage/0.1.0" },
-      });
-
-      if (!response.ok) {
-        return reply.status(502).send({ error: "Search service unavailable" });
-      }
-
-      const data = (await response.json()) as {
-        results?: {
-          row_id: number;
-          fields: {
-            Name: string;
-            Icon?: { path?: string; path_hr1?: string };
-            ItemUICategory?: { fields?: { Name: string } };
-          };
-        }[];
-      };
-
-      const results = (data.results ?? []).map((r) => {
-        const iconPath = r.fields.Icon?.path_hr1 ?? r.fields.Icon?.path;
-        return {
-          id: r.row_id,
-          name: r.fields.Name ?? `Item ${r.row_id}`,
-          iconUrl: iconPath
-            ? `${config.xivapiBaseUrl}/asset?path=${encodeURIComponent(iconPath)}&format=png`
-            : undefined,
-          category: r.fields.ItemUICategory?.fields?.Name,
-        };
-      });
-
-      const result = { results };
-      searchCache.set(q, result);
-      if (searchCache.size > 500) {
-        const keys = Array.from(searchCache.keys());
-        for (let i = 0; i < 250; i++) searchCache.delete(keys[i]!);
-      }
-      return result;
-    } catch {
-      return reply.status(502).send({ error: "Search failed" });
-    }
-  });
-
   app.get<{ Params: { itemId: string } }>("/items/:itemId/listings", async (request, reply) => {
     const itemId = Number(request.params.itemId);
 
@@ -220,15 +157,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [listingData, item, dcList] = await Promise.all([
+    const [listingData, dcList] = await Promise.all([
       marketSnapshotStore.getCurrentListings(itemId),
-      new XivApiClient().getItemDetails(itemId),
       universalis.getDataCenters(),
     ]);
-
-    if (!item) {
-      return reply.status(404).send({ error: "Item not found" });
-    }
 
     const worldDataCenters: Record<number, string> = {};
     for (const dc of dcList) {
@@ -237,7 +169,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
       }
     }
 
-    // Group sale records by data center
     const dcPrices: Record<string, number[]> = {};
     for (const sale of listingData.sales) {
       const dc = worldDataCenters[sale.worldId];
@@ -246,7 +177,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
       dcPrices[dc].push(sale.pricePerUnit);
     }
 
-    // Compute IQR-filtered average per data center
     const dcAverages: Record<string, { avgPrice: number; count: number }> = {};
     for (const [dc, prices] of Object.entries(dcPrices)) {
       const avg = iqrAverage(prices);
@@ -255,7 +185,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
       }
     }
 
-    // Fallback global IQR average for worlds/DCs with no sale data
     const allPrices = listingData.sales.map((s) => s.pricePerUnit);
     const globalAvg = iqrAverage(allPrices);
 
@@ -279,7 +208,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     return {
       itemId,
-      item,
       listings,
       saleStats: {
         avgPrice: globalAvg ?? 0,
@@ -305,15 +233,10 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [sales, item, dcList] = await Promise.all([
+    const [sales, dcList] = await Promise.all([
       marketSnapshotStore.getSaleHistory(itemId),
-      new XivApiClient().getItemDetails(itemId),
       universalis.getDataCenters(),
     ]);
-
-    if (!item) {
-      return reply.status(404).send({ error: "Item not found" });
-    }
 
     const worldDataCenters: Record<number, string> = {};
     for (const dc of dcList) {
@@ -324,7 +247,6 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     return {
       itemId,
-      item,
       sales,
       worlds: [...new Set(sales.map((s) => s.worldName))].sort(),
       worldDataCenters,

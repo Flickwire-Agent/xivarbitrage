@@ -1,58 +1,18 @@
-import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useItemDetails, useItemHistory } from "../hooks/api.js";
+import { useUiStore } from "../stores/uiStore.js";
 import { SaleHistoryView } from "./SaleHistoryView.js";
 
 export function ItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const navigate = useNavigate();
-  const [data, setData] = useState<ItemHistoryResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("darkMode") === "true" ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    }
-    return false;
-  });
+  const { isDarkMode, toggleDarkMode } = useUiStore();
+  const id = itemId ? Number(itemId) : undefined;
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
-    localStorage.setItem("darkMode", String(isDarkMode));
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    if (!itemId) return;
-
-    const controller = new AbortController();
-
-    async function load() {
-      setIsLoading(true);
-
-      try {
-        const response = await fetch(`/api/items/${itemId}/history`, {
-          signal: controller.signal,
-        });
-        if (response.ok) {
-          setData((await response.json()) as ItemHistoryResponse);
-        }
-      } catch (loadError) {
-        if (!controller.signal.aborted) {
-          console.error("Failed to load item history:", loadError);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => controller.abort();
-  }, [itemId]);
+  const { data, isLoading, error } = useItemHistory(id);
+  const { data: itemDetails } = useItemDetails(id);
 
   if (!itemId) {
     return (
@@ -70,13 +30,18 @@ export function ItemPage() {
     );
   }
 
+  const enrichedData = {
+    ...data,
+    item: itemDetails ?? { id: data.itemId, name: `Item ${data.itemId}` },
+  };
+
   return (
     <>
       <div className="topBarActions" style={{ justifyContent: "flex-end", marginBottom: 16 }}>
         <button
           className="iconButton"
           type="button"
-          onClick={() => setIsDarkMode(!isDarkMode)}
+          onClick={toggleDarkMode}
           aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
           {isDarkMode ? (
@@ -86,7 +51,13 @@ export function ItemPage() {
           )}
         </button>
       </div>
-      <SaleHistoryView data={data} onBack={() => navigate("/")} />
+      {error ? (
+        <div className="notice error" role="alert">
+          Failed to load item history
+        </div>
+      ) : (
+        <SaleHistoryView data={enrichedData} onBack={() => navigate("/")} />
+      )}
     </>
   );
 }

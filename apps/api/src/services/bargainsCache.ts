@@ -1,7 +1,6 @@
-import type { BargainListing, ItemDetails } from "@xiv-arbitrage/shared";
+import type { BargainListing } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import pool from "../db/pool.js";
-import { XivApiClient } from "./xivapi.js";
 import { UniversalisClient } from "./universalis.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { iqrAverage } from "./stats.js";
@@ -11,7 +10,6 @@ export class BargainsCache {
   private latest: BargainListing[] = [];
   private generatedAt = "";
   private refreshPromise: Promise<void> | null = null;
-  private xivapi = new XivApiClient();
   private universalis = new UniversalisClient();
   private worldDataCenters: Record<number, string> = {};
 
@@ -107,7 +105,6 @@ export class BargainsCache {
 
     const batchSize = 250;
     const allBargains: BargainListing[] = [];
-    const itemCache = new Map<number, ItemDetails>();
 
     for (let i = 0; i < allItemIds.length; i += batchSize) {
       const batch = allItemIds.slice(i, i + batchSize);
@@ -127,16 +124,6 @@ export class BargainsCache {
         const itemDcAvg = dcAvgLookup.get(row.item_id);
         const globalIqr = globalIqrByItem.get(row.item_id) ?? null;
 
-        let item = itemCache.get(row.item_id);
-        if (!item) {
-          try {
-            item = await this.xivapi.getItemDetails(row.item_id);
-            itemCache.set(row.item_id, item);
-          } catch {
-            item = { id: row.item_id, name: `Item ${row.item_id}` };
-          }
-        }
-
         for (const listing of itemListings) {
           if (!listing.pricePerUnit || listing.pricePerUnit <= 0) continue;
           const worldId = listing.worldID ?? 0;
@@ -149,7 +136,6 @@ export class BargainsCache {
 
           allBargains.push({
             itemId: row.item_id,
-            item,
             worldId,
             worldName: listing.worldName ?? "Unknown",
             dataCenter: dc,

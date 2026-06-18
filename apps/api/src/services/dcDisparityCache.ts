@@ -1,22 +1,13 @@
-import type {
-  DcDisparity,
-  DcDisparityQuery,
-  DcPriceInfo,
-  ItemDetails,
-} from "@xiv-arbitrage/shared";
+import type { DcDisparity, DcDisparityQuery, DcPriceInfo } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
-import { XivApiClient } from "./xivapi.js";
 import { dcAverageStore } from "./dcAverageStore.js";
 import type { DcItemAverage } from "./stats.js";
-
-const ITEM_HYDRATION_CONCURRENCY = 10;
 
 export class DcDisparityCache {
   private latest: DcDisparity[] = [];
   private generatedAt = "";
   private hasLoaded = false;
   private refreshPromise: Promise<void> | null = null;
-  private xivapi = new XivApiClient();
 
   start() {
     void this.refresh();
@@ -40,7 +31,7 @@ export class DcDisparityCache {
     const total = filtered.length;
     const totalPages = Math.ceil(total / perPage);
     const start = (page - 1) * perPage;
-    const disparities = await this.hydrateItems(filtered.slice(start, start + perPage));
+    const disparities = filtered.slice(start, start + perPage);
 
     return { generatedAt: this.generatedAt, disparities, total, page, perPage, totalPages };
   }
@@ -125,7 +116,6 @@ export class DcDisparityCache {
 
       allDisparities.push({
         itemId,
-        item: this.placeholderItem(itemId),
         spread,
         spreadPercent,
         highDc: {
@@ -177,46 +167,7 @@ export class DcDisparityCache {
     if (query?.sort === "spreadPercent") {
       return [...filtered].sort((a, b) => b.spreadPercent - a.spreadPercent);
     }
-    if (query?.sort === "item") {
-      return [...filtered].sort((a, b) => a.item.name.localeCompare(b.item.name));
-    }
     return [...filtered].sort((a, b) => b.spread - a.spread);
-  }
-
-  private async hydrateItems(disparities: DcDisparity[]): Promise<DcDisparity[]> {
-    if (disparities.length === 0) return disparities;
-
-    const startedAt = Date.now();
-    const hydrated = disparities.slice();
-    let nextIndex = 0;
-    const workers = Array.from(
-      { length: Math.min(ITEM_HYDRATION_CONCURRENCY, disparities.length) },
-      async () => {
-        while (nextIndex < disparities.length) {
-          const currentIndex = nextIndex++;
-          const disparity = disparities[currentIndex];
-          if (!disparity) continue;
-
-          try {
-            disparity.item = await this.xivapi.getItemDetails(disparity.itemId);
-            hydrated[currentIndex] = disparity;
-          } catch {
-            hydrated[currentIndex] = disparity;
-          }
-        }
-      },
-    );
-
-    await Promise.all(workers);
-    const elapsed = Date.now() - startedAt;
-    if (elapsed > 1000) {
-      console.log(`[DcDisparityCache] Hydrated ${disparities.length} item details in ${elapsed}ms`);
-    }
-    return hydrated;
-  }
-
-  private placeholderItem(itemId: number): ItemDetails {
-    return { id: itemId, name: `Item ${itemId}` };
   }
 }
 

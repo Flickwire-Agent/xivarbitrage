@@ -1,7 +1,8 @@
-import type { ItemListing, ListingsResponse } from "@xiv-arbitrage/shared";
+import type { ItemListing } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useItemDetails, useItemListings } from "../hooks/api.js";
+import { useUiStore } from "../stores/uiStore.js";
 
 function getUniversalisUrl(itemId: number): string {
   return `https://universalis.app/market/${itemId}`;
@@ -11,56 +12,11 @@ export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [data, setData] = useState<ListingsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("darkMode") === "true" ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    }
-    return false;
-  });
+  const { isDarkMode, toggleDarkMode } = useUiStore();
+  const id = itemId ? Number(itemId) : undefined;
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
-    localStorage.setItem("darkMode", String(isDarkMode));
-  }, [isDarkMode]);
-
-  useEffect(() => {
-    if (!itemId) return;
-
-    const controller = new AbortController();
-
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch(`/api/items/${itemId}/listings`, {
-          signal: controller.signal,
-        });
-        if (response.ok) {
-          setData((await response.json()) as ListingsResponse);
-        } else {
-          setError(`API returned ${response.status}`);
-        }
-      } catch (loadError) {
-        if (!controller.signal.aborted) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load listings");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => controller.abort();
-  }, [itemId]);
+  const { data, isLoading, error } = useItemListings(id);
+  const { data: itemDetails } = useItemDetails(id);
 
   if (!itemId) {
     return <div className="notice error">No item specified</div>;
@@ -72,7 +28,7 @@ export function ListingsPage() {
         <button
           className="iconButton"
           type="button"
-          onClick={() => setIsDarkMode(!isDarkMode)}
+          onClick={toggleDarkMode}
           aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
         >
           {isDarkMode ? (
@@ -94,12 +50,12 @@ export function ListingsPage() {
             <ArrowLeft size={18} aria-hidden="true" />
             <span>Back</span>
           </button>
-          {data?.item.iconUrl ? (
-            <img src={data.item.iconUrl} alt="" className="itemDetailIcon" loading="lazy" />
+          {itemDetails?.iconUrl ? (
+            <img src={itemDetails.iconUrl} alt="" className="itemDetailIcon" loading="lazy" />
           ) : null}
           <div>
-            <h1>{data?.item.name ?? "Loading..."}</h1>
-            <p className="eyebrow">{data?.item.category ?? "Uncategorized"}</p>
+            <h1>{itemDetails?.name ?? "Loading..."}</h1>
+            <p className="eyebrow">{itemDetails?.category ?? "Uncategorized"}</p>
           </div>
         </div>
         <div className="topBarActions">
@@ -138,7 +94,7 @@ export function ListingsPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error}
+          {error instanceof Error ? error.message : "Failed to load listings"}
         </div>
       ) : null}
 

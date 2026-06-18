@@ -18,7 +18,6 @@ export interface ItemDetails {
 
 export interface ArbitrageOpportunity {
   itemId: number;
-  item: ItemDetails;
   low: WorldPrice;
   high: WorldPrice;
   grossSpread: number;
@@ -59,7 +58,6 @@ export interface SaleRecord {
 
 export interface ItemHistoryResponse {
   itemId: number;
-  item: ItemDetails;
   sales: SaleRecord[];
   worlds: string[];
   worldDataCenters: Record<number, string>;
@@ -78,7 +76,6 @@ export interface ItemListing {
 
 export interface BargainListing {
   itemId: number;
-  item: ItemDetails;
   worldId: number;
   worldName: string;
   dataCenter: string;
@@ -96,7 +93,6 @@ export interface BargainsResponse {
 
 export interface ListingsResponse {
   itemId: number;
-  item: ItemDetails;
   listings: ItemListing[];
   saleStats: {
     avgPrice: number;
@@ -114,7 +110,6 @@ export interface DcPriceInfo {
 
 export interface DcDisparity {
   itemId: number;
-  item: ItemDetails;
   spread: number;
   spreadPercent: number;
   highDc: DcPriceInfo;
@@ -128,7 +123,7 @@ export interface DcDisparityQuery {
   minSpread?: number;
   minSpreadPercent?: number;
   region?: string;
-  sort?: "spread" | "spreadPercent" | "item";
+  sort?: "spread" | "spreadPercent";
   page?: number;
   perPage?: number;
 }

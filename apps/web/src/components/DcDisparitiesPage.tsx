@@ -1,4 +1,4 @@
-import type { DcDisparityResponse } from "@xiv-arbitrage/shared";
+import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,8 +8,10 @@ import {
   Sun,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
+import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
+import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 
@@ -18,23 +20,7 @@ const PAGE_SIZE = 50;
 export function DcDisparitiesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [data, setData] = useState<DcDisparityResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("darkMode") === "true" ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
-    localStorage.setItem("darkMode", String(isDarkMode));
-  }, [isDarkMode]);
+  const { isDarkMode, toggleDarkMode } = useUiStore();
 
   const highDc = searchParams.get("highDc") ?? "";
   const lowDc = searchParams.get("lowDc") ?? "";
@@ -43,45 +29,30 @@ export function DcDisparitiesPage() {
   const minSpread = searchParams.get("minSpread") ?? "";
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const query = useMemo(
+    () => ({
+      highDc: highDc || undefined,
+      lowDc: lowDc || undefined,
+      region: region || undefined,
+      sort: (sort || undefined) as "spread" | "spreadPercent" | undefined,
+      minSpread: minSpread ? Number(minSpread) : undefined,
+      perPage: PAGE_SIZE,
+    }),
+    [highDc, lowDc, region, sort, minSpread],
+  );
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
+  const { data, isLoading, error } = useDcDisparities(query, page);
 
-      try {
-        const params = new URLSearchParams();
-        if (highDc) params.set("highDc", highDc);
-        if (lowDc) params.set("lowDc", lowDc);
-        if (region) params.set("region", region);
-        if (sort) params.set("sort", sort);
-        if (minSpread) params.set("minSpread", minSpread);
-        if (page > 1) params.set("page", String(page));
-        params.set("perPage", String(PAGE_SIZE));
+  const itemIds = useMemo(() => data?.disparities.map((d) => d.itemId) ?? [], [data?.disparities]);
+  const itemDetails = useBulkItemDetails(itemIds);
 
-        const response = await fetch(`/api/dc-disparities?${params}`, {
-          signal: controller.signal,
-        });
-        if (response.ok) {
-          setData((await response.json()) as DcDisparityResponse);
-        } else {
-          setError(`API returned ${response.status}`);
-        }
-      } catch (loadError) {
-        if (!controller.signal.aborted) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load disparities");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => controller.abort();
-  }, [highDc, lowDc, region, sort, minSpread, page]);
+  const disparities = useMemo(() => {
+    if (!data) return [];
+    return data.disparities.map((d) => ({
+      ...d,
+      item: itemDetails.get(d.itemId) ?? { id: d.itemId, name: `Item ${d.itemId}` },
+    }));
+  }, [data, itemDetails]);
 
   const summary = useMemo(() => {
     if (!data) return { count: 0, avgSpread: 0, dcSet: new Set<string>() };
@@ -194,7 +165,7 @@ export function DcDisparitiesPage() {
           <button
             type="button"
             className="iconButton"
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleDarkMode}
             aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDarkMode ? (
@@ -206,7 +177,7 @@ export function DcDisparitiesPage() {
         </div>
       </section>
 
-      {data && data.disparities.length > 0 ? (
+      {data && disparities.length > 0 ? (
         <section className="metricStrip" aria-label="Disparity summary">
           <article>
             <Gauge size={18} aria-hidden="true" />
@@ -254,7 +225,7 @@ export function DcDisparitiesPage() {
         <SelectField
           label="Sort by"
           value={sort}
-          options={["spread", "spreadPercent", "item"]}
+          options={["spread", "spreadPercent"]}
           onChange={(v) => updateFilter("sort", v)}
         />
         <div className="selectField">
@@ -273,7 +244,7 @@ export function DcDisparitiesPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error}
+          {error instanceof Error ? error.message : "Failed to load disparities"}
         </div>
       ) : null}
 
@@ -281,7 +252,7 @@ export function DcDisparitiesPage() {
         <div className="notice" role="status" aria-live="polite">
           Computing data center price disparities...
         </div>
-      ) : data && data.disparities.length > 0 ? (
+      ) : data && disparities.length > 0 ? (
         <section className="tableShell" aria-label="DC disparities table">
           <table>
             <thead>
@@ -295,70 +266,76 @@ export function DcDisparitiesPage() {
               </tr>
             </thead>
             <tbody>
-              {data.disparities.map((d) => (
-                <tr
-                  key={d.itemId}
-                  className="clickable"
-                  onClick={() => navigate(`/items/${d.itemId}`)}
-                >
-                  <td>
-                    <div className="itemCell">
-                      {d.item.iconUrl ? <img src={d.item.iconUrl} alt="" loading="lazy" /> : null}
-                      <div>
-                        <button
-                          type="button"
-                          className="itemNameButton"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/items/${d.itemId}`);
-                          }}
-                          aria-label={`View sale history for ${d.item.name}`}
-                        >
-                          <strong>{d.item.name}</strong>
-                        </button>
-                        <span>{d.item.category ?? "Uncategorized"}</span>
+              {disparities.map(
+                (
+                  d: DcDisparity & {
+                    item: { id: number; name: string; iconUrl?: string; category?: string };
+                  },
+                ) => (
+                  <tr
+                    key={d.itemId}
+                    className="clickable"
+                    onClick={() => navigate(`/items/${d.itemId}`)}
+                  >
+                    <td>
+                      <div className="itemCell">
+                        {d.item.iconUrl ? <img src={d.item.iconUrl} alt="" loading="lazy" /> : null}
+                        <div>
+                          <button
+                            type="button"
+                            className="itemNameButton"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/items/${d.itemId}`);
+                            }}
+                            aria-label={`View sale history for ${d.item.name}`}
+                          >
+                            <strong>{d.item.name}</strong>
+                          </button>
+                          <span>{d.item.category ?? "Uncategorized"}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <strong>{d.lowDc.dataCenter}</strong>
-                    <span className="cellSubtext">
-                      {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
-                    </span>
-                  </td>
-                  <td>
-                    <strong>{d.highDc.dataCenter}</strong>
-                    <span className="cellSubtext">
-                      {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
-                    </span>
-                  </td>
-                  <td>
-                    <strong>{d.spread.toLocaleString()} gil</strong>
-                  </td>
-                  <td>
-                    <strong>{d.spreadPercent}%</strong>
-                  </td>
-                  <td>
-                    <div className="dcTags">
-                      {d.allDcs.map((dc) => (
-                        <span
-                          key={dc.dataCenter}
-                          className={`dcTag${
-                            dc.dataCenter === d.highDc.dataCenter
-                              ? " dcTagHigh"
-                              : dc.dataCenter === d.lowDc.dataCenter
-                                ? " dcTagLow"
-                                : ""
-                          }`}
-                          title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
-                        >
-                          {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <strong>{d.lowDc.dataCenter}</strong>
+                      <span className="cellSubtext">
+                        {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{d.highDc.dataCenter}</strong>
+                      <span className="cellSubtext">
+                        {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{d.spread.toLocaleString()} gil</strong>
+                    </td>
+                    <td>
+                      <strong>{d.spreadPercent}%</strong>
+                    </td>
+                    <td>
+                      <div className="dcTags">
+                        {d.allDcs.map((dc: DcPriceInfo) => (
+                          <span
+                            key={dc.dataCenter}
+                            className={`dcTag${
+                              dc.dataCenter === d.highDc.dataCenter
+                                ? " dcTagHigh"
+                                : dc.dataCenter === d.lowDc.dataCenter
+                                  ? " dcTagLow"
+                                  : ""
+                            }`}
+                            title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
+                          >
+                            {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
           <p className="tableFooter">

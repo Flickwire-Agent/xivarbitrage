@@ -10,6 +10,10 @@ import type { UniversalisMarketData } from "./universalis.js";
 import { WorldCatalog } from "./worldCatalog.js";
 import { XivApiClient } from "./xivapi.js";
 
+interface EnrichedOpportunity extends ArbitrageOpportunity {
+  itemCategory?: string;
+}
+
 export class ArbitrageService {
   private worldCatalog: WorldCatalog;
   private xivapi: XivApiClient;
@@ -78,7 +82,7 @@ export class ArbitrageService {
         }
       }
 
-      const opportunities: (ArbitrageOpportunity | null)[] = [];
+      const opportunities: (EnrichedOpportunity | null)[] = [];
       const chunkSize = 100;
       for (let i = 0; i < itemsToEvaluate.length; i += chunkSize) {
         const chunk = itemsToEvaluate.slice(i, i + chunkSize);
@@ -105,7 +109,7 @@ export class ArbitrageService {
     regions: string[],
     snapshots: { data: UniversalisMarketData; region: string }[],
     worldById: Map<number, { name: string; dataCenter: string }>,
-  ): Promise<ArbitrageOpportunity | null> {
+  ): Promise<EnrichedOpportunity | null> {
     try {
       if (snapshots.length === 0) {
         return null;
@@ -198,7 +202,7 @@ export class ArbitrageService {
 
       return {
         itemId,
-        item,
+        itemCategory: item.category,
         low,
         high,
         grossSpread,
@@ -220,7 +224,7 @@ export class ArbitrageService {
   }
 
   createResponse(
-    opportunities: ArbitrageOpportunity[],
+    opportunities: EnrichedOpportunity[],
     filters: OpportunityFilters,
     generatedAt: string,
   ): OpportunityResponse {
@@ -256,7 +260,7 @@ export class ArbitrageService {
         ),
       ].sort(),
       categories: [
-        ...new Set(opportunities.map((opportunity) => opportunity.item.category).filter(isDefined)),
+        ...new Set(opportunities.map((opportunity) => opportunity.itemCategory).filter(isDefined)),
       ].sort(),
       total,
       page: clampedPage,
@@ -330,17 +334,17 @@ export class ArbitrageService {
   }
 
   private applyFilters(
-    opportunities: ArbitrageOpportunity[],
+    opportunities: EnrichedOpportunity[],
     filters: OpportunityFilters,
   ): ArbitrageOpportunity[] {
-    return opportunities.filter((opportunity) => {
+    const filtered = opportunities.filter((opportunity) => {
       if (filters.highWorld && opportunity.high.worldName !== filters.highWorld) {
         return false;
       }
       if (filters.highDataCenter && opportunity.high.dataCenter !== filters.highDataCenter) {
         return false;
       }
-      if (filters.category && opportunity.item.category !== filters.category) {
+      if (filters.category && opportunity.itemCategory !== filters.category) {
         return false;
       }
       if (filters.minVolume && opportunity.recentSales < filters.minVolume) {
@@ -357,6 +361,8 @@ export class ArbitrageService {
       }
       return true;
     });
+
+    return filtered.map(({ itemCategory: _, ...rest }) => rest);
   }
 
   private sort(

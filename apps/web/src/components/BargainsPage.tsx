@@ -1,57 +1,27 @@
-import type { BargainsResponse } from "@xiv-arbitrage/shared";
 import { ExternalLink, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useBargains, useBulkItemDetails } from "../hooks/api.js";
+import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
+import type { BargainListing } from "@xiv-arbitrage/shared";
+import { useMemo } from "react";
 
 export function BargainsPage() {
   const navigate = useNavigate();
-  const [data, setData] = useState<BargainsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("darkMode") === "true" ||
-        window.matchMedia("(prefers-color-scheme: dark)").matches
-      );
-    }
-    return false;
-  });
+  const { isDarkMode, toggleDarkMode } = useUiStore();
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
-    localStorage.setItem("darkMode", String(isDarkMode));
-  }, [isDarkMode]);
+  const { data, isLoading, error } = useBargains();
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const itemIds = useMemo(() => data?.bargains.map((b) => b.itemId) ?? [], [data?.bargains]);
+  const itemDetails = useBulkItemDetails(itemIds);
 
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const response = await fetch("/api/bargains", { signal: controller.signal });
-        if (response.ok) {
-          setData((await response.json()) as BargainsResponse);
-        } else {
-          setError(`API returned ${response.status}`);
-        }
-      } catch (loadError) {
-        if (!controller.signal.aborted) {
-          setError(loadError instanceof Error ? loadError.message : "Failed to load bargains");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-    return () => controller.abort();
-  }, []);
+  const bargains = useMemo(() => {
+    if (!data) return [];
+    return data.bargains.map((b) => ({
+      ...b,
+      item: itemDetails.get(b.itemId) ?? { id: b.itemId, name: `Item ${b.itemId}` },
+    }));
+  }, [data, itemDetails]);
 
   return (
     <>
@@ -85,7 +55,7 @@ export function BargainsPage() {
           <button
             type="button"
             className="iconButton"
-            onClick={() => setIsDarkMode(!isDarkMode)}
+            onClick={toggleDarkMode}
             aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
           >
             {isDarkMode ? (
@@ -99,7 +69,7 @@ export function BargainsPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error}
+          {error instanceof Error ? error.message : "Failed to load bargains"}
         </div>
       ) : null}
 
@@ -107,7 +77,7 @@ export function BargainsPage() {
         <div className="notice" role="status" aria-live="polite">
           Scanning market for bargains...
         </div>
-      ) : data && data.bargains.length > 0 ? (
+      ) : data && bargains.length > 0 ? (
         <section className="tableShell" aria-label="Bargains table">
           <table>
             <thead>
@@ -121,45 +91,52 @@ export function BargainsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.bargains.map((b, i) => (
-                <tr
-                  key={`${b.itemId}-${b.worldId}-${b.pricePerUnit}-${i}`}
-                  className="clickable"
-                  onClick={() => navigate(`/items/${b.itemId}/listings`)}
-                >
-                  <td>
-                    <div className="itemCell">
-                      {b.item.iconUrl ? (
-                        <img src={b.item.iconUrl} alt="" className="miniIcon" loading="lazy" />
-                      ) : null}
-                      <div>
-                        <strong>{b.item.name}</strong>
-                        <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>
+              {bargains.map(
+                (
+                  b: BargainListing & {
+                    item: { id: number; name: string; iconUrl?: string; category?: string };
+                  },
+                  i: number,
+                ) => (
+                  <tr
+                    key={`${b.itemId}-${b.worldId}-${b.pricePerUnit}-${i}`}
+                    className="clickable"
+                    onClick={() => navigate(`/items/${b.itemId}/listings`)}
+                  >
+                    <td>
+                      <div className="itemCell">
+                        {b.item.iconUrl ? (
+                          <img src={b.item.iconUrl} alt="" className="miniIcon" loading="lazy" />
+                        ) : null}
+                        <div>
+                          <strong>{b.item.name}</strong>
+                          <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td>
-                    <strong>{b.worldName}</strong>
-                  </td>
-                  <td>{b.dataCenter}</td>
-                  <td>
-                    <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
-                  </td>
-                  <td>{b.recentAvgPrice.toLocaleString()} gil</td>
-                  <td>
-                    <div className="discountCell">
-                      <strong className="discountPositive">
-                        {b.discount.toLocaleString()} gil
-                      </strong>
-                      <span className="discountPct">{b.discountPercent}% below avg</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td>
+                      <strong>{b.worldName}</strong>
+                    </td>
+                    <td>{b.dataCenter}</td>
+                    <td>
+                      <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
+                    </td>
+                    <td>{b.recentAvgPrice.toLocaleString()} gil</td>
+                    <td>
+                      <div className="discountCell">
+                        <strong className="discountPositive">
+                          {b.discount.toLocaleString()} gil
+                        </strong>
+                        <span className="discountPct">{b.discountPercent}% below avg</span>
+                      </div>
+                    </td>
+                  </tr>
+                ),
+              )}
             </tbody>
           </table>
           <p className="tableFooter">
-            Showing top {data.bargains.length} bargains across all items. Refreshed{" "}
+            Showing top {bargains.length} bargains across all items. Refreshed{" "}
             {new Date(data.generatedAt).toLocaleTimeString()}.
           </p>
         </section>

@@ -1,46 +1,31 @@
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-interface SearchResult {
-  id: number;
-  name: string;
-  iconUrl?: string;
-  category?: string;
-}
+import { useItemSearch } from "../hooks/api.js";
+import type { ItemDetails } from "../lib/xivapi.js";
 
 export function SearchBox() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const { data: results } = useItemSearch(query);
+
   useEffect(() => {
     if (query.length < 2) {
-      setResults([]);
       setIsOpen(false);
       return;
     }
-
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/items/search?q=${encodeURIComponent(query)}`);
-        if (res.ok) {
-          const data = await res.json();
-          setResults(data.results ?? []);
-          setIsOpen(true);
-          setSelectedIndex(-1);
-        }
-      } catch {
-        // ignore
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [query]);
+    if (results && results.length > 0) {
+      setIsOpen(true);
+      setSelectedIndex(-1);
+    } else {
+      setIsOpen(false);
+    }
+  }, [query, results]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -52,16 +37,16 @@ export function SearchBox() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  function selectItem(item: SearchResult) {
+  function selectItem(item: ItemDetails) {
     navigate(`/items/${item.id}`);
     setQuery("");
-    setResults([]);
     setIsOpen(false);
     inputRef.current?.blur();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (!isOpen || results.length === 0) {
+    const items = results ?? [];
+    if (!isOpen || items.length === 0) {
       if (e.key === "Escape") {
         inputRef.current?.blur();
       }
@@ -71,16 +56,16 @@ export function SearchBox() {
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault();
-        setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : 0));
+        setSelectedIndex((prev) => (prev < items.length - 1 ? prev + 1 : 0));
         break;
       case "ArrowUp":
         e.preventDefault();
-        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : results.length - 1));
+        setSelectedIndex((prev) => (prev > 0 ? prev - 1 : items.length - 1));
         break;
       case "Enter":
         e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < results.length) {
-          const item = results[selectedIndex]!;
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+          const item = items[selectedIndex]!;
           selectItem(item);
         }
         break;
@@ -91,6 +76,7 @@ export function SearchBox() {
   }
 
   const listboxId = "search-listbox";
+  const items = results ?? [];
 
   return (
     <div className="searchBox" ref={containerRef}>
@@ -101,24 +87,24 @@ export function SearchBox() {
         placeholder="Search items..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => results.length > 0 && setIsOpen(true)}
+        onFocus={() => items.length > 0 && setIsOpen(true)}
         onKeyDown={handleKeyDown}
         aria-label="Search items"
         aria-controls={listboxId}
         aria-activedescendant={
-          selectedIndex >= 0 && isOpen && results[selectedIndex]
-            ? `search-result-${results[selectedIndex].id}`
+          selectedIndex >= 0 && isOpen && items[selectedIndex]
+            ? `search-result-${items[selectedIndex].id}`
             : undefined
         }
-        aria-expanded={isOpen && results.length > 0}
+        aria-expanded={isOpen && items.length > 0}
         aria-autocomplete="list"
         autoComplete="off"
         role="combobox"
         spellCheck={false}
       />
-      {isOpen && results.length > 0 ? (
+      {isOpen && items.length > 0 ? (
         <div className="searchDropdown" role="listbox" id={listboxId}>
-          {results.map((item, i) => (
+          {items.map((item, i) => (
             <div
               key={item.id}
               id={`search-result-${item.id}`}

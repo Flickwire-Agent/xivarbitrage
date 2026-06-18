@@ -3,9 +3,14 @@ import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { SaleHistoryChart } from "./SaleHistoryChart.js";
+import type { ItemDetails } from "../lib/xivapi.js";
+
+interface EnrichedItemHistoryResponse extends ItemHistoryResponse {
+  item: ItemDetails;
+}
 
 interface SaleHistoryViewProps {
-  data: ItemHistoryResponse;
+  data: EnrichedItemHistoryResponse;
   onBack: () => void;
 }
 
