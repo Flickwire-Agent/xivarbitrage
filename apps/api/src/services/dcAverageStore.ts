@@ -1,29 +1,19 @@
 import { config } from "../config.js";
-import pg from "pg";
+import pool from "../db/pool.js";
 import { UniversalisClient } from "./universalis.js";
 import { iqrAverage, type DcItemAverage } from "./stats.js";
-
-const { Pool } = pg;
 
 const MIN_SALES_PER_DC = 7;
 const RECOMPUTE_INTERVAL_MS = 60 * 60 * 1000;
 
 export class DcAverageStore {
-  private pool: pg.Pool | null;
   private universalis = new UniversalisClient();
   private worldDataCenters: Record<number, string> = {};
   private dcRegions: Record<string, string> = {};
   private computePromise: Promise<void> | null = null;
   private lastCompute: number = 0;
 
-  constructor() {
-    this.pool = config.databaseUrl
-      ? new Pool({
-          connectionString: config.databaseUrl,
-          ssl: config.databaseUrl.includes("localhost") ? false : { rejectUnauthorized: false },
-        })
-      : null;
-  }
+  constructor() {}
 
   start() {
     void this.recompute();
@@ -56,11 +46,13 @@ export class DcAverageStore {
   }
 
   private async compute(): Promise<void> {
-    if (!this.pool) return;
+    if (!config.databaseUrl) return;
     console.log("[DcAverageStore] Recomputing DC averages...");
     await this.ensureMapping();
 
-    const itemResult = await this.pool.query<{ item_id: number }>(
+    const computeStart = new Date();
+
+    const itemResult = await pool.query<{ item_id: number }>(
       `SELECT DISTINCT item_id
        FROM sale_history
        WHERE sold_at > now() - interval '30 days'
@@ -70,7 +62,7 @@ export class DcAverageStore {
 
     const allItemIds = itemResult.rows.map((r) => r.item_id);
 
-    const salesResult = await this.pool.query<{
+    const salesResult = await pool.query<{
       item_id: number;
       world_id: number;
       price_per_unit: number;
@@ -124,7 +116,6 @@ export class DcAverageStore {
       }
     }
 
-    await this.pool.query("DELETE FROM dc_item_averages");
     for (let i = 0; i < averages.length; i += 500) {
       const batch = averages.slice(i, i + 500);
       const values = batch.map(
@@ -135,7 +126,7 @@ export class DcAverageStore {
       for (const a of batch) {
         params.push(a.itemId, a.dataCenter, a.region, a.avgPrice, a.saleCount);
       }
-      await this.pool.query(
+      await pool.query(
         `INSERT INTO dc_item_averages (item_id, data_center, region, avg_price, sale_count, computed_at)
          VALUES ${values.join(", ")}
          ON CONFLICT (item_id, data_center) DO UPDATE SET
@@ -147,6 +138,8 @@ export class DcAverageStore {
       );
     }
 
+    await pool.query("DELETE FROM dc_item_averages WHERE computed_at < $1", [computeStart]);
+
     this.lastCompute = Date.now();
     console.log(
       `[DcAverageStore] Stored ${averages.length} DC averages for ${salesByItemWorld.size} items`,
@@ -154,8 +147,8 @@ export class DcAverageStore {
   }
 
   async getAverages(): Promise<DcItemAverage[]> {
-    if (!this.pool) return [];
-    const result = await this.pool.query<{
+    if (!config.databaseUrl) return [];
+    const result = await pool.query<{
       item_id: number;
       data_center: string;
       region: string;
