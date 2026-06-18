@@ -1,17 +1,10 @@
 import { worlds as fallbackWorlds, type WorldInfo } from "../data/worlds.js";
-import {
-  UniversalisClient,
-  type UniversalisDataCenter,
-  type UniversalisWorld,
-} from "./universalis.js";
+import { worldDcMapping } from "./worldDcMapping.js";
 
-const TARGET_REGIONS = new Set(["North-America", "Europe", "Oceania"]);
 const FALLBACK_REGIONS = ["North-America"];
 
 export class WorldCatalog {
   private cachedWorlds: WorldInfo[] | null = null;
-
-  constructor(private readonly universalis = new UniversalisClient()) {}
 
   async getWorlds(): Promise<WorldInfo[]> {
     if (this.cachedWorlds) {
@@ -19,7 +12,8 @@ export class WorldCatalog {
     }
 
     try {
-      this.cachedWorlds = await this.fetchSupportedWorlds();
+      const mapping = await worldDcMapping.getMapping();
+      this.cachedWorlds = mapping.worlds;
     } catch {
       this.cachedWorlds = fallbackWorlds;
     }
@@ -35,26 +29,5 @@ export class WorldCatalog {
 
   async getWorldById(): Promise<Map<number, WorldInfo>> {
     return new Map((await this.getWorlds()).map((world) => [world.id, world]));
-  }
-
-  private async fetchSupportedWorlds(): Promise<WorldInfo[]> {
-    const [availableWorlds, dataCenters] = await Promise.all([
-      this.universalis.getWorlds(),
-      this.universalis.getDataCenters(),
-    ]);
-    const worldNames = new Map(
-      availableWorlds.map((world: UniversalisWorld) => [world.id, world.name]),
-    );
-
-    return dataCenters
-      .filter((dataCenter: UniversalisDataCenter) => TARGET_REGIONS.has(dataCenter.region))
-      .flatMap((dataCenter: UniversalisDataCenter) =>
-        dataCenter.worlds.map((worldId) => ({
-          id: worldId,
-          name: worldNames.get(worldId) ?? `World ${worldId}`,
-          dataCenter: dataCenter.name,
-          region: dataCenter.region,
-        })),
-      );
   }
 }

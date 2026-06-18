@@ -1,17 +1,15 @@
 import type { BargainListing } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import pool from "../db/pool.js";
-import { UniversalisClient } from "./universalis.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { iqrAverage } from "./stats.js";
 import { dcAverageStore } from "./dcAverageStore.js";
+import { worldDcMapping } from "./worldDcMapping.js";
 
 export class BargainsCache {
   private latest: BargainListing[] = [];
   private generatedAt = "";
   private refreshPromise: Promise<void> | null = null;
-  private universalis = new UniversalisClient();
-  private worldDataCenters: Record<number, string> = {};
 
   constructor() {}
 
@@ -45,16 +43,7 @@ export class BargainsCache {
   private async scan(): Promise<BargainListing[]> {
     if (!config.databaseUrl) return [];
 
-    if (Object.keys(this.worldDataCenters).length === 0) {
-      try {
-        const dcs = await this.universalis.getDataCenters();
-        for (const dc of dcs) {
-          for (const wid of dc.worlds) {
-            this.worldDataCenters[wid] = dc.name;
-          }
-        }
-      } catch {}
-    }
+    const mapping = await worldDcMapping.getMapping();
 
     const dcAverages = await dcAverageStore.getAverages();
     const dcAvgLookup = new Map<number, Map<string, number>>();
@@ -127,7 +116,7 @@ export class BargainsCache {
         for (const listing of itemListings) {
           if (!listing.pricePerUnit || listing.pricePerUnit <= 0) continue;
           const worldId = listing.worldID ?? 0;
-          const dc = this.worldDataCenters[worldId] ?? "Unknown";
+          const dc = mapping.worldIdToDc[worldId] ?? "Unknown";
           const avg = itemDcAvg?.get(dc) ?? globalIqr ?? 0;
           if (avg <= 0) continue;
 

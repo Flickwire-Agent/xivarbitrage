@@ -1,15 +1,12 @@
 import { config } from "../config.js";
 import pool from "../db/pool.js";
-import { UniversalisClient } from "./universalis.js";
 import { iqrAverage, type DcItemAverage } from "./stats.js";
+import { worldDcMapping } from "./worldDcMapping.js";
 
 const MIN_SALES_PER_DC = 7;
 const RECOMPUTE_INTERVAL_MS = 60 * 60 * 1000;
 
 export class DcAverageStore {
-  private universalis = new UniversalisClient();
-  private worldDataCenters: Record<number, string> = {};
-  private dcRegions: Record<string, string> = {};
   private computePromise: Promise<void> | null = null;
   private lastCompute: number = 0;
 
@@ -34,21 +31,11 @@ export class DcAverageStore {
     return this.computePromise;
   }
 
-  private async ensureMapping(): Promise<void> {
-    if (Object.keys(this.worldDataCenters).length > 0) return;
-    const dcs = await this.universalis.getDataCenters();
-    for (const dc of dcs) {
-      for (const wid of dc.worlds) {
-        this.worldDataCenters[wid] = dc.name;
-      }
-      this.dcRegions[dc.name] = dc.region;
-    }
-  }
-
   private async compute(): Promise<void> {
     if (!config.databaseUrl) return;
     console.log("[DcAverageStore] Recomputing DC averages...");
-    await this.ensureMapping();
+
+    const mapping = await worldDcMapping.getMapping();
 
     const computeStart = new Date();
 
@@ -95,7 +82,7 @@ export class DcAverageStore {
     for (const [itemId, worldSales] of salesByItemWorld) {
       const dcPrices = new Map<string, number[]>();
       for (const [worldId, prices] of worldSales) {
-        const dc = this.worldDataCenters[worldId];
+        const dc = mapping.worldIdToDc[worldId];
         if (!dc) continue;
         let arr = dcPrices.get(dc);
         if (!arr) {
@@ -111,7 +98,7 @@ export class DcAverageStore {
           averages.push({
             itemId,
             dataCenter: dc,
-            region: this.dcRegions[dc] ?? "Unknown",
+            region: mapping.dcRegions[dc] ?? "Unknown",
             avgPrice: avg,
             saleCount: prices.length,
           });

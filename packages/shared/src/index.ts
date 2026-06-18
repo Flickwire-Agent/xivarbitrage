@@ -60,7 +60,21 @@ export interface ItemHistoryResponse {
   itemId: number;
   sales: SaleRecord[];
   worlds: string[];
-  worldDataCenters: Record<number, string>;
+}
+
+export interface WorldInfo {
+  id: number;
+  name: string;
+  dataCenter: string;
+  region: string;
+}
+
+export interface WorldsResponse {
+  worlds: WorldInfo[];
+  dataCenters: string[];
+  regions: string[];
+  worldIdToDc: Record<number, string>;
+  updatedAt: string;
 }
 
 export interface ItemListing {

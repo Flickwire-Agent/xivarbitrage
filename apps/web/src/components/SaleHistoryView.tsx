@@ -2,6 +2,7 @@ import type { ItemHistoryResponse } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
+import { useWorlds } from "../hooks/api.js";
 import { SaleHistoryChart } from "./SaleHistoryChart.js";
 import type { ItemDetails } from "../lib/xivapi.js";
 
@@ -21,6 +22,7 @@ function getUniversalisUrl(itemId: number): string {
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
   const location = useLocation();
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
+  const { data: worldsData } = useWorlds();
 
   const saleStats = useMemo(() => {
     if (data.sales.length === 0) return null;
@@ -30,6 +32,15 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
     const avg = Math.round(prices.reduce((a, b) => a + b, 0) / prices.length);
     return { min, max, avg, count: data.sales.length };
   }, [data]);
+
+  const worldIdToDc = useMemo(() => {
+    if (worldsData?.worldIdToDc) return worldsData.worldIdToDc;
+    const map: Record<number, string> = {};
+    for (const w of worldsData?.worlds ?? []) {
+      map[w.id] = w.dataCenter;
+    }
+    return map;
+  }, [worldsData]);
 
   function toggleWorld(world: string) {
     setVisibleWorlds((prev) => {
@@ -163,7 +174,7 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
         <SaleHistoryChart
           sales={data.sales}
           visibleWorlds={visibleWorlds}
-          worldDataCenters={data.worldDataCenters}
+          worldIdToDc={worldIdToDc}
         />
       </section>
     </div>

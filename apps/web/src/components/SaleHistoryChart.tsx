@@ -59,14 +59,10 @@ const DC_LINE_COLORS = ["#d62828", "#003049", "#7209b7", "#f77f00", "#1a936f", "
 interface SaleHistoryChartProps {
   sales: SaleRecord[];
   visibleWorlds: Set<string>;
-  worldDataCenters: Record<number, string>;
+  worldIdToDc: Record<number, string>;
 }
 
-export function SaleHistoryChart({
-  sales,
-  visibleWorlds,
-  worldDataCenters,
-}: SaleHistoryChartProps) {
+export function SaleHistoryChart({ sales, visibleWorlds, worldIdToDc }: SaleHistoryChartProps) {
   const byWorld = new Map<string, SaleRecord[]>();
   for (const sale of sales) {
     const group = byWorld.get(sale.worldName) ?? [];
@@ -80,7 +76,7 @@ export function SaleHistoryChart({
 
   const byDc = new Map<string, SaleRecord[]>();
   for (const sale of sales) {
-    const dc = worldDataCenters[sale.worldId];
+    const dc = worldIdToDc[sale.worldId];
     if (!dc) continue;
     const group = byDc.get(dc) ?? [];
     group.push(sale);

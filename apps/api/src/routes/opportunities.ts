@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ArbitrageCache } from "../services/arbitrageCache.js";
 import { getQueueStats } from "../services/jobQueue.js";
 import { marketSnapshotStore } from "../services/marketSnapshotStore.js";
-import { universalis } from "../services/universalis.js";
+import { worldDcMapping } from "../services/worldDcMapping.js";
 import { config } from "../config.js";
 import { iqrAverage } from "../services/stats.js";
 import pool from "../db/pool.js";
@@ -74,9 +74,20 @@ async function checkRedisHealth(): Promise<boolean> {
   }
 }
 
+function msUntilWednesdayMidnight(): number {
+  const now = new Date();
+  const next = new Date(now);
+  next.setDate(now.getDate() + ((3 - now.getDay() + 7) % 7 || 7));
+  next.setHours(0, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 7);
+  return next.getTime() - now.getTime();
+}
+
 export async function opportunityRoutes(app: FastifyInstance) {
   const arbitrage = new ArbitrageCache();
   arbitrage.start();
+
+  await worldDcMapping.refresh();
 
   const { bargainsCache } = await import("../services/bargainsCache.js");
   bargainsCache.start();
@@ -86,6 +97,12 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
   const { dcAverageStore } = await import("../services/dcAverageStore.js");
   dcAverageStore.start();
+
+  const refreshTimer = setTimeout(async () => {
+    await worldDcMapping.refresh();
+    setInterval(() => void worldDcMapping.refresh(), 7 * 24 * 60 * 60 * 1000).unref();
+  }, msUntilWednesdayMidnight());
+  refreshTimer.unref();
 
   app.get("/health", async (request, reply) => {
     const dbHealthy = await checkDatabaseHealth();
@@ -150,6 +167,22 @@ export async function opportunityRoutes(app: FastifyInstance) {
     return response;
   });
 
+  app.get("/worlds", async () => {
+    const mapping = await worldDcMapping.getMapping();
+    return {
+      worlds: mapping.worlds,
+      dataCenters: mapping.dataCenters,
+      regions: mapping.regions,
+      worldIdToDc: mapping.worldIdToDc,
+      updatedAt: mapping.updatedAt,
+    };
+  });
+
+  app.post("/worlds/refresh", async () => {
+    await worldDcMapping.refresh();
+    return { ok: true };
+  });
+
   app.get<{ Params: { itemId: string } }>("/items/:itemId/listings", async (request, reply) => {
     const itemId = Number(request.params.itemId);
 
@@ -157,21 +190,14 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [listingData, dcList] = await Promise.all([
+    const [listingData, mapping] = await Promise.all([
       marketSnapshotStore.getCurrentListings(itemId),
-      universalis.getDataCenters(),
+      worldDcMapping.getMapping(),
     ]);
-
-    const worldDataCenters: Record<number, string> = {};
-    for (const dc of dcList) {
-      for (const wid of dc.worlds) {
-        worldDataCenters[wid] = dc.name;
-      }
-    }
 
     const dcPrices: Record<string, number[]> = {};
     for (const sale of listingData.sales) {
-      const dc = worldDataCenters[sale.worldId];
+      const dc = mapping.worldIdToDc[sale.worldId];
       if (!dc) continue;
       if (!dcPrices[dc]) dcPrices[dc] = [];
       dcPrices[dc].push(sale.pricePerUnit);
@@ -190,7 +216,7 @@ export async function opportunityRoutes(app: FastifyInstance) {
 
     const listings = listingData.listings
       .map((l) => {
-        const dc = worldDataCenters[l.worldId] ?? "Unknown";
+        const dc = mapping.worldIdToDc[l.worldId] ?? "Unknown";
         const dcAvg = dcAverages[dc]?.avgPrice ?? globalAvg ?? 0;
         return {
           worldId: l.worldId,
@@ -233,23 +259,12 @@ export async function opportunityRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [sales, dcList] = await Promise.all([
-      marketSnapshotStore.getSaleHistory(itemId),
-      universalis.getDataCenters(),
-    ]);
-
-    const worldDataCenters: Record<number, string> = {};
-    for (const dc of dcList) {
-      for (const worldId of dc.worlds) {
-        worldDataCenters[worldId] = dc.name;
-      }
-    }
+    const sales = await marketSnapshotStore.getSaleHistory(itemId);
 
     return {
       itemId,
       sales,
       worlds: [...new Set(sales.map((s) => s.worldName))].sort(),
-      worldDataCenters,
     };
   });
 

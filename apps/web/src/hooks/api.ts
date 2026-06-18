@@ -7,11 +7,25 @@ import type {
   BargainsResponse,
   DcDisparityResponse,
   DcDisparityQuery,
+  WorldsResponse,
 } from "@xiv-arbitrage/shared";
 import { fetchItemDetails, searchItems, type ItemDetails } from "../lib/xivapi.js";
 
 const STALE_TIME_API = 15 * 60 * 1000;
 const STALE_TIME_XIVAPI = 60 * 60 * 1000;
+const STALE_TIME_WORLDS = 7 * 24 * 60 * 60 * 1000;
+
+export function useWorlds() {
+  return useQuery({
+    queryKey: ["worlds"],
+    queryFn: async () => {
+      const response = await fetch("/api/worlds");
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      return response.json() as Promise<WorldsResponse>;
+    },
+    staleTime: STALE_TIME_WORLDS,
+  });
+}
 
 export function useOpportunities(filters: OpportunityFilters, page: number) {
   const queryKey = ["opportunities", filters, page];

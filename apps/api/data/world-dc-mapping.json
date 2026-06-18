@@ -1,0 +1,503 @@
+{
+  "worldIdToDc": {
+    "21": "Materia",
+    "22": "Materia",
+    "23": "Mana",
+    "24": "Meteor",
+    "28": "Mana",
+    "29": "Meteor",
+    "30": "Meteor",
+    "31": "Meteor",
+    "32": "Meteor",
+    "33": "Light",
+    "34": "Crystal",
+    "35": "Primal",
+    "36": "Light",
+    "37": "Crystal",
+    "39": "Chaos",
+    "40": "Aether",
+    "41": "Crystal",
+    "42": "Light",
+    "43": "Gaia",
+    "44": "Mana",
+    "45": "Elemental",
+    "46": "Gaia",
+    "47": "Mana",
+    "48": "Mana",
+    "49": "Elemental",
+    "50": "Elemental",
+    "51": "Gaia",
+    "52": "Meteor",
+    "53": "Primal",
+    "54": "Aether",
+    "55": "Primal",
+    "56": "Light",
+    "57": "Aether",
+    "58": "Elemental",
+    "59": "Gaia",
+    "60": "Meteor",
+    "61": "Mana",
+    "62": "Crystal",
+    "63": "Aether",
+    "64": "Primal",
+    "65": "Aether",
+    "66": "Light",
+    "67": "Light",
+    "68": "Elemental",
+    "69": "Gaia",
+    "70": "Mana",
+    "71": "Chaos",
+    "72": "Elemental",
+    "73": "Aether",
+    "74": "Crystal",
+    "75": "Crystal",
+    "76": "Gaia",
+    "77": "Primal",
+    "78": "Primal",
+    "79": "Aether",
+    "80": "Chaos",
+    "81": "Crystal",
+    "82": "Meteor",
+    "83": "Chaos",
+    "85": "Chaos",
+    "86": "Materia",
+    "87": "Materia",
+    "88": "Materia",
+    "90": "Elemental",
+    "91": "Crystal",
+    "92": "Gaia",
+    "93": "Primal",
+    "94": "Elemental",
+    "95": "Primal",
+    "96": "Mana",
+    "97": "Chaos",
+    "98": "Gaia",
+    "99": "Aether",
+    "400": "Chaos",
+    "401": "Chaos",
+    "402": "Light",
+    "403": "Light",
+    "404": "Dynamis",
+    "405": "Dynamis",
+    "406": "Dynamis",
+    "407": "Dynamis",
+    "408": "Dynamis",
+    "409": "Dynamis",
+    "410": "Dynamis",
+    "411": "Dynamis",
+    "1042": "陆行鸟",
+    "1043": "猫小胖",
+    "1044": "陆行鸟",
+    "1045": "猫小胖",
+    "1060": "陆行鸟",
+    "1076": "莫古力",
+    "1081": "陆行鸟",
+    "1106": "猫小胖",
+    "1113": "莫古力",
+    "1121": "莫古力",
+    "1166": "莫古力",
+    "1167": "陆行鸟",
+    "1169": "猫小胖",
+    "1170": "莫古力",
+    "1171": "莫古力",
+    "1172": "莫古力",
+    "1173": "陆行鸟",
+    "1174": "陆行鸟",
+    "1175": "陆行鸟",
+    "1176": "莫古力",
+    "1177": "猫小胖",
+    "1178": "猫小胖",
+    "1179": "猫小胖",
+    "1180": "豆豆柴",
+    "1183": "豆豆柴",
+    "1186": "豆豆柴",
+    "1192": "豆豆柴",
+    "1201": "豆豆柴",
+    "2075": "한국",
+    "2076": "한국",
+    "2077": "한국",
+    "2078": "한국",
+    "2080": "한국",
+    "3000": "NA Cloud DC (Beta)",
+    "3001": "NA Cloud DC (Beta)",
+    "4028": "陸行鳥",
+    "4029": "陸行鳥",
+    "4030": "陸行鳥",
+    "4031": "陸行鳥",
+    "4032": "陸行鳥",
+    "4033": "陸行鳥",
+    "4034": "陸行鳥",
+    "4035": "陸行鳥"
+  },
+  "dcRegions": {
+    "Elemental": "Japan",
+    "Gaia": "Japan",
+    "Mana": "Japan",
+    "Aether": "North-America",
+    "Primal": "North-America",
+    "Chaos": "Europe",
+    "Light": "Europe",
+    "Crystal": "North-America",
+    "Materia": "Oceania",
+    "Meteor": "Japan",
+    "Dynamis": "North-America",
+    "NA Cloud DC (Beta)": "NA-Cloud-DC",
+    "陆行鸟": "中国",
+    "莫古力": "中国",
+    "猫小胖": "中国",
+    "豆豆柴": "中国",
+    "한국": "한국",
+    "陸行鳥": "繁中服"
+  },
+  "worlds": [
+    {
+      "id": 40,
+      "name": "Jenova",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 54,
+      "name": "Faerie",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 57,
+      "name": "Siren",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 63,
+      "name": "Gilgamesh",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 65,
+      "name": "Midgardsormr",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 73,
+      "name": "Adamantoise",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 79,
+      "name": "Cactuar",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 99,
+      "name": "Sargatanas",
+      "dataCenter": "Aether",
+      "region": "North-America"
+    },
+    {
+      "id": 35,
+      "name": "Famfrit",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 53,
+      "name": "Exodus",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 55,
+      "name": "Lamia",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 64,
+      "name": "Leviathan",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 77,
+      "name": "Ultros",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 78,
+      "name": "Behemoth",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 93,
+      "name": "Excalibur",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 95,
+      "name": "Hyperion",
+      "dataCenter": "Primal",
+      "region": "North-America"
+    },
+    {
+      "id": 39,
+      "name": "Omega",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 71,
+      "name": "Moogle",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 80,
+      "name": "Cerberus",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 83,
+      "name": "Louisoix",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 85,
+      "name": "Spriggan",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 97,
+      "name": "Ragnarok",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 400,
+      "name": "Sagittarius",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 401,
+      "name": "Phantom",
+      "dataCenter": "Chaos",
+      "region": "Europe"
+    },
+    {
+      "id": 33,
+      "name": "Twintania",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 36,
+      "name": "Lich",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 42,
+      "name": "Zodiark",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 56,
+      "name": "Phoenix",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 66,
+      "name": "Odin",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 67,
+      "name": "Shiva",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 402,
+      "name": "Alpha",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 403,
+      "name": "Raiden",
+      "dataCenter": "Light",
+      "region": "Europe"
+    },
+    {
+      "id": 34,
+      "name": "Brynhildr",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 37,
+      "name": "Mateus",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 41,
+      "name": "Zalera",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 62,
+      "name": "Diabolos",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 74,
+      "name": "Coeurl",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 75,
+      "name": "Malboro",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 81,
+      "name": "Goblin",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 91,
+      "name": "Balmung",
+      "dataCenter": "Crystal",
+      "region": "North-America"
+    },
+    {
+      "id": 21,
+      "name": "Ravana",
+      "dataCenter": "Materia",
+      "region": "Oceania"
+    },
+    {
+      "id": 22,
+      "name": "Bismarck",
+      "dataCenter": "Materia",
+      "region": "Oceania"
+    },
+    {
+      "id": 86,
+      "name": "Sephirot",
+      "dataCenter": "Materia",
+      "region": "Oceania"
+    },
+    {
+      "id": 87,
+      "name": "Sophia",
+      "dataCenter": "Materia",
+      "region": "Oceania"
+    },
+    {
+      "id": 88,
+      "name": "Zurvan",
+      "dataCenter": "Materia",
+      "region": "Oceania"
+    },
+    {
+      "id": 404,
+      "name": "Marilith",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 405,
+      "name": "Seraph",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 406,
+      "name": "Halicarnassus",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 407,
+      "name": "Maduin",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 408,
+      "name": "Cuchulainn",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 409,
+      "name": "Kraken",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 410,
+      "name": "Rafflesia",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    },
+    {
+      "id": 411,
+      "name": "Golem",
+      "dataCenter": "Dynamis",
+      "region": "North-America"
+    }
+  ],
+  "dataCenters": [
+    "Aether",
+    "Chaos",
+    "Crystal",
+    "Dynamis",
+    "Elemental",
+    "Gaia",
+    "Light",
+    "Mana",
+    "Materia",
+    "Meteor",
+    "NA Cloud DC (Beta)",
+    "Primal",
+    "猫小胖",
+    "莫古力",
+    "豆豆柴",
+    "陆行鸟",
+    "陸行鳥",
+    "한국"
+  ],
+  "regions": [
+    "Europe",
+    "Japan",
+    "NA-Cloud-DC",
+    "North-America",
+    "Oceania",
+    "中国",
+    "繁中服",
+    "한국"
+  ],
+  "updatedAt": "2026-06-18T13:31:08.864Z"
+}
