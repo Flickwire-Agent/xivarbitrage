@@ -94,6 +94,12 @@ export async function runMigrations(): Promise<void> {
   console.log("✓ Created index on sale_history (item_id, world_id)");
 
   await pool.query(`
+      CREATE INDEX CONCURRENTLY IF NOT EXISTS sale_history_item_sold_world_price_idx
+        ON sale_history (item_id, sold_at DESC, world_id) INCLUDE (price_per_unit);
+    `);
+  console.log("✓ Created covering index on sale_history for DC average recompute");
+
+  await pool.query(`
       CREATE INDEX IF NOT EXISTS sale_history_sold_at_idx
         ON sale_history (sold_at);
     `);

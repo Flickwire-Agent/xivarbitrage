@@ -58,7 +58,10 @@ export class DcAverageStore {
        WHERE sold_at > now() - interval '30 days'
        LIMIT 3000`,
     );
-    if (itemResult.rows.length === 0) return;
+    if (itemResult.rows.length === 0) {
+      this.lastCompute = Date.now();
+      return;
+    }
 
     const allItemIds = itemResult.rows.map((r) => r.item_id);
 
