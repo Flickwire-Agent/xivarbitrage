@@ -1,6 +1,7 @@
 import type { DcDisparity, DcDisparityQuery, DcPriceInfo } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import { dcAverageStore } from "./dcAverageStore.js";
+import pool from "../db/pool.js";
 import type { DcItemAverage } from "./stats.js";
 
 export class DcDisparityCache {
@@ -81,12 +82,73 @@ export class DcDisparityCache {
 
     console.log(`[DcDisparityCache] Loaded averages for ${byItem.size} items`);
 
-    const allDisparities: DcDisparity[] = [];
-    let candidatesFound = 0;
+    let allItemIds: number[];
+    if (config.databaseUrl) {
+      const result = await pool.query<{ item_id: number }>(
+        `SELECT item_id FROM marketable_items ORDER BY item_id`,
+      );
+      allItemIds = result.rows.map((r) => r.item_id);
+    } else {
+      allItemIds = [...byItem.keys()];
+    }
 
-    for (const [itemId, dcAverages] of byItem) {
-      if (dcAverages.length < 2) continue;
-      candidatesFound++;
+    console.log(`[DcDisparityCache] Total marketable items: ${allItemIds.length}`);
+
+    const allDisparities: DcDisparity[] = [];
+
+    for (const itemId of allItemIds) {
+      const dcAverages = byItem.get(itemId);
+
+      if (!dcAverages || dcAverages.length < 2) {
+        if (dcAverages?.length === 1) {
+          const single = dcAverages[0]!;
+          allDisparities.push({
+            itemId,
+            spread: 0,
+            spreadPercent: 0,
+            highDc: {
+              dataCenter: single.dataCenter,
+              region: single.region,
+              avgPrice: single.avgPrice,
+              saleCount: single.saleCount,
+            },
+            lowDc: {
+              dataCenter: single.dataCenter,
+              region: single.region,
+              avgPrice: single.avgPrice,
+              saleCount: single.saleCount,
+            },
+            allDcs: [
+              {
+                dataCenter: single.dataCenter,
+                region: single.region,
+                avgPrice: single.avgPrice,
+                saleCount: single.saleCount,
+              },
+            ],
+          });
+        } else {
+          allDisparities.push({
+            itemId,
+            spread: 0,
+            spreadPercent: 0,
+            highDc: {
+              dataCenter: "—",
+              region: "—",
+              avgPrice: 0,
+              saleCount: 0,
+            },
+            lowDc: {
+              dataCenter: "—",
+              region: "—",
+              avgPrice: 0,
+              saleCount: 0,
+            },
+            allDcs: [],
+          });
+        }
+        continue;
+      }
 
       let highDc: DcItemAverage | null = null;
       let lowDc: DcItemAverage | null = null;
@@ -135,7 +197,7 @@ export class DcDisparityCache {
     }
 
     console.log(
-      `[DcDisparityCache] Processed ${byItem.size} items, ${candidatesFound} had multi-DC data, ${allDisparities.length} results after sorting in ${Date.now() - startedAt}ms`,
+      `[DcDisparityCache] Processed ${allItemIds.length} total items, ${allDisparities.length} results in ${Date.now() - startedAt}ms`,
     );
 
     allDisparities.sort((a, b) => b.spread - a.spread);

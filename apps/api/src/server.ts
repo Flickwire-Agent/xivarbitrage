@@ -551,7 +551,7 @@ if (existsSync(aiPluginPath)) {
 if (existsSync(webDistPath)) {
   await app.register(staticFiles, {
     root: webDistPath,
-    wildcard: false,
+    wildcard: true,
     cacheControl: false,
     setHeaders: (res, filePath) => {
       // Vite emits hashed asset filenames like index-Bm8n5KMu.js.

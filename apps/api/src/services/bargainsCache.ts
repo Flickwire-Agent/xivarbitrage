@@ -3,7 +3,6 @@ import { config } from "../config.js";
 import pool from "../db/pool.js";
 import type { UniversalisMarketData } from "./universalis.js";
 import { iqrAverage } from "./stats.js";
-import { dcAverageStore } from "./dcAverageStore.js";
 import { worldDcMapping } from "./worldDcMapping.js";
 
 export class BargainsCache {
@@ -44,17 +43,6 @@ export class BargainsCache {
     if (!config.databaseUrl) return [];
 
     const mapping = await worldDcMapping.getMapping();
-
-    const dcAverages = await dcAverageStore.getAverages();
-    const dcAvgLookup = new Map<number, Map<string, number>>();
-    for (const avg of dcAverages) {
-      let byDc = dcAvgLookup.get(avg.itemId);
-      if (!byDc) {
-        byDc = new Map();
-        dcAvgLookup.set(avg.itemId, byDc);
-      }
-      byDc.set(avg.dataCenter, avg.avgPrice);
-    }
 
     const itemResult = await pool.query<{ item_id: number }>(
       `SELECT DISTINCT s.item_id
@@ -110,18 +98,18 @@ export class BargainsCache {
         const itemListings = row.data.listings;
         if (!itemListings?.length) continue;
 
-        const itemDcAvg = dcAvgLookup.get(row.item_id);
-        const globalIqr = globalIqrByItem.get(row.item_id) ?? null;
+        const globalAvg = globalIqrByItem.get(row.item_id) ?? null;
+        if (!globalAvg || globalAvg <= 0) continue;
 
         for (const listing of itemListings) {
           if (!listing.pricePerUnit || listing.pricePerUnit <= 0) continue;
           const worldId = listing.worldID ?? 0;
           const dc = mapping.worldIdToDc[worldId] ?? "Unknown";
-          const avg = itemDcAvg?.get(dc) ?? globalIqr ?? 0;
-          if (avg <= 0) continue;
 
-          const discount = avg - listing.pricePerUnit;
+          const discount = globalAvg - listing.pricePerUnit;
           if (discount <= 0) continue;
+          const discountPercent = Math.round((discount / globalAvg) * 100);
+          if (discountPercent < 20) continue;
 
           allBargains.push({
             itemId: row.item_id,
@@ -130,9 +118,9 @@ export class BargainsCache {
             dataCenter: dc,
             pricePerUnit: listing.pricePerUnit,
             quantity: listing.quantity,
-            recentAvgPrice: avg,
+            recentAvgPrice: globalAvg,
             discount,
-            discountPercent: Math.round((discount / avg) * 100),
+            discountPercent,
           });
         }
       }

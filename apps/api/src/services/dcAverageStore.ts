@@ -3,7 +3,7 @@ import pool from "../db/pool.js";
 import { iqrAverage, type DcItemAverage } from "./stats.js";
 import { worldDcMapping } from "./worldDcMapping.js";
 
-const MIN_SALES_PER_DC = 7;
+const MIN_SALES_PER_DC = 1;
 const RECOMPUTE_INTERVAL_MS = 60 * 60 * 1000;
 
 export class DcAverageStore {
@@ -42,8 +42,7 @@ export class DcAverageStore {
     const itemResult = await pool.query<{ item_id: number }>(
       `SELECT DISTINCT item_id
        FROM sale_history
-       WHERE sold_at > now() - interval '30 days'
-       LIMIT 3000`,
+       WHERE sold_at > now() - interval '30 days'`,
     );
     if (itemResult.rows.length === 0) {
       this.lastCompute = Date.now();

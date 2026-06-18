@@ -10,15 +10,12 @@ import { SelectField } from "./SelectField.js";
 const PAGE_SIZE = 50;
 
 export function DcDisparitiesPage() {
-  useEffect(() => {
-    document.title = "DC Price Disparities | XIV Arbitrage";
-  }, []);
   const [, navigate] = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
 
   useEffect(() => {
-    document.title = "DC Price Disparities | XIV Arbitrage";
+    document.title = "DC Disparities | XIV Arbitrage";
   }, []);
 
   const highDc = searchParams.get("highDc") ?? "";
@@ -61,11 +58,11 @@ export function DcDisparitiesPage() {
         dcSet.add(dc.dataCenter);
       }
     }
-    const totalSpread = data.disparities.reduce((s, d) => s + d.spread, 0);
+    const withSpread = data.disparities.filter((d) => d.spread > 0);
+    const totalSpread = withSpread.reduce((s, d) => s + d.spread, 0);
     return {
       count: data.total,
-      avgSpread:
-        data.disparities.length > 0 ? Math.round(totalSpread / data.disparities.length) : 0,
+      avgSpread: withSpread.length > 0 ? Math.round(totalSpread / withSpread.length) : 0,
       dcSet,
     };
   }, [data]);
@@ -139,8 +136,8 @@ export function DcDisparitiesPage() {
     <>
       <section className="topBar">
         <div>
-          <p className="eyebrow">Cross-Data Center Price Gaps</p>
-          <h1>DC Price Disparities</h1>
+          <p className="eyebrow">Final Fantasy XIV Market Board</p>
+          <h1>DC Disparities</h1>
         </div>
         <SearchBox />
         <div className="topBarActions">
@@ -160,12 +157,12 @@ export function DcDisparitiesPage() {
       </section>
 
       {data && disparities.length > 0 ? (
-        <section className="metricStrip" aria-label="Disparity summary">
+        <section className="metricStrip" aria-label="Market summary">
           <article>
             <Gauge size={18} aria-hidden="true" />
             <div>
-              <span>Items with disparities</span>
-              <strong>{summary.count}</strong>
+              <span>Total items</span>
+              <strong>{data.total}</strong>
             </div>
           </article>
           <article>
@@ -232,7 +229,7 @@ export function DcDisparitiesPage() {
 
       {isLoading ? (
         <div className="notice" role="status" aria-live="polite">
-          Computing data center price disparities...
+          Loading market data...
         </div>
       ) : data && disparities.length > 0 ? (
         <section className="tableShell" aria-label="DC disparities table">
@@ -280,43 +277,96 @@ export function DcDisparitiesPage() {
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <strong>{d.lowDc.dataCenter}</strong>
-                      <span className="cellSubtext">
-                        {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{d.highDc.dataCenter}</strong>
-                      <span className="cellSubtext">
-                        {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
-                      </span>
-                    </td>
-                    <td>
-                      <strong>{d.spread.toLocaleString()} gil</strong>
-                    </td>
-                    <td>
-                      <strong>{d.spreadPercent}%</strong>
-                    </td>
-                    <td>
-                      <div className="dcTags">
-                        {d.allDcs.map((dc: DcPriceInfo) => (
-                          <span
-                            key={dc.dataCenter}
-                            className={`dcTag${
-                              dc.dataCenter === d.highDc.dataCenter
-                                ? " dcTagHigh"
-                                : dc.dataCenter === d.lowDc.dataCenter
-                                  ? " dcTagLow"
-                                  : ""
-                            }`}
-                            title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
-                          >
-                            {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
+                    {d.allDcs.length === 0 ? (
+                      <>
+                        <td>
+                          <span className="cellSubtext">No sale data</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">No sale data</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">—</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">—</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">—</span>
+                        </td>
+                      </>
+                    ) : d.lowDc.dataCenter === d.highDc.dataCenter ? (
+                      <>
+                        <td>
+                          <strong>{d.lowDc.dataCenter}</strong>
+                          <span className="cellSubtext">
+                            {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
                           </span>
-                        ))}
-                      </div>
-                    </td>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">Only one DC</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">—</span>
+                        </td>
+                        <td>
+                          <span className="cellSubtext">—</span>
+                        </td>
+                        <td>
+                          <div className="dcTags">
+                            {d.allDcs.map((dc: DcPriceInfo) => (
+                              <span
+                                key={dc.dataCenter}
+                                className="dcTag"
+                                title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
+                              >
+                                {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td>
+                          <strong>{d.lowDc.dataCenter}</strong>
+                          <span className="cellSubtext">
+                            {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{d.highDc.dataCenter}</strong>
+                          <span className="cellSubtext">
+                            {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{d.spread.toLocaleString()} gil</strong>
+                        </td>
+                        <td>
+                          <strong>{d.spreadPercent}%</strong>
+                        </td>
+                        <td>
+                          <div className="dcTags">
+                            {d.allDcs.map((dc: DcPriceInfo) => (
+                              <span
+                                key={dc.dataCenter}
+                                className={`dcTag${
+                                  dc.dataCenter === d.highDc.dataCenter
+                                    ? " dcTagHigh"
+                                    : dc.dataCenter === d.lowDc.dataCenter
+                                      ? " dcTagLow"
+                                      : ""
+                                }`}
+                                title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
+                              >
+                                {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ),
               )}
@@ -372,10 +422,7 @@ export function DcDisparitiesPage() {
           ) : null}
         </section>
       ) : data ? (
-        <div className="notice">
-          No cross-DC disparities found. Not enough items have sale data across multiple data
-          centers.
-        </div>
+        <div className="notice">No market data available yet.</div>
       ) : null}
     </>
   );

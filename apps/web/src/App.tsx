@@ -1,9 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Switch, useLocation } from "wouter";
 
-const OpportunitiesPage = lazy(() =>
-  import("./components/OpportunitiesPage.js").then((m) => ({ default: m.OpportunitiesPage })),
-);
 const ItemPage = lazy(() =>
   import("./components/ItemPage.js").then((m) => ({ default: m.ItemPage })),
 );
@@ -49,7 +46,7 @@ export function App() {
             className={`mainTab${isActive("/") ? " active" : ""}`}
             aria-current={isActive("/") ? "page" : undefined}
           >
-            Arbitrage
+            Disparities
           </Link>
           <Link
             href="/bargains"
@@ -58,22 +55,14 @@ export function App() {
           >
             Bargains
           </Link>
-          <Link
-            href="/dc-disparities"
-            className={`mainTab${isActive("/dc-disparities") ? " active" : ""}`}
-            aria-current={isActive("/dc-disparities") ? "page" : undefined}
-          >
-            DC Gaps
-          </Link>
         </nav>
         <Suspense fallback={<PageFallback />}>
           <Switch>
-            <Route path="/" component={OpportunitiesPage} />
+            <Route path="/" component={DcDisparitiesPage} />
             <Route path="/bargains" component={BargainsPage} />
-            <Route path="/dc-disparities" component={DcDisparitiesPage} />
             <Route path="/items/:itemId/listings" component={ListingsPage} />
             <Route path="/items/:itemId" component={ItemPage} />
-            <Route component={OpportunitiesPage} />
+            <Route component={DcDisparitiesPage} />
           </Switch>
         </Suspense>
       </main>

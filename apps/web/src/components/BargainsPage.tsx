@@ -104,7 +104,7 @@ export function BargainsPage() {
                 <th scope="col">Server</th>
                 <th scope="col">Data Center</th>
                 <th scope="col">Listed price</th>
-                <th scope="col">DC avg</th>
+                <th scope="col">Global avg</th>
                 <th scope="col">Discount</th>
               </tr>
             </thead>
