@@ -1,5 +1,5 @@
-import { ExternalLink, Moon, Sun } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
+import { useLocation, useSearchParams } from "wouter";
 import { useBargains, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -8,13 +8,16 @@ import { useEffect, useMemo } from "react";
 
 export function BargainsPage() {
   const [, navigate] = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
 
   useEffect(() => {
     document.title = "Market Bargains | XIV Arbitrage";
   }, []);
 
-  const { data, isLoading, error } = useBargains();
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+
+  const { data, isLoading, error } = useBargains(page);
 
   const itemIds = useMemo(() => data?.bargains.map((b) => b.itemId) ?? [], [data?.bargains]);
   const itemDetails = useBulkItemDetails(itemIds);
@@ -27,6 +30,37 @@ export function BargainsPage() {
     }));
   }, [data, itemDetails]);
 
+  const totalPages = data?.totalPages ?? 1;
+  const currentPage = data?.page ?? 1;
+
+  function goToPage(p: number) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (p > 1) {
+        next.set("page", String(p));
+      } else {
+        next.delete("page");
+      }
+      return next;
+    });
+  }
+
+  function getPageNumbers(): (number | "ellipsis")[] {
+    const pages: (number | "ellipsis")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("ellipsis");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("ellipsis");
+      pages.push(totalPages);
+    }
+    return pages;
+  }
+
   return (
     <>
       <section className="topBar">
@@ -36,26 +70,6 @@ export function BargainsPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <Link href="/" className="iconButton" aria-label="View arbitrage opportunities">
-            <span>Arbitrage</span>
-          </Link>
-          <Link
-            href="/dc-disparities"
-            className="iconButton"
-            aria-label="View data center price disparities"
-          >
-            <span>DC Gaps</span>
-          </Link>
-          <a
-            href="https://github.com/Flickwire-Agent/xivarbitrage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="iconButton"
-            aria-label="View source on GitHub"
-          >
-            <ExternalLink size={18} aria-hidden="true" />
-            <span>GitHub</span>
-          </a>
           <button
             type="button"
             className="iconButton"
@@ -140,9 +154,53 @@ export function BargainsPage() {
             </tbody>
           </table>
           <p className="tableFooter">
-            Showing top {bargains.length} bargains across all items. Refreshed{" "}
-            {new Date(data.generatedAt).toLocaleTimeString()}.
+            Page {data.page} of {data.totalPages} &mdash; {data.total} total bargains &middot;
+            Refreshed {new Date(data.generatedAt).toLocaleTimeString()}.
           </p>
+          {data.totalPages > 1 ? (
+            <nav className="pagination" aria-label="Pagination">
+              <button
+                type="button"
+                className="iconButton"
+                disabled={page <= 1}
+                onClick={() => goToPage(page - 1)}
+                aria-label="Previous page"
+              >
+                <ChevronLeft size={16} aria-hidden="true" />
+                <span>Prev</span>
+              </button>
+              <div className="paginationPages">
+                {getPageNumbers().map((p, i) =>
+                  p === "ellipsis" ? (
+                    <span key={`e${i}`} className="paginationEllipsis">
+                      &hellip;
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      className={`paginationPage${p === page ? " active" : ""}`}
+                      onClick={() => goToPage(p)}
+                      aria-label={`Page ${p}`}
+                      aria-current={p === page ? "page" : undefined}
+                    >
+                      {p}
+                    </button>
+                  ),
+                )}
+              </div>
+              <button
+                type="button"
+                className="iconButton"
+                disabled={page >= totalPages}
+                onClick={() => goToPage(page + 1)}
+                aria-label="Next page"
+              >
+                <span>Next</span>
+                <ChevronRight size={16} aria-hidden="true" />
+              </button>
+            </nav>
+          ) : null}
         </section>
       ) : data ? (
         <div className="notice">No bargains found across any items yet.</div>

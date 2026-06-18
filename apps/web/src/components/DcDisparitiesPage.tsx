@@ -1,15 +1,7 @@
 import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
-import {
-  ChevronLeft,
-  ChevronRight,
-  ExternalLink,
-  Gauge,
-  Moon,
-  Sun,
-  TrendingUp,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Gauge, Moon, Sun, TrendingUp } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { Link, useLocation, useSearchParams } from "wouter";
+import { useLocation, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -152,23 +144,6 @@ export function DcDisparitiesPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <Link href="/" className="iconButton" aria-label="View arbitrage opportunities">
-            <span>Arbitrage</span>
-          </Link>
-          <Link href="/bargains" className="iconButton" aria-label="View market bargains">
-            <TrendingUp size={16} aria-hidden="true" />
-            <span>Bargains</span>
-          </Link>
-          <a
-            href="https://github.com/Flickwire-Agent/xivarbitrage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="iconButton"
-            aria-label="View source on GitHub"
-          >
-            <ExternalLink size={18} aria-hidden="true" />
-            <span>GitHub</span>
-          </a>
           <button
             type="button"
             className="iconButton"

@@ -244,8 +244,21 @@ export async function opportunityRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/bargains", async () => {
-    return bargainsCache.get();
+  const bargainsQuerySchema = z.object({
+    page: z.coerce.number().int().positive().optional(),
+    perPage: z.coerce.number().int().positive().max(200).optional(),
+  });
+
+  app.get("/bargains", async (request) => {
+    const query = bargainsQuerySchema.parse(request.query);
+    const page = query.page ?? 1;
+    const perPage = query.perPage ?? 50;
+    const { generatedAt, bargains: allBargains } = await bargainsCache.get();
+    const total = allBargains.length;
+    const totalPages = Math.ceil(total / perPage);
+    const start = (page - 1) * perPage;
+    const bargains = allBargains.slice(start, start + perPage);
+    return { generatedAt, bargains, total, page, perPage, totalPages };
   });
 
   app.get("/dc-disparities", async (request) => {

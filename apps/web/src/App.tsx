@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Link, Route, Switch } from "wouter";
+import { Link, Route, Switch, useLocation } from "wouter";
 
 const OpportunitiesPage = lazy(() =>
   import("./components/OpportunitiesPage.js").then((m) => ({ default: m.OpportunitiesPage })),
@@ -26,6 +26,13 @@ function PageFallback() {
 }
 
 export function App() {
+  const [location] = useLocation();
+
+  function isActive(path: string) {
+    if (path === "/") return location === "/";
+    return location.startsWith(path);
+  }
+
   return (
     <>
       <a
@@ -35,20 +42,30 @@ export function App() {
       >
         Skip to main content
       </a>
-      <nav className="srOnly" aria-label="Site navigation">
-        <ul>
-          <li>
-            <Link href="/">Arbitrage Opportunities</Link>
-          </li>
-          <li>
-            <Link href="/bargains">Market Bargains</Link>
-          </li>
-          <li>
-            <Link href="/dc-disparities">DC Price Disparities</Link>
-          </li>
-        </ul>
-      </nav>
       <main className="appShell" id="main-content" aria-label="XIV Arbitrage application">
+        <nav className="mainTabs" aria-label="Main views">
+          <Link
+            href="/"
+            className={`mainTab${isActive("/") ? " active" : ""}`}
+            aria-current={isActive("/") ? "page" : undefined}
+          >
+            Arbitrage
+          </Link>
+          <Link
+            href="/bargains"
+            className={`mainTab${isActive("/bargains") ? " active" : ""}`}
+            aria-current={isActive("/bargains") ? "page" : undefined}
+          >
+            Bargains
+          </Link>
+          <Link
+            href="/dc-disparities"
+            className={`mainTab${isActive("/dc-disparities") ? " active" : ""}`}
+            aria-current={isActive("/dc-disparities") ? "page" : undefined}
+          >
+            DC Gaps
+          </Link>
+        </nav>
         <Suspense fallback={<PageFallback />}>
           <Switch>
             <Route path="/" component={OpportunitiesPage} />
@@ -60,35 +77,42 @@ export function App() {
           </Switch>
         </Suspense>
       </main>
-      <footer className="srOnly">
-        <p>XIV Arbitrage — FFXIV Market Board Arbitrage Finder</p>
-        <p>
-          Market data from{" "}
-          <a href="https://universalis.app" rel="noopener noreferrer">
-            Universalis
-          </a>
-          . Item data from{" "}
-          <a href="https://xivapi.com" rel="noopener noreferrer">
-            XIVAPI
-          </a>
-          .
-        </p>
-        <nav aria-label="API documentation">
-          <ul>
-            <li>
-              <a href="/api/opportunities">Arbitrage API</a>
-            </li>
-            <li>
-              <a href="/api/bargains">Bargains API</a>
-            </li>
-            <li>
-              <a href="/api/dc-disparities">DC Disparities API</a>
-            </li>
-            <li>
-              <a href="/llms.txt">AI Agent Docs</a>
-            </li>
-          </ul>
-        </nav>
+      <footer className="appFooter">
+        <div className="appFooterInner">
+          <div className="appFooterBrand">
+            <span>XIV Arbitrage</span>
+            <span className="appFooterSeparator">&mdash;</span>
+            <span>FFXIV Market Board Arbitrage Finder</span>
+          </div>
+          <div className="appFooterLinks">
+            <a href="https://universalis.app" rel="noopener noreferrer">
+              Universalis
+            </a>
+            <a href="https://xivapi.com" rel="noopener noreferrer">
+              XIVAPI
+            </a>
+            <a href="/api/opportunities">API</a>
+            <a href="/llms.txt">AI Docs</a>
+            <a
+              href="https://github.com/Flickwire-Agent/xivarbitrage"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="appFooterGithub"
+              aria-label="View source on GitHub"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+              <span>GitHub</span>
+            </a>
+          </div>
+        </div>
       </footer>
     </>
   );

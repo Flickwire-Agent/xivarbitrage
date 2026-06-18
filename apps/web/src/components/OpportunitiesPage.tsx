@@ -3,7 +3,6 @@ import {
   ArrowDownUp,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   Filter,
   Gauge,
   Moon,
@@ -12,7 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { Link, useSearchParams } from "wouter";
+import { useSearchParams } from "wouter";
 import { useInvalidateOpportunities, useOpportunities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { OpportunityTable } from "./OpportunityTable.js";
@@ -121,28 +120,6 @@ export function OpportunitiesPage() {
         </div>
         <SearchBox />
         <div className="topBarActions">
-          <Link href="/bargains" className="iconButton" aria-label="View bargains">
-            <TrendingUp size={16} aria-hidden="true" />
-            <span>Bargains</span>
-          </Link>
-          <Link
-            href="/dc-disparities"
-            className="iconButton"
-            aria-label="View data center price disparities"
-          >
-            <TrendingUp size={16} aria-hidden="true" />
-            <span>DC Gaps</span>
-          </Link>
-          <a
-            href="https://github.com/Flickwire-Agent/xivarbitrage"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="iconButton"
-            aria-label="View source on GitHub"
-          >
-            <ExternalLink size={18} aria-hidden="true" />
-            <span>GitHub</span>
-          </a>
           <button
             className="iconButton"
             type="button"

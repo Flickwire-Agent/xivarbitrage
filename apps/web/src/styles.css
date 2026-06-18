@@ -1013,3 +1013,143 @@ a:hover {
     height: 36px;
   }
 }
+
+.mainTabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+  padding: 4px;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+:root[data-theme="dark"] .mainTabs {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+.mainTab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3d4c5e;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.mainTab:hover {
+  color: #17212b;
+  background: #f0f3f8;
+  text-decoration: none;
+}
+
+:root[data-theme="dark"] .mainTab:hover {
+  color: #e1e8f0;
+  background: #2a3a4f;
+}
+
+.mainTab.active {
+  color: #ffffff;
+  background: #1a4795;
+}
+
+.mainTab.active:hover {
+  color: #ffffff;
+  background: #1a4795;
+}
+
+@media (max-width: 620px) {
+  .mainTab {
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+}
+
+.appFooter {
+  border-top: 1px solid #d7dee9;
+  margin-top: 32px;
+  padding: 24px 0 32px;
+}
+
+:root[data-theme="dark"] .appFooter {
+  border-top-color: #2a3a4f;
+}
+
+.appFooterInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: min(1480px, calc(100vw - 32px));
+  margin: 0 auto;
+  font-size: 0.82rem;
+  color: #3d4c5e;
+}
+
+:root[data-theme="dark"] .appFooterInner {
+  color: #a3b3c5;
+}
+
+.appFooterBrand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.appFooterSeparator {
+  color: #8a9bb0;
+}
+
+:root[data-theme="dark"] .appFooterSeparator {
+  color: #5a6b80;
+}
+
+.appFooterLinks {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.appFooterLinks a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.appFooterGithub {
+  padding: 6px 12px;
+  border: 1px solid #c9d2df;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.appFooterGithub:hover {
+  border-color: #a8b5c7;
+  background: #f5f7fb;
+  text-decoration: none;
+}
+
+:root[data-theme="dark"] .appFooterGithub {
+  border-color: #2a3a4f;
+}
+
+:root[data-theme="dark"] .appFooterGithub:hover {
+  border-color: #3a4a5f;
+  background: #232d3d;
+}
+
+@media (max-width: 620px) {
+  .appFooterInner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

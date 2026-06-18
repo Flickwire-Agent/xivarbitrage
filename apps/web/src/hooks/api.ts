@@ -75,11 +75,14 @@ export function useItemListings(itemId: number | undefined) {
   });
 }
 
-export function useBargains() {
+export function useBargains(page: number) {
   return useQuery({
-    queryKey: ["bargains"],
+    queryKey: ["bargains", page],
     queryFn: async () => {
-      const response = await fetch("/api/bargains");
+      const params = new URLSearchParams();
+      if (page > 1) params.set("page", String(page));
+      params.set("perPage", String(50));
+      const response = await fetch(`/api/bargains?${params.toString()}`);
       if (!response.ok) throw new Error(`API returned ${response.status}`);
       return response.json() as Promise<BargainsResponse>;
     },

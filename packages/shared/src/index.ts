@@ -103,6 +103,10 @@ export interface BargainListing {
 export interface BargainsResponse {
   generatedAt: string;
   bargains: BargainListing[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
 }
 
 export interface ListingsResponse {
