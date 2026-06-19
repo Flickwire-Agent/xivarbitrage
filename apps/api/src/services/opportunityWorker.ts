@@ -19,9 +19,23 @@ export async function initializeWorker(): Promise<void> {
       const { itemId } = job.data;
       const startTime = Date.now();
       let processedRegions = 0;
+      let skippedFreshRegions = 0;
 
       try {
         for (const region of TARGET_REGIONS) {
+          const freshData = await marketSnapshotStore.getFresh(region, itemId);
+
+          if (freshData) {
+            await pool.query(
+              `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
+               VALUES ($1, $2, $3, $4, now(), now())`,
+              [job.id, itemId, region, "skipped_fresh"],
+            );
+
+            skippedFreshRegions++;
+            continue;
+          }
+
           const data = await universalis.getCurrentData(region, itemId);
 
           if (!data) {
@@ -41,7 +55,7 @@ export async function initializeWorker(): Promise<void> {
           processedRegions++;
         }
 
-        if (processedRegions > 0) {
+        if (processedRegions + skippedFreshRegions > 0) {
           await pool.query("UPDATE marketable_items SET last_scanned = now() WHERE item_id = $1", [
             itemId,
           ]);
@@ -49,10 +63,15 @@ export async function initializeWorker(): Promise<void> {
 
         const duration = Date.now() - startTime;
         console.log(
-          `[Worker] Processed item_id=${itemId} regions=${processedRegions}/${TARGET_REGIONS.length} duration=${duration}ms`,
+          `[Worker] Processed item_id=${itemId} regions=${processedRegions}/${TARGET_REGIONS.length} skippedFresh=${skippedFreshRegions} duration=${duration}ms`,
         );
 
-        return { processed: processedRegions > 0, processedRegions, duration };
+        return {
+          processed: processedRegions + skippedFreshRegions > 0,
+          processedRegions,
+          skippedFreshRegions,
+          duration,
+        };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
 
