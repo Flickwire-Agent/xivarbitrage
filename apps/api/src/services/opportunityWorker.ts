@@ -7,6 +7,41 @@ import { TARGET_REGIONS, type EvaluateItemJob } from "./jobQueue.js";
 
 let worker: Worker<EvaluateItemJob> | null = null;
 
+const WORKER_METRIC_LOG_INTERVAL_MS = 60000;
+
+const workerMetrics = {
+  completedJobs: 0,
+  failedJobs: 0,
+  processedRegions: 0,
+  totalDuration: 0,
+  maxDuration: 0,
+  loggedAt: Date.now(),
+};
+
+function recordWorkerSuccess(processedRegions: number, duration: number): void {
+  workerMetrics.completedJobs++;
+  workerMetrics.processedRegions += processedRegions;
+  workerMetrics.totalDuration += duration;
+  workerMetrics.maxDuration = Math.max(workerMetrics.maxDuration, duration);
+
+  const now = Date.now();
+  if (now - workerMetrics.loggedAt < WORKER_METRIC_LOG_INTERVAL_MS) {
+    return;
+  }
+
+  const avgDuration = Math.round(workerMetrics.totalDuration / workerMetrics.completedJobs);
+  console.log(
+    `[Worker] Metrics jobs=${workerMetrics.completedJobs} failed=${workerMetrics.failedJobs} regions=${workerMetrics.processedRegions} avgDuration=${avgDuration}ms maxDuration=${workerMetrics.maxDuration}ms`,
+  );
+
+  workerMetrics.completedJobs = 0;
+  workerMetrics.failedJobs = 0;
+  workerMetrics.processedRegions = 0;
+  workerMetrics.totalDuration = 0;
+  workerMetrics.maxDuration = 0;
+  workerMetrics.loggedAt = now;
+}
+
 export async function initializeWorker(): Promise<void> {
   if (!config.databaseUrl || !config.redisUrl) {
     console.warn("Database URL or Redis URL not configured. Worker will not be initialized.");
@@ -48,13 +83,12 @@ export async function initializeWorker(): Promise<void> {
         }
 
         const duration = Date.now() - startTime;
-        console.log(
-          `[Worker] Processed item_id=${itemId} regions=${processedRegions}/${TARGET_REGIONS.length} duration=${duration}ms`,
-        );
+        recordWorkerSuccess(processedRegions, duration);
 
         return { processed: processedRegions > 0, processedRegions, duration };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
+        workerMetrics.failedJobs++;
 
         await pool.query(
           `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)

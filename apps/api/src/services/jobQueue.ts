@@ -42,10 +42,6 @@ export function getQueue(): Queue<EvaluateItemJob> {
       },
     });
 
-    queueEvents.on("completed", ({ jobId }) => {
-      console.log(`[BullMQ] Job ${jobId} completed`);
-    });
-
     queueEvents.on("failed", ({ jobId, failedReason }) => {
       console.error(`[BullMQ] Job ${jobId} failed: ${failedReason}`);
     });
