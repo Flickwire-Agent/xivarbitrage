@@ -63,6 +63,7 @@ export interface BargainListing {
 export interface BargainsResponse {
   generatedAt: string;
   bargains: BargainListing[];
+  itemDetails?: Record<number, ItemDetails>;
   total: number;
   page: number;
   perPage: number;
@@ -109,6 +110,7 @@ export interface DcDisparityQuery {
 export interface DcDisparityResponse {
   generatedAt: string;
   disparities: DcDisparity[];
+  itemDetails?: Record<number, ItemDetails>;
   total: number;
   page: number;
   perPage: number;

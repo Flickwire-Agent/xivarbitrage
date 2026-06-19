@@ -192,12 +192,17 @@ export async function apiRoutes(app: FastifyInstance) {
     const totalPages = Math.ceil(total / perPage);
     const start = (page - 1) * perPage;
     const bargains = allBargains.slice(start, start + perPage);
-    return { generatedAt, bargains, total, page, perPage, totalPages };
+    const itemDetails = await xivapiProxy.getCachedItemDetails(bargains.map((b) => b.itemId));
+    return { generatedAt, bargains, itemDetails, total, page, perPage, totalPages };
   });
 
   app.get("/dc-disparities", async (request) => {
     const query = dcDisparityQuerySchema.parse(request.query);
-    return dcDisparityCache.get(query);
+    const result = await dcDisparityCache.get(query);
+    const itemDetails = await xivapiProxy.getCachedItemDetails(
+      result.disparities.map((d) => d.itemId),
+    );
+    return { ...result, itemDetails };
   });
 
   app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {
@@ -277,6 +282,23 @@ export async function apiRoutes(app: FastifyInstance) {
       const msg = error instanceof Error ? error.message : String(error);
       return reply.status(502).send({ error: msg });
     }
+  });
+
+  app.get("/xivapi/items", async (request, reply) => {
+    const rawQuery = request.query as Record<string, string | string[] | undefined>;
+    const rawIds = Array.isArray(rawQuery.ids) ? rawQuery.ids.join(",") : rawQuery.ids;
+    const itemIds = (rawIds ?? "")
+      .split(",")
+      .map((id) => Number(id.trim()))
+      .filter((id) => Number.isInteger(id) && id > 0)
+      .slice(0, 200);
+    const waitMs = Math.min(3000, Math.max(0, Number(rawQuery.waitMs ?? 1800)));
+
+    if (itemIds.length === 0) {
+      return reply.status(400).send({ error: "Missing item IDs" });
+    }
+
+    return xivapiProxy.fetchItemDetailsBatch(itemIds, waitMs);
   });
 
   app.get("/xivapi/search", async (request, reply) => {

@@ -1,10 +1,12 @@
 import { config as loadEnv } from "dotenv";
+import compress from "@fastify/compress";
 import cors from "@fastify/cors";
 import staticFiles from "@fastify/static";
 import Fastify from "fastify";
 import { existsSync, readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { constants as zlibConstants } from "node:zlib";
 import { ZodError } from "zod";
 import { config } from "./config.js";
 import { apiRoutes } from "./routes/api.js";
@@ -17,6 +19,19 @@ import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
 loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
 
 const schemas = {
+  ItemDetails: {
+    type: "object",
+    required: ["id", "name"],
+    properties: {
+      id: { type: "integer" },
+      name: { type: "string" },
+      description: { type: "string" },
+      iconUrl: { type: "string" },
+      category: { type: "string" },
+      levelItem: { type: "integer" },
+      stackSize: { type: "integer" },
+    },
+  },
   BargainListing: {
     type: "object",
     required: [
@@ -48,6 +63,10 @@ const schemas = {
     properties: {
       generatedAt: { type: "string", format: "date-time" },
       bargains: { type: "array", items: { $ref: "#/components/schemas/BargainListing" } },
+      itemDetails: {
+        type: "object",
+        additionalProperties: { $ref: "#/components/schemas/ItemDetails" },
+      },
     },
   },
   DcPriceInfo: {
@@ -78,6 +97,10 @@ const schemas = {
     properties: {
       generatedAt: { type: "string", format: "date-time" },
       disparities: { type: "array", items: { $ref: "#/components/schemas/DcDisparity" } },
+      itemDetails: {
+        type: "object",
+        additionalProperties: { $ref: "#/components/schemas/ItemDetails" },
+      },
       total: { type: "integer" },
       page: { type: "integer" },
       perPage: { type: "integer" },
@@ -224,6 +247,49 @@ const app = Fastify({
 
 await app.register(cors, {
   origin: true,
+});
+
+await app.register(compress, {
+  global: true,
+  threshold: 1024,
+  brotliOptions: {
+    params: {
+      [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+      [zlibConstants.BROTLI_PARAM_QUALITY]: 4,
+    },
+  },
+  zlibOptions: {
+    level: 4,
+    memLevel: 8,
+  },
+});
+
+app.addHook("onRequest", async (request, reply) => {
+  const url = request.raw.url ?? "";
+
+  if (/^\/api\/(?:health|worker\/status|monitoring\/usage)(?:\?|$)/.test(url)) {
+    reply.header("Cache-Control", "no-store");
+    return;
+  }
+
+  if (/^\/api\/worlds(?:\?|$)/.test(url)) {
+    reply.header("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
+    return;
+  }
+
+  if (/^\/api\/xivapi\/(?:items|sheet\/Item\/\d+)(?:\?|$)/.test(url)) {
+    reply.header("Cache-Control", "public, max-age=3600, stale-while-revalidate=86400");
+    return;
+  }
+
+  if (/^\/api\/xivapi\/search(?:\?|$)/.test(url)) {
+    reply.header("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+    return;
+  }
+
+  if (/^\/api\/(?:dc-disparities|bargains|items\/\d+\/(?:history|listings))(?:\?|$)/.test(url)) {
+    reply.header("Cache-Control", "private, max-age=60, stale-while-revalidate=300");
+  }
 });
 
 app.setErrorHandler((error, request, reply) => {
@@ -420,9 +486,17 @@ if (existsSync(webDistPath)) {
     wildcard: true,
     cacheControl: false,
     setHeaders: (res, filePath) => {
+      if (basename(filePath) === "sw.js") {
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+        return;
+      }
+
       // Vite emits hashed asset filenames like index-Bm8n5KMu.js.
       // These can be cached forever because the content hash changes on every build.
-      if (/-[A-Za-z0-9_-]{8,}\.(js|css)(\.map)?$/.test(basename(filePath))) {
+      if (
+        filePath.startsWith(join(webDistPath, "assets")) ||
+        /-[A-Za-z0-9_-]{8,}\.[A-Za-z0-9.]+$/.test(basename(filePath))
+      ) {
         res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
       } else {
         // index.html and other non-hashed files must never be long-cached so
