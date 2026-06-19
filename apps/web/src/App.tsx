@@ -16,8 +16,28 @@ const DcDisparitiesPage = lazy(() =>
 
 function PageFallback() {
   return (
-    <div className="notice" role="status" aria-live="polite">
-      Loading...
+    <div className="pageSkeleton" role="status" aria-live="polite" aria-label="Loading page">
+      <section className="topBar skeletonTopBar" aria-hidden="true">
+        <div>
+          <p className="eyebrow skeletonLine skeletonEyebrow" />
+          <div className="skeletonTitle" />
+        </div>
+        <div className="skeletonSearch" />
+        <div className="skeletonButton" />
+      </section>
+      <section className="metricStrip skeletonMetrics" aria-hidden="true">
+        <article />
+        <article />
+        <article />
+      </section>
+      <section className="toolbar skeletonToolbar" aria-hidden="true">
+        <div />
+        <div />
+        <div />
+        <div />
+        <div />
+      </section>
+      <div className="tableShell skeletonTable" aria-hidden="true" />
     </div>
   );
 }
@@ -56,15 +76,17 @@ export function App() {
             Bargains
           </Link>
         </nav>
-        <Suspense fallback={<PageFallback />}>
-          <Switch>
-            <Route path="/" component={DcDisparitiesPage} />
-            <Route path="/bargains" component={BargainsPage} />
-            <Route path="/items/:itemId/listings" component={ListingsPage} />
-            <Route path="/items/:itemId" component={ItemPage} />
-            <Route component={DcDisparitiesPage} />
-          </Switch>
-        </Suspense>
+        <div className="routeFrame">
+          <Suspense fallback={<PageFallback />}>
+            <Switch>
+              <Route path="/" component={DcDisparitiesPage} />
+              <Route path="/bargains" component={BargainsPage} />
+              <Route path="/items/:itemId/listings" component={ListingsPage} />
+              <Route path="/items/:itemId" component={ItemPage} />
+              <Route component={DcDisparitiesPage} />
+            </Switch>
+          </Suspense>
+        </div>
       </main>
       <footer className="appFooter">
         <div className="appFooterInner">

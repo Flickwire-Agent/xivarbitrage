@@ -65,7 +65,9 @@ export function ListingsPage() {
               className="itemDetailIcon"
               loading="lazy"
             />
-          ) : null}
+          ) : (
+            <span className="itemDetailIcon" aria-hidden="true" />
+          )}
           <div>
             <h1>{itemDetails?.name ?? "Loading..."}</h1>
             <p className="eyebrow">{itemDetails?.category ?? "Uncategorized"}</p>
@@ -111,7 +113,7 @@ export function ListingsPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="notice" role="status" aria-live="polite">
+        <div className="notice contentLoading" role="status" aria-live="polite">
           Loading listings...
         </div>
       ) : data ? (

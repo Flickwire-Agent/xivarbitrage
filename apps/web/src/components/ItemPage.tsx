@@ -30,7 +30,7 @@ export function ItemPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="notice" role="status" aria-live="polite">
+      <div className="notice contentLoading" role="status" aria-live="polite">
         Loading...
       </div>
     );

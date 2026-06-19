@@ -17,6 +17,8 @@
     <meta name="theme-color" content="#0f1117" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <link rel="canonical" href="https://xivarbitrage.projects.blueskye.co.uk/" />
+    <link rel="preconnect" href="https://v2.xivapi.com" crossorigin />
+    <link rel="dns-prefetch" href="https://v2.xivapi.com" />
     <link rel="manifest" href="/manifest.json" />
 
     <meta property="og:type" content="website" />
@@ -65,8 +67,35 @@
   <body>
     <div id="root">
       <main class="appShell" id="main-content" aria-label="XIV Arbitrage application">
-        <h1>XIV Arbitrage</h1>
-        <p class="notice" role="status" aria-live="polite">Loading market data…</p>
+        <nav class="mainTabs" aria-label="Main views">
+          <span class="mainTab active">Disparities</span>
+          <span class="mainTab">Bargains</span>
+        </nav>
+        <div class="routeFrame">
+          <div class="pageSkeleton" role="status" aria-live="polite" aria-label="Loading page">
+            <section class="topBar skeletonTopBar" aria-hidden="true">
+              <div>
+                <p class="eyebrow skeletonLine skeletonEyebrow"></p>
+                <div class="skeletonTitle"></div>
+              </div>
+              <div class="skeletonSearch"></div>
+              <div class="skeletonButton"></div>
+            </section>
+            <section class="metricStrip skeletonMetrics" aria-hidden="true">
+              <article></article>
+              <article></article>
+              <article></article>
+            </section>
+            <section class="toolbar skeletonToolbar" aria-hidden="true">
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+              <div></div>
+            </section>
+            <div class="tableShell skeletonTable" aria-hidden="true"></div>
+          </div>
+        </div>
       </main>
     </div>
     <noscript>

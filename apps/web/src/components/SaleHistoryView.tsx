@@ -157,7 +157,9 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
                 className="itemDetailIcon"
                 loading="lazy"
               />
-            ) : null}
+            ) : (
+              <span className="itemDetailIcon" aria-hidden="true" />
+            )}
             <div>
               <h1>{data.item.name}</h1>
               <p className="eyebrow">{data.item.category ?? "Uncategorized"}</p>

@@ -51,6 +51,80 @@ select {
   margin-bottom: 24px;
 }
 
+.pageSkeleton {
+  min-height: 680px;
+}
+
+.skeletonTopBar > div:first-child {
+  flex: 1 1 auto;
+}
+
+.skeletonLine,
+.skeletonTitle,
+.skeletonSearch,
+.skeletonButton,
+.skeletonToolbar div,
+.skeletonMetrics article,
+.skeletonTable {
+  color: transparent;
+  background: linear-gradient(90deg, #eef2f7 25%, #f7f9fc 50%, #eef2f7 75%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeletonEyebrow {
+  width: min(260px, 60vw);
+  height: 0.82rem;
+  border-radius: 999px;
+}
+
+.skeletonTitle {
+  width: min(420px, 72vw);
+  height: clamp(2rem, 4vw, 4.5rem);
+  border-radius: 10px;
+}
+
+.skeletonSearch {
+  flex: 0 1 320px;
+  height: 42px;
+  border-radius: 8px;
+}
+
+.skeletonButton {
+  width: 48px;
+  height: 42px;
+  border-radius: 6px;
+}
+
+.skeletonMetrics article {
+  min-height: 76px;
+}
+
+.skeletonToolbar div {
+  height: 62px;
+  border-radius: 6px;
+}
+
+.skeletonTable {
+  min-height: 420px;
+}
+
+@keyframes skeletonPulse {
+  to {
+    background-position-x: -200%;
+  }
+}
+
+:root[data-theme="dark"] .skeletonLine,
+:root[data-theme="dark"] .skeletonTitle,
+:root[data-theme="dark"] .skeletonSearch,
+:root[data-theme="dark"] .skeletonButton,
+:root[data-theme="dark"] .skeletonToolbar div,
+:root[data-theme="dark"] .skeletonMetrics article,
+:root[data-theme="dark"] .skeletonTable {
+  background-image: linear-gradient(90deg, #1a2332 25%, #223047 50%, #1a2332 75%);
+}
+
 .topBarActions {
   display: flex;
   gap: 8px;
@@ -360,6 +434,11 @@ input:focus {
   color: #3d4c5e;
 }
 
+.routeFrame,
+.contentLoading {
+  min-height: 680px;
+}
+
 :root[data-theme="dark"] .notice {
   border-color: #2a3a4f;
   background: #1a2332;
@@ -476,15 +555,18 @@ td strong {
   min-width: 260px;
 }
 
-.itemCell img {
+.itemCell img,
+.itemIconPlaceholder {
   width: 42px;
   height: 42px;
   border-radius: 6px;
   object-fit: cover;
   background: #eef2f7;
+  flex: 0 0 42px;
 }
 
-:root[data-theme="dark"] .itemCell img {
+:root[data-theme="dark"] .itemCell img,
+:root[data-theme="dark"] .itemIconPlaceholder {
   background: #2a3a4f;
 }
 
@@ -666,6 +748,7 @@ a:hover {
 }
 
 .itemDetailIcon {
+  display: block;
   width: 48px;
   height: 48px;
   border-radius: 8px;
@@ -989,6 +1072,12 @@ a:hover {
     padding: 12px 0;
   }
 
+  .routeFrame,
+  .contentLoading,
+  .pageSkeleton {
+    min-height: 520px;
+  }
+
   .paginationPages {
     gap: 2px;
   }
@@ -1038,7 +1127,7 @@ a:hover {
   border-radius: 6px;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #3d4c5e;
+  color: #243447;
   transition: all 0.2s ease;
   text-decoration: none;
 }
@@ -1054,7 +1143,12 @@ a:hover {
   background: #2a3a4f;
 }
 
-.mainTab.active {
+:root[data-theme="dark"] .mainTab {
+  color: #d2deeb;
+}
+
+.mainTab.active,
+:root[data-theme="dark"] .mainTab.active {
   color: #ffffff;
   background: #1a4795;
 }
