@@ -230,6 +230,27 @@ pnpm run -r --filter=@xiv-arbitrage/api build  # production build
 pnpm run -r --filter=@xiv-arbitrage/web build
 ```
 
+## Marketing & Visibility
+
+- **Xiv-resources**: Listed at `https://github.com/karashiiro/xiv-resources` in both "Web Applications" and "Web APIs" sections. PR was created at `https://github.com/karashiiro/xiv-resources/pull/32`. To update the listing, fork the repo, edit `README.md`, and open a new PR.
+- **GitHub topics**: Set to `ffxiv`, `market-board`, `universalis`, `arbitrage`, `ffxiv-tool`, `final-fantasy-xiv`.
+- **OG image**: Generated at `apps/web/public/og-image.png` (1200x630). Included in `index.html` with `og:image` and `twitter:image` tags.
+- **Favicon**: Generated from OG image. Served as 512x512, 192x192 (PWA), and 32x32 (favicon). Declared in `index.html` and `manifest.json`.
+- **Sitemap**: `apps/web/public/sitemap.xml` — lists `/` and `/bargains`. The incorrect `/dc-disparities` entry was removed (that route doesn't exist).
+- **Analytics**: Plausible (EU-based, privacy-friendly, no cookies). Controlled by `VITE_PLAUSIBLE_DOMAIN` env var. Set at build time. Loads dynamically via `apps/web/src/lib/analytics.ts` only in production when the env var is set.
+- **API analytics**: Built-in `apiUsageMonitor` service records every API request (IP, endpoint, status code, response time, user agent, origin) in Redis with hourly bucketing and 7-day retention. Exposed at `GET /api/monitoring/usage?hours=24` returning total requests, unique consumers, top endpoints, status codes, and response time distribution.
+
+## Recommissioning
+
+If reactivating this project after a gap, check:
+
+1. `pm2 status` — restart `xivarbitrage` if needed
+2. `pnpm build` — recheck build works with current toolchain
+3. Redis and PostgreSQL are running
+4. The Universalis API rate limit hasn't changed
+5. GitHub topics are still set on the repo
+6. xiv-resources PR was accepted (check https://github.com/karashiiro/xiv-resources/pull/32)
+
 ## Key Concepts
 
 - **Arbitrage spread**: Low side = cheapest current listing (buy price); High side = highest recent _sold_ price (actual transactions, not listings)
