@@ -3,7 +3,11 @@ import { config } from "../config.js";
 export class RateLimiter {
   private nextAvailableAt = 0;
 
-  constructor(private readonly requestsPerSecond: number) {}
+  constructor(private readonly requestsPerSecond: number) {
+    if (!Number.isFinite(requestsPerSecond) || requestsPerSecond <= 0) {
+      throw new Error(`Invalid rate limit: ${requestsPerSecond} requests per second`);
+    }
+  }
 
   async schedule<T>(task: () => Promise<T>): Promise<T> {
     const spacingMs = 1000 / this.requestsPerSecond;

@@ -1,4 +1,5 @@
 import { config } from "../config.js";
+import { rateLimiter } from "./rateLimiter.js";
 
 export interface UniversalisListing {
   pricePerUnit: number;
@@ -66,25 +67,27 @@ export class UniversalisClient {
   }
 
   private async fetchJson<T>(path: string): Promise<T> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
+    return rateLimiter.schedule(async () => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
 
-    try {
-      const response = await fetch(`${config.universalisBaseUrl}${path}`, {
-        headers: {
-          "User-Agent": "xiv-arbitrage/0.1.0",
-        },
-        signal: controller.signal,
-      });
+      try {
+        const response = await fetch(`${config.universalisBaseUrl}${path}`, {
+          headers: {
+            "User-Agent": "xiv-arbitrage/0.1.0",
+          },
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`Universalis request failed: ${response.status} ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Universalis request failed: ${response.status} ${response.statusText}`);
+        }
+
+        return (await response.json()) as T;
+      } finally {
+        clearTimeout(timeout);
       }
-
-      return (await response.json()) as T;
-    } finally {
-      clearTimeout(timeout);
-    }
+    });
   }
 }
 

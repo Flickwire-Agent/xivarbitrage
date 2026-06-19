@@ -2,9 +2,8 @@ import { Worker } from "bullmq";
 import { config } from "../config.js";
 import { universalis } from "./universalis.js";
 import { marketSnapshotStore } from "./marketSnapshotStore.js";
-import { rateLimiter } from "./rateLimiter.js";
 import { pool } from "../db/pool.js";
-import type { EvaluateItemJob } from "./jobQueue.js";
+import { TARGET_REGIONS, type EvaluateItemJob } from "./jobQueue.js";
 
 let worker: Worker<EvaluateItemJob> | null = null;
 
@@ -17,20 +16,21 @@ export async function initializeWorker(): Promise<void> {
   worker = new Worker<EvaluateItemJob>(
     "arbitrage-opportunities",
     async (job) => {
-      const { itemId, region } = job.data;
+      const { itemId } = job.data;
       const startTime = Date.now();
+      let processedRegions = 0;
 
       try {
-        const data = await rateLimiter.schedule(() => universalis.getCurrentData(region, itemId));
+        for (const region of TARGET_REGIONS) {
+          const data = await universalis.getCurrentData(region, itemId);
 
-        if (data) {
+          if (!data) {
+            continue;
+          }
+
           await marketSnapshotStore.upsert(region, itemId, data);
 
           await marketSnapshotStore.storeSales(itemId, data);
-
-          await pool.query("UPDATE marketable_items SET last_scanned = now() WHERE item_id = $1", [
-            itemId,
-          ]);
 
           await pool.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
@@ -38,23 +38,31 @@ export async function initializeWorker(): Promise<void> {
             [job.id, itemId, region, "completed"],
           );
 
-          const duration = Date.now() - startTime;
-          console.log(
-            `[Worker] Processed item_id=${itemId} region=${region} duration=${duration}ms`,
-          );
+          processedRegions++;
         }
 
-        return { processed: true, duration: Date.now() - startTime };
+        if (processedRegions > 0) {
+          await pool.query("UPDATE marketable_items SET last_scanned = now() WHERE item_id = $1", [
+            itemId,
+          ]);
+        }
+
+        const duration = Date.now() - startTime;
+        console.log(
+          `[Worker] Processed item_id=${itemId} regions=${processedRegions}/${TARGET_REGIONS.length} duration=${duration}ms`,
+        );
+
+        return { processed: processedRegions > 0, processedRegions, duration };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
 
         await pool.query(
           `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)
            VALUES ($1, $2, $3, $4, $5, now())`,
-          [job.id, itemId, region, "failed", errorMsg],
+          [job.id, itemId, "all", "failed", errorMsg],
         );
 
-        console.error(`[Worker] Failed item_id=${itemId} region=${region} error=${errorMsg}`);
+        console.error(`[Worker] Failed item_id=${itemId} error=${errorMsg}`);
         throw error;
       }
     },

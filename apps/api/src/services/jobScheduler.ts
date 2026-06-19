@@ -1,9 +1,7 @@
 import { config } from "../config.js";
-import { getQueue } from "./jobQueue.js";
+import { getItemScanJobId, getQueue, TARGET_REGIONS } from "./jobQueue.js";
 import { universalis } from "./universalis.js";
 import { pool } from "../db/pool.js";
-
-const TARGET_REGIONS = ["North-America", "Europe", "Oceania"];
 
 export class JobScheduler {
   private lastScheduleTime = 0;
@@ -151,52 +149,51 @@ export class JobScheduler {
       }
 
       const queue = getQueue();
+      const counts = await queue.getJobCounts("active", "delayed", "prioritized", "waiting");
+      const waitingJobs = (counts.waiting ?? 0) + (counts.wait ?? 0);
+      const outstandingJobs =
+        (counts.active ?? 0) + (counts.delayed ?? 0) + (counts.prioritized ?? 0) + waitingJobs;
+
+      if (outstandingJobs > 0) {
+        console.log(
+          `[JobScheduler] ${outstandingJobs} scan job(s) still queued; skipping schedule`,
+        );
+        return;
+      }
 
       const reqPerSecond = config.universalisRequestsPerSecond;
-      const concurrency = config.jobQueueConcurrency;
-      const perWorkerRate = reqPerSecond / concurrency;
-      const delayBetweenJobs = Math.max(1, Math.round(1000 / perWorkerRate));
 
-      const totalJobs = itemIds.length * TARGET_REGIONS.length;
-      const estimatedScanSeconds = totalJobs / reqPerSecond;
+      const totalRequests = itemIds.length * TARGET_REGIONS.length;
+      const estimatedScanSeconds = totalRequests / reqPerSecond;
       const estimatedScanMinutes = (estimatedScanSeconds / 60).toFixed(1);
 
       this.scheduleCooldownMs = Math.max(60_000, estimatedScanSeconds * 1000);
 
       console.log(
-        `[JobScheduler] Queueing ${totalJobs} jobs (${itemIds.length} items × ${TARGET_REGIONS.length} regions)`,
+        `[JobScheduler] Queueing ${itemIds.length} item scan jobs ` +
+          `(${totalRequests} Universalis requests across ${TARGET_REGIONS.length} regions)`,
       );
-      console.log(
-        `[JobScheduler] Rate limit: ${reqPerSecond} req/s across ${concurrency} workers ` +
-          `(${perWorkerRate} req/s per worker) → ${delayBetweenJobs}ms between jobs`,
-      );
+      console.log(`[JobScheduler] Rate limit: ${reqPerSecond} Universalis req/s`);
       console.log(
         `[JobScheduler] Estimated full scan time: ~${estimatedScanMinutes} minutes ` +
           `(${estimatedScanSeconds.toFixed(0)}s at ${reqPerSecond} req/s)`,
       );
 
       const bulkBatchSize = 1000;
-      let delay = 0;
-      let jobIndex = 0;
       const allJobs: {
         name: string;
-        data: { itemId: number; region: string };
-        opts: { delay: number; priority: number };
+        data: { itemId: number };
+        opts: { jobId: string };
       }[] = [];
 
       for (const itemId of itemIds) {
-        for (const region of TARGET_REGIONS) {
-          allJobs.push({
-            name: `evaluate-item-${itemId}-${region}`,
-            data: { itemId, region },
-            opts: {
-              delay,
-              priority: Math.floor(100 - ((delay / 1000) % 100)),
-            },
-          });
-          delay += delayBetweenJobs;
-          jobIndex++;
-        }
+        allJobs.push({
+          name: getItemScanJobId(itemId),
+          data: { itemId },
+          opts: {
+            jobId: getItemScanJobId(itemId),
+          },
+        });
       }
 
       for (let i = 0; i < allJobs.length; i += bulkBatchSize) {
@@ -204,7 +201,7 @@ export class JobScheduler {
         await queue.addBulk(batch);
       }
 
-      console.log(`[JobScheduler] Successfully queued ${totalJobs} jobs`);
+      console.log(`[JobScheduler] Successfully queued ${itemIds.length} item scan jobs`);
     } catch (error) {
       console.error(
         `[JobScheduler] Error scheduling jobs: ${error instanceof Error ? error.message : String(error)}`,
