@@ -27,6 +27,7 @@ Optional environment variables:
 - `UNIVERSALIS_REQS_PER_SECOND`: Defaults to `20`, below the documented `25 req/s` API limit.
 - `ARBITRAGE_ITEM_LIMIT`: Number of marketable item IDs to inspect per request. Defaults to `80`.
 - `ARBITRAGE_MAX_CONCURRENCY`: Market request concurrency. Defaults to `4`.
+- `VITE_PLAUSIBLE_DOMAIN`: Domain for Plausible analytics (EU-based, privacy-friendly). Set to your domain to enable analytics. Omit to disable. Must be set during web build.
 
 ## Notes
 
