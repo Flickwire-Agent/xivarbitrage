@@ -40,7 +40,7 @@ export function DcDisparitiesPage() {
   const { data, isLoading, error } = useDcDisparities(query, page);
 
   const itemIds = useMemo(() => data?.disparities.map((d) => d.itemId) ?? [], [data?.disparities]);
-  const itemDetails = useBulkItemDetails(itemIds);
+  const itemDetails = useBulkItemDetails(itemIds, data?.itemDetails);
 
   const disparities = useMemo(() => {
     if (!data) return [];
@@ -156,31 +156,29 @@ export function DcDisparitiesPage() {
         </div>
       </section>
 
-      {data && disparities.length > 0 ? (
-        <section className="metricStrip" aria-label="Market summary">
-          <article>
-            <Gauge size={18} aria-hidden="true" />
-            <div>
-              <span>Total items</span>
-              <strong>{data.total}</strong>
-            </div>
-          </article>
-          <article>
-            <TrendingUp size={18} aria-hidden="true" />
-            <div>
-              <span>Average spread</span>
-              <strong>{summary.avgSpread.toLocaleString()} gil</strong>
-            </div>
-          </article>
-          <article>
-            <TrendingUp size={18} aria-hidden="true" />
-            <div>
-              <span>Data centers</span>
-              <strong>{summary.dcSet.size}</strong>
-            </div>
-          </article>
-        </section>
-      ) : null}
+      <section className="metricStrip" aria-label="Market summary">
+        <article>
+          <Gauge size={18} aria-hidden="true" />
+          <div>
+            <span>Total items</span>
+            <strong>{data ? data.total.toLocaleString() : "Loading"}</strong>
+          </div>
+        </article>
+        <article>
+          <TrendingUp size={18} aria-hidden="true" />
+          <div>
+            <span>Average spread</span>
+            <strong>{data ? `${summary.avgSpread.toLocaleString()} gil` : "Loading"}</strong>
+          </div>
+        </article>
+        <article>
+          <TrendingUp size={18} aria-hidden="true" />
+          <div>
+            <span>Data centers</span>
+            <strong>{data ? summary.dcSet.size : "Loading"}</strong>
+          </div>
+        </article>
+      </section>
 
       <section className="toolbar">
         <SelectField
@@ -228,7 +226,7 @@ export function DcDisparitiesPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="notice" role="status" aria-live="polite">
+        <div className="notice contentLoading" role="status" aria-live="polite">
           Loading market data...
         </div>
       ) : data && disparities.length > 0 ? (
@@ -260,7 +258,9 @@ export function DcDisparitiesPage() {
                       <div className="itemCell">
                         {d.item.iconUrl ? (
                           <img src={d.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
-                        ) : null}
+                        ) : (
+                          <span className="itemIconPlaceholder" aria-hidden="true" />
+                        )}
                         <div>
                           <button
                             type="button"

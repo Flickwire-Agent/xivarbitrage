@@ -30,6 +30,11 @@ export interface ItemDetails {
   category?: string;
 }
 
+export interface BulkItemDetailsResponse {
+  itemDetails: Record<number, ItemDetails>;
+  pendingItemIds: number[];
+}
+
 function buildIconUrl(iconPath: string | undefined): string | undefined {
   if (!iconPath) return undefined;
   return `${XIVAPI_ASSET_URL}/asset?path=${encodeURIComponent(iconPath)}&format=png`;
@@ -56,6 +61,22 @@ export async function fetchItemDetails(itemId: number): Promise<ItemDetails> {
     iconUrl: buildIconUrl(iconPath),
     category: data.fields.ItemUICategory?.fields?.Name,
   };
+}
+
+export async function fetchItemDetailsBatch(itemIds: number[]): Promise<BulkItemDetailsResponse> {
+  const uniqueIds = [...new Set(itemIds)].filter(Boolean);
+  if (uniqueIds.length === 0) return { itemDetails: {}, pendingItemIds: [] };
+
+  const url = new URL(`${XIVAPI_PROXY_BASE_URL}/items`, window.location.origin);
+  url.searchParams.set("ids", uniqueIds.join(","));
+  url.searchParams.set("waitMs", "1800");
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`XIVAPI batch request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<BulkItemDetailsResponse>;
 }
 
 export async function searchItems(query: string): Promise<ItemDetails[]> {

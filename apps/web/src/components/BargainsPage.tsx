@@ -20,7 +20,7 @@ export function BargainsPage() {
   const { data, isLoading, error } = useBargains(page);
 
   const itemIds = useMemo(() => data?.bargains.map((b) => b.itemId) ?? [], [data?.bargains]);
-  const itemDetails = useBulkItemDetails(itemIds);
+  const itemDetails = useBulkItemDetails(itemIds, data?.itemDetails);
 
   const bargains = useMemo(() => {
     if (!data) return [];
@@ -92,7 +92,7 @@ export function BargainsPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="notice" role="status" aria-live="polite">
+        <div className="notice contentLoading" role="status" aria-live="polite">
           Scanning market for bargains...
         </div>
       ) : data && bargains.length > 0 ? (
@@ -125,7 +125,9 @@ export function BargainsPage() {
                       <div className="itemCell">
                         {b.item.iconUrl ? (
                           <img src={b.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
-                        ) : null}
+                        ) : (
+                          <span className="itemIconPlaceholder" aria-hidden="true" />
+                        )}
                         <div>
                           <strong>{b.item.name}</strong>
                           <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>

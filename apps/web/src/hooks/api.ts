@@ -1,4 +1,5 @@
-import { useQuery, useQueries } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import type {
   ItemHistoryResponse,
   ListingsResponse,
@@ -7,7 +8,13 @@ import type {
   DcDisparityQuery,
   WorldsResponse,
 } from "@xiv-arbitrage/shared";
-import { fetchItemDetails, searchItems, type ItemDetails } from "../lib/xivapi.js";
+import {
+  fetchItemDetails,
+  fetchItemDetailsBatch,
+  searchItems,
+  type BulkItemDetailsResponse,
+  type ItemDetails,
+} from "../lib/xivapi.js";
 
 const STALE_TIME_API = 15 * 60 * 1000;
 const STALE_TIME_XIVAPI = 60 * 60 * 1000;
@@ -107,20 +114,52 @@ export function useItemSearch(query: string) {
   });
 }
 
-export function useBulkItemDetails(itemIds: number[]) {
+export function useBulkItemDetails(
+  itemIds: number[],
+  initialDetails: Record<number, ItemDetails> | undefined = undefined,
+) {
   const uniqueIds = [...new Set(itemIds)].filter(Boolean);
-  const queries = uniqueIds.map((id) => ({
-    queryKey: ["xivapi-item", id] as const,
-    queryFn: () => fetchItemDetails(id),
-    staleTime: STALE_TIME_XIVAPI,
-  }));
-
-  const results = useQueries({ queries });
   const detailsMap = new Map<number, ItemDetails>();
-  results.forEach((result, i) => {
-    if (result.data) {
-      detailsMap.set(uniqueIds[i]!, result.data);
+
+  for (const detail of Object.values(initialDetails ?? {})) {
+    detailsMap.set(detail.id, detail);
+  }
+
+  const missingIds = uniqueIds.filter((id) => !detailsMap.has(id));
+  const missingIdsKey = missingIds.join(",");
+  const deferredMissingIds = useMemo(() => missingIds, [missingIdsKey]);
+  const [metadataFetchEnabled, setMetadataFetchEnabled] = useState(false);
+
+  useEffect(() => {
+    setMetadataFetchEnabled(false);
+
+    if (deferredMissingIds.length === 0) return undefined;
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(() => setMetadataFetchEnabled(true), {
+        timeout: 1200,
+      });
+      return () => window.cancelIdleCallback(idleId);
     }
+
+    const timeoutId = window.setTimeout(() => setMetadataFetchEnabled(true), 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [deferredMissingIds]);
+
+  const batchResult = useQuery<BulkItemDetailsResponse>({
+    queryKey: ["xivapi-items", deferredMissingIds] as const,
+    queryFn: () => fetchItemDetailsBatch(deferredMissingIds),
+    enabled: metadataFetchEnabled && deferredMissingIds.length > 0,
+    staleTime: STALE_TIME_XIVAPI,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.pendingItemIds.length ? 1000 : false;
+    },
   });
+
+  for (const detail of Object.values(batchResult.data?.itemDetails ?? {})) {
+    detailsMap.set(detail.id, detail);
+  }
+
   return detailsMap;
 }
