@@ -321,4 +321,38 @@ export async function apiRoutes(app: FastifyInstance) {
     const hoursBack = Math.min(168, Math.max(1, Number((request.query as any).hours ?? 24)));
     return apiUsageMonitor.getSummary(hoursBack);
   });
+
+  // OG image endpoints
+  const { generateDisparitiesOg, generateBargainsOg, generateItemOg } =
+    await import("../services/ogGenerator.js");
+
+  app.get("/og/disparities", async (request, reply) => {
+    const page = Math.max(1, Number((request.query as any).page ?? 1));
+    const png = await generateDisparitiesOg(page);
+    return reply
+      .header("Content-Type", "image/png")
+      .header("Cache-Control", "public, max-age=900")
+      .send(png);
+  });
+
+  app.get("/og/bargains", async (request, reply) => {
+    const page = Math.max(1, Number((request.query as any).page ?? 1));
+    const png = await generateBargainsOg(page);
+    return reply
+      .header("Content-Type", "image/png")
+      .header("Cache-Control", "public, max-age=900")
+      .send(png);
+  });
+
+  app.get<{ Params: { itemId: string } }>("/og/items/:itemId", async (request, reply) => {
+    const itemId = Number(request.params.itemId);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+      return reply.status(400).send({ error: "Invalid item ID" });
+    }
+    const png = await generateItemOg(itemId);
+    return reply
+      .header("Content-Type", "image/png")
+      .header("Cache-Control", "public, max-age=900")
+      .send(png);
+  });
 }

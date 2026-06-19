@@ -234,7 +234,7 @@ pnpm run -r --filter=@xiv-arbitrage/web build
 
 - **Xiv-resources**: Listed at `https://github.com/karashiiro/xiv-resources` in both "Web Applications" and "Web APIs" sections. PR was created at `https://github.com/karashiiro/xiv-resources/pull/32`. To update the listing, fork the repo, edit `README.md`, and open a new PR.
 - **GitHub topics**: Set to `ffxiv`, `market-board`, `universalis`, `arbitrage`, `ffxiv-tool`, `final-fantasy-xiv`.
-- **OG image**: Generated at `apps/web/public/og-image.png` (1200x630). Included in `index.html` with `og:image` and `twitter:image` tags.
+- **OG image**: Dynamically server-generated via Sharp + SVG at `/api/og/disparities` (top 5 disparities), `/api/og/bargains` (top 5 bargains), and `/api/og/items/:itemId` (item icon + stats). The SVG templates live in `apps/api/src/services/ogGenerator.ts`. Images are cached in-memory for 15 min. Set `og:image` in `index.html` to the dynamic endpoint.
 - **Favicon**: Generated from OG image. Served as 512x512, 192x192 (PWA), and 32x32 (favicon). Declared in `index.html` and `manifest.json`.
 - **Sitemap**: `apps/web/public/sitemap.xml` — lists `/` and `/bargains`. The incorrect `/dc-disparities` entry was removed (that route doesn't exist).
 - **Analytics**: Plausible (EU-based, privacy-friendly, no cookies). Controlled by `VITE_PLAUSIBLE_DOMAIN` env var. Set at build time. Loads dynamically via `apps/web/src/lib/analytics.ts` only in production when the env var is set.
