@@ -82,7 +82,7 @@ export function DcDisparitiesPage() {
     if (!data) return [];
     return data.disparities.map((d) => ({
       ...d,
-      item: itemDetails.get(d.itemId) ?? { id: d.itemId, name: `Item ${d.itemId}` },
+      item: itemDetails.get(d.itemId) ?? { id: d.itemId, name: "Unknown item" },
     }));
   }, [data, itemDetails]);
 

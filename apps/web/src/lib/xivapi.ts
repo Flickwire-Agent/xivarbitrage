@@ -1,19 +1,6 @@
 const XIVAPI_ASSET_URL = "https://v2.xivapi.com/api";
 const XIVAPI_PROXY_BASE_URL = "/api/xivapi";
 
-export interface XivApiItemFields {
-  Name?: string;
-  Icon?: {
-    path?: string;
-    path_hr1?: string;
-  };
-  ItemUICategory?: {
-    fields?: {
-      Name?: string;
-    };
-  };
-}
-
 export interface XivApiSearchResult {
   row_id: number;
   fields: {
@@ -38,29 +25,6 @@ export interface BulkItemDetailsResponse {
 function buildIconUrl(iconPath: string | undefined): string | undefined {
   if (!iconPath) return undefined;
   return `${XIVAPI_ASSET_URL}/asset?path=${encodeURIComponent(iconPath)}&format=png`;
-}
-
-export async function fetchItemDetails(itemId: number): Promise<ItemDetails> {
-  const url = new URL(`${XIVAPI_PROXY_BASE_URL}/sheet/Item/${itemId}`);
-  url.searchParams.set("fields", "Name,Icon,ItemUICategory.Name");
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`XIVAPI request failed: ${response.status}`);
-  }
-
-  const data = (await response.json()) as {
-    row_id: number;
-    fields: XivApiItemFields;
-  };
-
-  const iconPath = data.fields.Icon?.path ?? data.fields.Icon?.path_hr1;
-  return {
-    id: data.row_id,
-    name: data.fields.Name ?? `Item ${itemId}`,
-    iconUrl: buildIconUrl(iconPath),
-    category: data.fields.ItemUICategory?.fields?.Name,
-  };
 }
 
 export async function fetchItemDetailsBatch(itemIds: number[]): Promise<BulkItemDetailsResponse> {

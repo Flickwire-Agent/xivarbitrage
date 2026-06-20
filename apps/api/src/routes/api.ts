@@ -125,9 +125,10 @@ export async function apiRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const [listingData, mapping] = await Promise.all([
+    const [listingData, mapping, metadata] = await Promise.all([
       marketSnapshotStore.getCurrentListings(itemId),
       worldDcMapping.getMapping(),
+      xivapiProxy.fetchItemDetailsBatch([itemId], 1800),
     ]);
 
     const dcPrices: Record<string, number[]> = {};
@@ -169,6 +170,7 @@ export async function apiRoutes(app: FastifyInstance) {
 
     return {
       itemId,
+      itemDetails: metadata.itemDetails,
       listings,
       saleStats: {
         avgPrice: globalAvg ?? 0,
@@ -192,17 +194,29 @@ export async function apiRoutes(app: FastifyInstance) {
     const totalPages = Math.ceil(total / perPage);
     const start = (page - 1) * perPage;
     const bargains = allBargains.slice(start, start + perPage);
-    const itemDetails = await xivapiProxy.getCachedItemDetails(bargains.map((b) => b.itemId));
-    return { generatedAt, bargains, itemDetails, total, page, perPage, totalPages };
+    const metadata = await xivapiProxy.fetchItemDetailsBatch(
+      bargains.map((b) => b.itemId),
+      3000,
+    );
+    return {
+      generatedAt,
+      bargains,
+      itemDetails: metadata.itemDetails,
+      total,
+      page,
+      perPage,
+      totalPages,
+    };
   });
 
   app.get("/dc-disparities", async (request) => {
     const query = dcDisparityQuerySchema.parse(request.query);
     const result = await dcDisparityCache.get(query);
-    const itemDetails = await xivapiProxy.getCachedItemDetails(
+    const metadata = await xivapiProxy.fetchItemDetailsBatch(
       result.disparities.map((d) => d.itemId),
+      3000,
     );
-    return { ...result, itemDetails };
+    return { ...result, itemDetails: metadata.itemDetails };
   });
 
   app.get<{ Params: { itemId: string } }>("/items/:itemId/history", async (request, reply) => {
@@ -212,10 +226,14 @@ export async function apiRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "Invalid item ID" });
     }
 
-    const sales = await marketSnapshotStore.getSaleHistory(itemId);
+    const [sales, metadata] = await Promise.all([
+      marketSnapshotStore.getSaleHistory(itemId),
+      xivapiProxy.fetchItemDetailsBatch([itemId], 1800),
+    ]);
 
     return {
       itemId,
+      itemDetails: metadata.itemDetails,
       sales,
       worlds: [...new Set(sales.map((s) => s.worldName))].sort(),
     };

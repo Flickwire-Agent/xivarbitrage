@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
 import { useLocation, useParams } from "wouter";
-import { useItemDetails, useItemHistory } from "../hooks/api.js";
+import { useItemHistory, useRetriedItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SaleHistoryView } from "./SaleHistoryView.js";
 
@@ -12,7 +12,7 @@ export function ItemPage() {
   const id = itemId ? Number(itemId) : undefined;
 
   const { data, isLoading, error } = useItemHistory(id);
-  const { data: itemDetails } = useItemDetails(id);
+  const itemDetails = useRetriedItemDetails(id, data?.itemDetails?.[data.itemId]);
 
   useEffect(() => {
     document.title = itemDetails
@@ -38,7 +38,7 @@ export function ItemPage() {
 
   const enrichedData = {
     ...data,
-    item: itemDetails ?? { id: data.itemId, name: `Item ${data.itemId}` },
+    item: itemDetails ?? { id: data.itemId, name: "Unknown item" },
   };
 
   return (

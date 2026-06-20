@@ -2,7 +2,7 @@ import type { ItemListing } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useLocation, useParams } from "wouter";
-import { useItemDetails, useItemListings } from "../hooks/api.js";
+import { useItemListings, useRetriedItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 
 function getUniversalisUrl(itemId: number): string {
@@ -16,7 +16,7 @@ export function ListingsPage() {
   const id = itemId ? Number(itemId) : undefined;
 
   const { data, isLoading, error } = useItemListings(id);
-  const { data: itemDetails } = useItemDetails(id);
+  const itemDetails = useRetriedItemDetails(id, data?.itemDetails?.[data.itemId]);
 
   useEffect(() => {
     document.title = itemDetails
@@ -69,7 +69,7 @@ export function ListingsPage() {
             <span className="itemDetailIcon" aria-hidden="true" />
           )}
           <div>
-            <h1>{itemDetails?.name ?? "Loading..."}</h1>
+            <h1>{itemDetails?.name ?? (isLoading ? "Loading..." : "Unknown item")}</h1>
             <p className="eyebrow">{itemDetails?.category ?? "Uncategorized"}</p>
           </div>
         </div>
