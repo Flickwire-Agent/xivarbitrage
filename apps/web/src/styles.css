@@ -452,6 +452,115 @@ input:focus {
   margin-bottom: 16px;
 }
 
+.savedViews {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 16px;
+  margin: -2px 0 18px;
+}
+
+:root[data-theme="dark"] .savedViews {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+.savedViewsHeader,
+.savedViewsControls,
+.savedViewsList li {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.savedViewsHeader {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.savedViews h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.savedViews p {
+  margin: 0;
+  color: #3d4c5e;
+  font-size: 0.86rem;
+}
+
+:root[data-theme="dark"] .savedViews p {
+  color: #a3b3c5;
+}
+
+.savedViewsControls .selectField {
+  flex: 1 1 220px;
+}
+
+.savedViewsList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.savedViewsList li {
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+:root[data-theme="dark"] .savedViewsList li {
+  border-top-color: #2a3a4f;
+}
+
+.savedViewsList li > button,
+.savedViewsList li div button {
+  border: none;
+  background: none;
+  color: #295cb5;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 4px 0;
+}
+
+:root[data-theme="dark"] .savedViewsList li > button,
+:root[data-theme="dark"] .savedViewsList li div button {
+  color: #7ba3e8;
+}
+
+.savedViewsList li > button:hover,
+.savedViewsList li div button:hover {
+  text-decoration: underline;
+}
+
+.savedViewsList li > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #3d4c5e;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:root[data-theme="dark"] .savedViewsList li > span {
+  color: #a3b3c5;
+}
+
+.savedViewsList li div {
+  display: flex;
+  gap: 10px;
+}
+
+.savedViewsMessage {
+  font-weight: 700;
+}
+
 :root[data-theme="dark"] .notice.error {
   border-color: #5a3a35;
   background: #3a2420;
@@ -619,6 +728,18 @@ a:hover {
 @media (max-width: 640px) {
   .toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .savedViewsHeader,
+  .savedViewsControls,
+  .savedViewsList li {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .savedViewsControls .iconButton,
+  .savedViewsHeader .iconButton {
+    justify-content: center;
   }
 
   .chartShell {
