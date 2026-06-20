@@ -1,3 +1,5 @@
+import { useId } from "react";
+
 interface SelectFieldProps {
   label: string;
   value: string;
@@ -5,10 +7,9 @@ interface SelectFieldProps {
   onChange: (value: string) => void;
 }
 
-let selectIdCounter = 0;
-
 export function SelectField({ label, value, options, onChange }: SelectFieldProps) {
-  const selectId = `select-${label.replace(/\s+/g, "-").toLowerCase()}-${++selectIdCounter}`;
+  const generatedId = useId();
+  const selectId = `select-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
 
   return (
     <div className="selectField">
