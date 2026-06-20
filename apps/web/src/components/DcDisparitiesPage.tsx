@@ -1,6 +1,6 @@
 import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
-import { ChevronLeft, ChevronRight, Gauge, Moon, Sun, TrendingUp } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { ChevronLeft, ChevronRight, Copy, Gauge, Moon, Save, Sun, TrendingUp } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
@@ -8,11 +8,46 @@ import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 
 const PAGE_SIZE = 50;
+const SAVED_VIEW_STORAGE_KEY = "xiv-arbitrage.saved-disparity-views";
+const MAX_SAVED_VIEW_NAME_LENGTH = 60;
+
+type SavedView = {
+  id: string;
+  name: string;
+  query: string;
+  createdAt: string;
+};
+
+function loadSavedViews(): SavedView[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const value = window.localStorage.getItem(SAVED_VIEW_STORAGE_KEY);
+    if (!value) return [];
+    const parsed = JSON.parse(value) as SavedView[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (view) =>
+        typeof view.id === "string" &&
+        typeof view.name === "string" &&
+        typeof view.query === "string" &&
+        typeof view.createdAt === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
+function normalizeSavedViewName(name: string) {
+  return name.trim().replace(/\s+/g, " ").slice(0, MAX_SAVED_VIEW_NAME_LENGTH);
+}
 
 export function DcDisparitiesPage() {
   const [, navigate] = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
+  const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
+  const [savedViewName, setSavedViewName] = useState("");
+  const [savedViewMessage, setSavedViewMessage] = useState("");
 
   useEffect(() => {
     document.title = "DC Disparities | XIV Arbitrage";
@@ -24,6 +59,7 @@ export function DcDisparitiesPage() {
   const sort = searchParams.get("sort") ?? "";
   const minSpread = searchParams.get("minSpread") ?? "";
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+  const currentQueryString = searchParams.toString();
 
   const query = useMemo(
     () => ({
@@ -112,6 +148,80 @@ export function DcDisparitiesPage() {
       }
       return next;
     });
+  }
+
+  function persistSavedViews(nextViews: SavedView[]) {
+    setSavedViews(nextViews);
+    window.localStorage.setItem(SAVED_VIEW_STORAGE_KEY, JSON.stringify(nextViews));
+  }
+
+  function saveCurrentView() {
+    const name = normalizeSavedViewName(savedViewName);
+    if (!name) {
+      setSavedViewMessage("Enter a name before saving this view.");
+      return;
+    }
+    if (savedViews.some((view) => view.name.toLowerCase() === name.toLowerCase())) {
+      setSavedViewMessage("A saved view with that name already exists.");
+      return;
+    }
+    const nextViews = [
+      ...savedViews,
+      {
+        id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`,
+        name,
+        query: currentQueryString,
+        createdAt: new Date().toISOString(),
+      },
+    ];
+    persistSavedViews(nextViews);
+    setSavedViewName("");
+    setSavedViewMessage(`Saved "${name}".`);
+  }
+
+  function loadSavedView(id: string) {
+    const view = savedViews.find((saved) => saved.id === id);
+    if (!view) return;
+    setSearchParams(new URLSearchParams(view.query));
+    setSavedViewMessage(`Loaded "${view.name}".`);
+  }
+
+  function renameSavedView(id: string) {
+    const view = savedViews.find((saved) => saved.id === id);
+    if (!view) return;
+    const nextName = normalizeSavedViewName(window.prompt("Rename saved view", view.name) ?? "");
+    if (!nextName) {
+      setSavedViewMessage("Saved view names cannot be empty.");
+      return;
+    }
+    if (
+      savedViews.some(
+        (saved) => saved.id !== id && saved.name.toLowerCase() === nextName.toLowerCase(),
+      )
+    ) {
+      setSavedViewMessage("A saved view with that name already exists.");
+      return;
+    }
+    persistSavedViews(
+      savedViews.map((saved) => (saved.id === id ? { ...saved, name: nextName } : saved)),
+    );
+    setSavedViewMessage(`Renamed view to "${nextName}".`);
+  }
+
+  function deleteSavedView(id: string) {
+    const view = savedViews.find((saved) => saved.id === id);
+    persistSavedViews(savedViews.filter((saved) => saved.id !== id));
+    setSavedViewMessage(view ? `Deleted "${view.name}".` : "Deleted saved view.");
+  }
+
+  async function shareCurrentView() {
+    const url = `${window.location.origin}${window.location.pathname}${currentQueryString ? `?${currentQueryString}` : ""}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setSavedViewMessage("Copied this filtered URL to the clipboard.");
+    } catch {
+      setSavedViewMessage(url);
+    }
   }
 
   function getPageNumbers(): (number | "ellipsis")[] {
@@ -217,6 +327,79 @@ export function DcDisparitiesPage() {
             onChange={(e) => updateFilter("minSpread", e.target.value)}
           />
         </div>
+      </section>
+
+      <section className="savedViews" aria-labelledby="saved-views-title">
+        <div className="savedViewsHeader">
+          <div>
+            <h2 id="saved-views-title">Saved views</h2>
+            <p>Save this exact filter, sort, and page state or share it as a URL.</p>
+          </div>
+          <button type="button" className="iconButton" onClick={shareCurrentView}>
+            <Copy size={16} aria-hidden="true" />
+            <span>Share URL</span>
+          </button>
+        </div>
+        <div className="savedViewsControls">
+          <label className="selectField" htmlFor="saved-view-name">
+            New view name
+            <input
+              id="saved-view-name"
+              type="text"
+              maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
+              placeholder="e.g. NA high-spread crafts"
+              value={savedViewName}
+              onChange={(event) => setSavedViewName(event.target.value)}
+            />
+          </label>
+          <button type="button" className="iconButton" onClick={saveCurrentView}>
+            <Save size={16} aria-hidden="true" />
+            <span>Save view</span>
+          </button>
+          <label className="selectField" htmlFor="saved-view-select">
+            Load saved view
+            <select
+              id="saved-view-select"
+              value=""
+              onChange={(event) => loadSavedView(event.target.value)}
+              disabled={savedViews.length === 0}
+            >
+              <option value="">
+                {savedViews.length === 0 ? "No saved views" : "Choose a view"}
+              </option>
+              {savedViews.map((view) => (
+                <option key={view.id} value={view.id}>
+                  {view.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {savedViews.length > 0 ? (
+          <ul className="savedViewsList" aria-label="Saved opportunity views">
+            {savedViews.map((view) => (
+              <li key={view.id}>
+                <button type="button" onClick={() => loadSavedView(view.id)}>
+                  {view.name}
+                </button>
+                <span>{view.query || "Default filters"}</span>
+                <div>
+                  <button type="button" onClick={() => renameSavedView(view.id)}>
+                    Rename
+                  </button>
+                  <button type="button" onClick={() => deleteSavedView(view.id)}>
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {savedViewMessage ? (
+          <p className="savedViewsMessage" role="status" aria-live="polite">
+            {savedViewMessage}
+          </p>
+        ) : null}
       </section>
 
       {error ? (
