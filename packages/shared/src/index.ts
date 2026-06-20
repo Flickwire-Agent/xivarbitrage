@@ -18,6 +18,7 @@ export interface SaleRecord {
 
 export interface ItemHistoryResponse {
   itemId: number;
+  itemDetails?: Record<number, ItemDetails>;
   sales: SaleRecord[];
   worlds: string[];
 }
@@ -72,6 +73,7 @@ export interface BargainsResponse {
 
 export interface ListingsResponse {
   itemId: number;
+  itemDetails?: Record<number, ItemDetails>;
   listings: ItemListing[];
   saleStats: {
     avgPrice: number;

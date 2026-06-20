@@ -15,6 +15,7 @@ import { getScheduler } from "./services/jobScheduler.js";
 import { initializeWorker, closeWorker } from "./services/opportunityWorker.js";
 import { closeQueue } from "./services/jobQueue.js";
 import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
+import { xivapiProxy } from "./services/xivapiProxy.js";
 
 loadEnv({ path: new URL("../../../.env", import.meta.url).pathname });
 
@@ -123,6 +124,10 @@ const schemas = {
     required: ["itemId", "sales", "worlds"],
     properties: {
       itemId: { type: "integer" },
+      itemDetails: {
+        type: "object",
+        additionalProperties: { $ref: "#/components/schemas/ItemDetails" },
+      },
       sales: { type: "array", items: { $ref: "#/components/schemas/SaleRecord" } },
       worlds: { type: "array", items: { type: "string" } },
     },
@@ -155,6 +160,10 @@ const schemas = {
     required: ["itemId", "listings", "saleStats"],
     properties: {
       itemId: { type: "integer" },
+      itemDetails: {
+        type: "object",
+        additionalProperties: { $ref: "#/components/schemas/ItemDetails" },
+      },
       listings: { type: "array", items: { $ref: "#/components/schemas/ItemListing" } },
       saleStats: {
         type: "object",
@@ -472,6 +481,66 @@ app.get("/api/openapi.json", async (request, reply) => {
 });
 
 const webDistPath = fileURLToPath(new URL("../../web/dist", import.meta.url));
+const indexHtmlPath = join(webDistPath, "index.html");
+let indexHtmlCache: string | null = null;
+
+function readIndexHtml(): string {
+  indexHtmlCache ??= readFileSync(indexHtmlPath, "utf-8");
+  return indexHtmlCache;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => {
+    switch (char) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      default:
+        return "&quot;";
+    }
+  });
+}
+
+function safeJson(value: unknown): string {
+  return JSON.stringify(value).replace(/[<>&\u2028\u2029]/g, (char) => {
+    switch (char) {
+      case "<":
+        return "\\u003c";
+      case ">":
+        return "\\u003e";
+      case "&":
+        return "\\u0026";
+      case "\u2028":
+        return "\\u2028";
+      default:
+        return "\\u2029";
+    }
+  });
+}
+
+async function renderItemPageShell(url: string): Promise<string | null> {
+  const match = /^\/items\/(\d+)(?:\/listings)?(?:[?#].*)?$/.exec(url);
+  if (!match) return null;
+
+  const itemId = Number(match[1]);
+  const { itemDetails } = await xivapiProxy.fetchItemDetailsBatch([itemId], 1800);
+  const item = itemDetails[itemId];
+  if (!item) return null;
+
+  const pageKind = url.includes("/listings") ? "Listings" : "Sale History";
+  const title = `${item.name} — ${pageKind} | XIV Arbitrage`;
+  const payload = safeJson({ [itemId]: item });
+
+  return readIndexHtml()
+    .replace(/<title>.*?<\/title>/, `<title>${escapeHtml(title)}</title>`)
+    .replace(
+      "</head>",
+      `<script id="xiv-embedded-item-details" type="application/json">${payload}</script>\n  </head>`,
+    );
+}
 
 const aiPluginPath = join(webDistPath, ".well-known", "ai-plugin.json");
 if (existsSync(aiPluginPath)) {
@@ -506,9 +575,14 @@ if (existsSync(webDistPath)) {
     },
   });
 
-  app.setNotFoundHandler((request, reply) => {
+  app.setNotFoundHandler(async (request, reply) => {
     if (request.raw.url?.startsWith("/api/")) {
       return reply.status(404).send({ error: "Not found" });
+    }
+
+    const itemPageShell = await renderItemPageShell(request.raw.url ?? "");
+    if (itemPageShell) {
+      return reply.type("text/html; charset=utf-8").send(itemPageShell);
     }
 
     return reply.sendFile("index.html");

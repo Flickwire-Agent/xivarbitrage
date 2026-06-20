@@ -26,7 +26,7 @@ export function BargainsPage() {
     if (!data) return [];
     return data.bargains.map((b) => ({
       ...b,
-      item: itemDetails.get(b.itemId) ?? { id: b.itemId, name: `Item ${b.itemId}` },
+      item: itemDetails.get(b.itemId) ?? { id: b.itemId, name: "Unknown item" },
     }));
   }, [data, itemDetails]);
 

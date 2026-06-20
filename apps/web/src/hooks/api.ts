@@ -9,7 +9,6 @@ import type {
   WorldsResponse,
 } from "@xiv-arbitrage/shared";
 import {
-  fetchItemDetails,
   fetchItemDetailsBatch,
   searchItems,
   type BulkItemDetailsResponse,
@@ -19,6 +18,34 @@ import {
 const STALE_TIME_API = 15 * 60 * 1000;
 const STALE_TIME_XIVAPI = 60 * 60 * 1000;
 const STALE_TIME_WORLDS = 7 * 24 * 60 * 60 * 1000;
+const METADATA_RETRY_INTERVAL_MS = 1500;
+const MAX_METADATA_FAILURES = 5;
+const MAX_METADATA_PENDING_POLLS = 20;
+let embeddedItemDetails: Record<number, ItemDetails> | undefined;
+
+function readEmbeddedItemDetails(): Record<number, ItemDetails> {
+  if (embeddedItemDetails) return embeddedItemDetails;
+  if (typeof document === "undefined") return {};
+
+  const script = document.getElementById("xiv-embedded-item-details");
+  if (!script?.textContent) {
+    embeddedItemDetails = {};
+    return embeddedItemDetails;
+  }
+
+  try {
+    embeddedItemDetails = JSON.parse(script.textContent) as Record<number, ItemDetails>;
+  } catch {
+    embeddedItemDetails = {};
+  }
+
+  return embeddedItemDetails;
+}
+
+export function getEmbeddedItemDetails(itemId: number | undefined): ItemDetails | undefined {
+  if (!itemId) return undefined;
+  return readEmbeddedItemDetails()[itemId];
+}
 
 export function useWorlds() {
   return useQuery({
@@ -96,15 +123,6 @@ export function useDcDisparities(query: DcDisparityQuery, page: number) {
   });
 }
 
-export function useItemDetails(itemId: number | undefined) {
-  return useQuery({
-    queryKey: ["xivapi-item", itemId],
-    queryFn: () => fetchItemDetails(itemId!),
-    enabled: !!itemId,
-    staleTime: STALE_TIME_XIVAPI,
-  });
-}
-
 export function useItemSearch(query: string) {
   return useQuery({
     queryKey: ["xivapi-search", query],
@@ -112,6 +130,20 @@ export function useItemSearch(query: string) {
     enabled: query.length >= 2,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+export function useRetriedItemDetails(
+  itemId: number | undefined,
+  initialDetail: ItemDetails | undefined,
+) {
+  const embeddedDetail = getEmbeddedItemDetails(itemId);
+  const initialDetails = useMemo(() => {
+    const detail = initialDetail ?? embeddedDetail;
+    return detail ? { [detail.id]: detail } : undefined;
+  }, [embeddedDetail, initialDetail]);
+
+  const details = useBulkItemDetails(itemId ? [itemId] : [], initialDetails);
+  return itemId ? details.get(itemId) : undefined;
 }
 
 export function useBulkItemDetails(
@@ -129,9 +161,13 @@ export function useBulkItemDetails(
   const missingIdsKey = missingIds.join(",");
   const deferredMissingIds = useMemo(() => missingIds, [missingIdsKey]);
   const [metadataFetchEnabled, setMetadataFetchEnabled] = useState(false);
+  const [pendingPollCount, setPendingPollCount] = useState(0);
+  const [metadataFailureBlocked, setMetadataFailureBlocked] = useState(false);
 
   useEffect(() => {
     setMetadataFetchEnabled(false);
+    setPendingPollCount(0);
+    setMetadataFailureBlocked(false);
 
     if (deferredMissingIds.length === 0) return undefined;
 
@@ -146,16 +182,37 @@ export function useBulkItemDetails(
     return () => globalThis.clearTimeout(timeoutId);
   }, [deferredMissingIds]);
 
+  const metadataBlocked = pendingPollCount >= MAX_METADATA_PENDING_POLLS;
+
   const batchResult = useQuery<BulkItemDetailsResponse>({
     queryKey: ["xivapi-items", deferredMissingIds] as const,
     queryFn: () => fetchItemDetailsBatch(deferredMissingIds),
-    enabled: metadataFetchEnabled && deferredMissingIds.length > 0,
+    enabled:
+      metadataFetchEnabled &&
+      deferredMissingIds.length > 0 &&
+      !metadataBlocked &&
+      !metadataFailureBlocked,
     staleTime: STALE_TIME_XIVAPI,
+    retry: (failureCount) => failureCount < MAX_METADATA_FAILURES,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10_000),
     refetchInterval: (query) => {
       const data = query.state.data;
-      return data?.pendingItemIds.length ? 1000 : false;
+      return data?.pendingItemIds.length ? METADATA_RETRY_INTERVAL_MS : false;
     },
   });
+
+  const pendingItemIdsKey = batchResult.data?.pendingItemIds.join(",") ?? "";
+
+  useEffect(() => {
+    if (!pendingItemIdsKey) return;
+    setPendingPollCount((count) => count + 1);
+  }, [pendingItemIdsKey, batchResult.dataUpdatedAt]);
+
+  useEffect(() => {
+    if (batchResult.failureCount >= MAX_METADATA_FAILURES) {
+      setMetadataFailureBlocked(true);
+    }
+  }, [batchResult.failureCount]);
 
   for (const detail of Object.values(batchResult.data?.itemDetails ?? {})) {
     detailsMap.set(detail.id, detail);
