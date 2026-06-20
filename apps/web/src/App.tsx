@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, Route, Switch, useLocation } from "wouter";
 
 const ItemPage = lazy(() =>
@@ -13,6 +13,12 @@ const BargainsPage = lazy(() =>
 const DcDisparitiesPage = lazy(() =>
   import("./components/DcDisparitiesPage.js").then((m) => ({ default: m.DcDisparitiesPage })),
 );
+const ONBOARDING_STORAGE_KEY = "xiv-arbitrage.onboarding-dismissed";
+
+function hasDismissedOnboarding() {
+  if (typeof window === "undefined") return true;
+  return window.localStorage.getItem(ONBOARDING_STORAGE_KEY) === "true";
+}
 
 function PageFallback() {
   return (
@@ -44,10 +50,17 @@ function PageFallback() {
 
 export function App() {
   const [location] = useLocation();
+  const [isExplainerOpen, setIsExplainerOpen] = useState(false);
+  const [isOnboardingDismissed, setIsOnboardingDismissed] = useState(hasDismissedOnboarding);
 
   function isActive(path: string) {
     if (path === "/") return location === "/";
     return location.startsWith(path);
+  }
+
+  function dismissOnboarding() {
+    window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "true");
+    setIsOnboardingDismissed(true);
   }
 
   return (
@@ -75,7 +88,122 @@ export function App() {
           >
             Bargains
           </Link>
+          <button
+            type="button"
+            className={`mainTab methodologyTab${isExplainerOpen ? " active" : ""}`}
+            onClick={() => setIsExplainerOpen((open) => !open)}
+            aria-expanded={isExplainerOpen}
+            aria-controls="methodology-explainer"
+          >
+            Methodology
+          </button>
         </nav>
+        {!isOnboardingDismissed ? (
+          <section className="onboardingPrompt" aria-labelledby="onboarding-title">
+            <div>
+              <p className="eyebrow">Before you trade</p>
+              <h2 id="onboarding-title">Understand how opportunities are calculated</h2>
+              <p>
+                XIV Arbitrage compares current low-side listings with high-side completed sales.
+                Review the terms, freshness, and risk notes before acting on market data.
+              </p>
+            </div>
+            <div className="onboardingActions">
+              <button
+                type="button"
+                className="iconButton"
+                onClick={() => {
+                  setIsExplainerOpen(true);
+                  dismissOnboarding();
+                }}
+              >
+                Read methodology
+              </button>
+              <button type="button" className="textButton" onClick={dismissOnboarding}>
+                Dismiss
+              </button>
+            </div>
+          </section>
+        ) : null}
+        {isExplainerOpen ? (
+          <section
+            className="methodologyExplainer"
+            id="methodology-explainer"
+            aria-labelledby="methodology-title"
+          >
+            <div className="methodologyHeader">
+              <div>
+                <p className="eyebrow">Methodology</p>
+                <h2 id="methodology-title">How to read arbitrage opportunities</h2>
+              </div>
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => setIsExplainerOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="methodologyGrid">
+              <article>
+                <h3>Gross spread</h3>
+                <p>
+                  The difference between the lowest buy-side price and the high-side market value
+                  before fees, taxes, travel time, or relisting risk.
+                </p>
+              </article>
+              <article>
+                <h3>Net spread</h3>
+                <p>
+                  Your expected margin after practical costs. Treat this as a planning estimate, not
+                  a guaranteed profit.
+                </p>
+              </article>
+              <article>
+                <h3>Recent sales</h3>
+                <p>
+                  High-side prices are based on completed sales, not current listings, so they
+                  reflect what buyers recently paid.
+                </p>
+              </article>
+              <article>
+                <h3>Velocity</h3>
+                <p>
+                  Sales volume indicates how often an item moves. Slow items can tie up gil even
+                  when the spread looks attractive.
+                </p>
+              </article>
+              <article>
+                <h3>Confidence and risk</h3>
+                <p>
+                  More recent sales across more worlds increase confidence. Thin data, old sales, or
+                  one-off spikes should be treated as higher risk.
+                </p>
+              </article>
+              <article>
+                <h3>Bargains</h3>
+                <p>
+                  Bargains are current listings priced below the global IQR-filtered recent average,
+                  useful for spotting underpriced items quickly.
+                </p>
+              </article>
+              <article>
+                <h3>DC disparities</h3>
+                <p>
+                  DC disparities compare average completed-sale prices between data centers to
+                  surface cross-DC price gaps.
+                </p>
+              </article>
+              <article>
+                <h3>Freshness and sources</h3>
+                <p>
+                  Market listings and sales come from Universalis, item details come from XIVAPI,
+                  and cached views refresh periodically. Always confirm in-game before buying.
+                </p>
+              </article>
+            </div>
+          </section>
+        ) : null}
         <div className="routeFrame">
           <Suspense fallback={<PageFallback />}>
             <Switch>
