@@ -142,8 +142,8 @@ export function useBulkItemDetails(
       return () => window.cancelIdleCallback(idleId);
     }
 
-    const timeoutId = window.setTimeout(() => setMetadataFetchEnabled(true), 250);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = globalThis.setTimeout(() => setMetadataFetchEnabled(true), 250);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [deferredMissingIds]);
 
   const batchResult = useQuery<BulkItemDetailsResponse>({
