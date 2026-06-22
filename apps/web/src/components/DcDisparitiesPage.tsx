@@ -58,7 +58,8 @@ export function DcDisparitiesPage() {
   const region = searchParams.get("region") ?? "";
   const sort = searchParams.get("sort") ?? "";
   const minSpread = searchParams.get("minSpread") ?? "";
-  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+  const requestedPage = Number(searchParams.get("page") ?? "1");
+  const page = Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
   const currentQueryString = searchParams.toString();
 
   const query = useMemo(
@@ -74,6 +75,19 @@ export function DcDisparitiesPage() {
   );
 
   const { data, isLoading, error } = useDcDisparities(query, page);
+
+  useEffect(() => {
+    if (!data || data.totalPages < 1 || page <= data.totalPages) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (data.totalPages <= 1) {
+        next.delete("page");
+      } else {
+        next.set("page", String(data.totalPages));
+      }
+      return next;
+    });
+  }, [data, page, setSearchParams]);
 
   const itemIds = useMemo(() => data?.disparities.map((d) => d.itemId) ?? [], [data?.disparities]);
   const itemDetails = useBulkItemDetails(itemIds, data?.itemDetails);
