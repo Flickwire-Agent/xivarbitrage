@@ -109,7 +109,7 @@ export class MarketSnapshotStore {
         INSERT INTO sale_history (item_id, world_id, world_name, price_per_unit, quantity, sold_at)
         VALUES ${placeholders.join(", ")}
         ON CONFLICT (item_id, world_id, price_per_unit, sold_at)
-        DO UPDATE SET world_name = EXCLUDED.world_name
+        DO NOTHING
       `,
       params,
     );
