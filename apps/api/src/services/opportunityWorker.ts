@@ -123,12 +123,6 @@ export async function initializeWorker(): Promise<void> {
           processedRegions++;
         }
 
-        if (processedRegions + skippedFreshRegions > 0) {
-          await pool.query("UPDATE marketable_items SET last_scanned = now() WHERE item_id = $1", [
-            itemId,
-          ]);
-        }
-
         const duration = Date.now() - startTime;
         recordWorkerSuccess(processedRegions, skippedFreshRegions, duration);
 
