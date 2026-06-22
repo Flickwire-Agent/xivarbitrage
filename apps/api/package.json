@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "check": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -b tsconfig.json",
+    "check": "tsc -b tsconfig.json --noEmit",
     "dev": "tsx watch src/server.ts",
-    "lint": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -b tsconfig.json --noEmit",
     "reset-db": "tsx scripts/reset-db.ts",
     "start": "node dist/server.js"
   },
