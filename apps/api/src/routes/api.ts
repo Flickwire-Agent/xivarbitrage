@@ -247,12 +247,19 @@ export async function apiRoutes(app: FastifyInstance) {
         return { error: "Database not configured" };
       }
 
-      const [itemStats, jobStats, lastScan] = await Promise.all([
+      const [itemStats, regionStats, jobStats, lastScan] = await Promise.all([
         pool.query<{ count: string; scanned: string }>(
           `SELECT 
             COUNT(*)::text as count,
             COUNT(CASE WHEN last_scanned IS NOT NULL THEN 1 END)::text as scanned
           FROM marketable_items`,
+        ),
+        pool.query<{ count: string; scanned: string; due: string }>(
+          `SELECT
+            COUNT(*)::text as count,
+            COUNT(CASE WHEN last_scanned IS NOT NULL THEN 1 END)::text as scanned,
+            COUNT(CASE WHEN next_scan_at <= now() THEN 1 END)::text as due
+          FROM item_region_scan_state`,
         ),
         pool.query<{ count: string; status: string }>(
           `SELECT status, COUNT(*)::text as count
@@ -267,6 +274,9 @@ export async function apiRoutes(app: FastifyInstance) {
 
       const totalItems = parseInt(itemStats.rows[0]?.count ?? "0", 10);
       const scannedItems = parseInt(itemStats.rows[0]?.scanned ?? "0", 10);
+      const totalItemRegions = parseInt(regionStats.rows[0]?.count ?? "0", 10);
+      const scannedItemRegions = parseInt(regionStats.rows[0]?.scanned ?? "0", 10);
+      const dueItemRegions = parseInt(regionStats.rows[0]?.due ?? "0", 10);
       const jobsByStatus = Object.fromEntries(
         jobStats.rows.map((row) => [row.status, parseInt(row.count, 10)]),
       );
@@ -277,6 +287,15 @@ export async function apiRoutes(app: FastifyInstance) {
           total: totalItems,
           scanned: scannedItems,
           progress: totalItems > 0 ? ((scannedItems / totalItems) * 100).toFixed(2) + "%" : "0%",
+        },
+        itemRegions: {
+          total: totalItemRegions,
+          scanned: scannedItemRegions,
+          due: dueItemRegions,
+          progress:
+            totalItemRegions > 0
+              ? ((scannedItemRegions / totalItemRegions) * 100).toFixed(2) + "%"
+              : "0%",
         },
         jobs24h: jobsByStatus,
         lastFullScan: lastScan.rows[0]?.last_scanned,

@@ -134,15 +134,26 @@ export class JobScheduler {
 
       await pool.query("DELETE FROM job_history WHERE created_at < now() - interval '7 days'");
 
-      const result = await pool.query<{ item_id: number }>(
-        `SELECT item_id FROM marketable_items
-         ORDER BY last_scanned NULLS FIRST`,
+      await pool.query(
+        `INSERT INTO item_region_scan_state (item_id, region)
+         SELECT item_id, target_region.region
+         FROM marketable_items
+         CROSS JOIN unnest($1::text[]) AS target_region(region)
+         ON CONFLICT (item_id, region) DO NOTHING`,
+        [TARGET_REGIONS],
       );
 
-      const itemIds = result.rows.map((row) => row.item_id);
+      const result = await pool.query<{ item_id: number; region: (typeof TARGET_REGIONS)[number] }>(
+        `SELECT item_id, region
+         FROM item_region_scan_state
+         WHERE next_scan_at <= now()
+         ORDER BY next_scan_at ASC, item_id ASC, region ASC`,
+      );
 
-      if (itemIds.length === 0) {
-        console.log("[JobScheduler] No items need scanning");
+      const dueScans = result.rows;
+
+      if (dueScans.length === 0) {
+        console.log("[JobScheduler] No item-region scans are due");
         this.scheduleInProgress = false;
         return;
       }
@@ -164,35 +175,35 @@ export class JobScheduler {
 
       const reqPerSecond = config.universalisRequestsPerSecond;
 
-      const totalRequests = itemIds.length * TARGET_REGIONS.length;
+      const totalRequests = dueScans.length;
       const estimatedScanSeconds = totalRequests / reqPerSecond;
       const estimatedScanMinutes = (estimatedScanSeconds / 60).toFixed(1);
 
       this.scheduleCooldownMs = Math.max(60_000, estimatedScanSeconds * 1000);
 
       console.log(
-        `[JobScheduler] Queueing ${itemIds.length} item scan jobs ` +
-          `(${totalRequests} Universalis requests across ${TARGET_REGIONS.length} regions)`,
+        `[JobScheduler] Queueing ${dueScans.length} due item-region scan jobs ` +
+          `(24h interval, ${TARGET_REGIONS.length} configured regions)`,
       );
       console.log(`[JobScheduler] Rate limit: ${reqPerSecond} Universalis req/s`);
       console.log(
-        `[JobScheduler] Estimated full scan time: ~${estimatedScanMinutes} minutes ` +
+        `[JobScheduler] Estimated due scan time: ~${estimatedScanMinutes} minutes ` +
           `(${estimatedScanSeconds.toFixed(0)}s at ${reqPerSecond} req/s)`,
       );
 
       const bulkBatchSize = 1000;
       const allJobs: {
         name: string;
-        data: { itemId: number };
+        data: { itemId: number; region: (typeof TARGET_REGIONS)[number] };
         opts: { jobId: string };
       }[] = [];
 
-      for (const itemId of itemIds) {
+      for (const { item_id: itemId, region } of dueScans) {
         allJobs.push({
-          name: getItemScanJobId(itemId),
-          data: { itemId },
+          name: getItemScanJobId(itemId, region),
+          data: { itemId, region },
           opts: {
-            jobId: getItemScanJobId(itemId),
+            jobId: getItemScanJobId(itemId, region),
           },
         });
       }
@@ -202,7 +213,7 @@ export class JobScheduler {
         await queue.addBulk(batch);
       }
 
-      console.log(`[JobScheduler] Successfully queued ${itemIds.length} item scan jobs`);
+      console.log(`[JobScheduler] Successfully queued ${dueScans.length} item-region scan jobs`);
     } catch (error) {
       console.error(
         `[JobScheduler] Error scheduling jobs: ${error instanceof Error ? error.message : String(error)}`,
