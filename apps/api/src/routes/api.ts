@@ -249,10 +249,19 @@ export async function apiRoutes(app: FastifyInstance) {
 
       const [itemStats, regionStats, jobStats, lastScan] = await Promise.all([
         pool.query<{ count: string; scanned: string }>(
-          `SELECT 
-            COUNT(*)::text as count,
-            COUNT(CASE WHEN last_scanned IS NOT NULL THEN 1 END)::text as scanned
-          FROM marketable_items`,
+          `WITH region_counts AS (
+             SELECT
+               item_id,
+               COUNT(*) FILTER (WHERE last_scanned IS NOT NULL)::integer AS scanned_regions,
+               COUNT(*)::integer AS target_regions
+             FROM item_region_scan_state
+             GROUP BY item_id
+           )
+           SELECT
+             COUNT(*)::text as count,
+             COUNT(CASE WHEN region_counts.scanned_regions = region_counts.target_regions THEN 1 END)::text as scanned
+           FROM marketable_items
+           LEFT JOIN region_counts USING (item_id)`,
         ),
         pool.query<{ count: string; scanned: string; due: string }>(
           `SELECT
@@ -268,7 +277,7 @@ export async function apiRoutes(app: FastifyInstance) {
            GROUP BY status`,
         ),
         pool.query<{ last_scanned: string | null }>(
-          `SELECT MAX(last_scanned) as last_scanned FROM marketable_items`,
+          `SELECT MAX(last_scanned) as last_scanned FROM item_region_scan_state`,
         ),
       ]);
 
