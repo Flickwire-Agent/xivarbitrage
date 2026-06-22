@@ -1,14 +1,16 @@
 import { Queue, QueueEvents } from "bullmq";
 import { config } from "../config.js";
 
+export const TARGET_REGIONS = ["North-America", "Europe", "Oceania"] as const;
+export type TargetRegion = (typeof TARGET_REGIONS)[number];
+
 export interface EvaluateItemJob {
   itemId: number;
+  region?: TargetRegion;
 }
 
-export const TARGET_REGIONS = ["North-America", "Europe", "Oceania"] as const;
-
-export function getItemScanJobId(itemId: number): string {
-  return `evaluate-item-${itemId}`;
+export function getItemScanJobId(itemId: number, region?: TargetRegion): string {
+  return region ? `evaluate-item-${itemId}-${region}` : `evaluate-item-${itemId}`;
 }
 
 let queue: Queue<EvaluateItemJob> | null = null;

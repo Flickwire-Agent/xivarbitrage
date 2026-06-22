@@ -3,7 +3,7 @@ import { config } from "../config.js";
 import { universalis } from "./universalis.js";
 import { marketSnapshotStore } from "./marketSnapshotStore.js";
 import { pool } from "../db/pool.js";
-import { TARGET_REGIONS, type EvaluateItemJob } from "./jobQueue.js";
+import { TARGET_REGIONS, type EvaluateItemJob, type TargetRegion } from "./jobQueue.js";
 
 let worker: Worker<EvaluateItemJob> | null = null;
 
@@ -18,6 +18,26 @@ const workerMetrics = {
   maxDuration: 0,
   loggedAt: Date.now(),
 };
+
+const SCAN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+async function recordRegionScan(
+  itemId: number,
+  region: TargetRegion,
+  status: "completed" | "skipped_fresh",
+): Promise<void> {
+  await pool.query(
+    `INSERT INTO item_region_scan_state
+       (item_id, region, last_scanned, next_scan_at, status, updated_at)
+     VALUES ($1, $2, now(), $3, $4, now())
+     ON CONFLICT (item_id, region) DO UPDATE SET
+       last_scanned = EXCLUDED.last_scanned,
+       next_scan_at = EXCLUDED.next_scan_at,
+       status = EXCLUDED.status,
+       updated_at = EXCLUDED.updated_at`,
+    [itemId, region, new Date(Date.now() + SCAN_INTERVAL_MS), status],
+  );
+}
 
 function recordWorkerSuccess(
   processedRegions: number,
@@ -58,41 +78,47 @@ export async function initializeWorker(): Promise<void> {
   worker = new Worker<EvaluateItemJob>(
     "arbitrage-opportunities",
     async (job) => {
-      const { itemId } = job.data;
+      const { itemId, region } = job.data;
       const startTime = Date.now();
       let processedRegions = 0;
       let skippedFreshRegions = 0;
 
       try {
-        for (const region of TARGET_REGIONS) {
-          const freshData = await marketSnapshotStore.getFresh(region, itemId);
+        const regionsToScan = region ? [region] : TARGET_REGIONS;
+
+        for (const targetRegion of regionsToScan) {
+          const freshData = await marketSnapshotStore.getFresh(targetRegion, itemId);
 
           if (freshData) {
             await pool.query(
               `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
                VALUES ($1, $2, $3, $4, now(), now())`,
-              [job.id, itemId, region, "skipped_fresh"],
+              [job.id, itemId, targetRegion, "skipped_fresh"],
             );
+
+            await recordRegionScan(itemId, targetRegion, "skipped_fresh");
 
             skippedFreshRegions++;
             continue;
           }
 
-          const data = await universalis.getCurrentData(region, itemId);
+          const data = await universalis.getCurrentData(targetRegion, itemId);
 
           if (!data) {
             continue;
           }
 
-          await marketSnapshotStore.upsert(region, itemId, data);
+          await marketSnapshotStore.upsert(targetRegion, itemId, data);
 
           await marketSnapshotStore.storeSales(itemId, data);
 
           await pool.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
              VALUES ($1, $2, $3, $4, now(), now())`,
-            [job.id, itemId, region, "completed"],
+            [job.id, itemId, targetRegion, "completed"],
           );
+
+          await recordRegionScan(itemId, targetRegion, "completed");
 
           processedRegions++;
         }

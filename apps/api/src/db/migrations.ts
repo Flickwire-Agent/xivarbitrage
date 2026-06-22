@@ -68,6 +68,25 @@ export async function runMigrations(): Promise<void> {
   console.log("✓ Created index on marketable_items (last_scanned)");
 
   await pool.query(`
+      CREATE TABLE IF NOT EXISTS item_region_scan_state (
+        item_id integer NOT NULL REFERENCES marketable_items(item_id) ON DELETE CASCADE,
+        region text NOT NULL,
+        last_scanned timestamptz,
+        next_scan_at timestamptz NOT NULL DEFAULT now(),
+        status text NOT NULL DEFAULT 'pending',
+        updated_at timestamptz NOT NULL DEFAULT now(),
+        PRIMARY KEY (item_id, region)
+      );
+    `);
+  console.log("✓ Created item_region_scan_state table");
+
+  await pool.query(`
+      CREATE INDEX IF NOT EXISTS item_region_scan_state_due_idx
+        ON item_region_scan_state (next_scan_at, status);
+    `);
+  console.log("✓ Created index on item_region_scan_state (next_scan_at, status)");
+
+  await pool.query(`
       CREATE TABLE IF NOT EXISTS sale_history (
         id bigserial PRIMARY KEY,
         item_id integer NOT NULL,
