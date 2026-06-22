@@ -128,7 +128,6 @@ export class JobScheduler {
     }
 
     this.scheduleInProgress = true;
-    this.lastScheduleTime = now;
 
     try {
       console.log("[JobScheduler] Scheduling jobs...");
@@ -160,6 +159,8 @@ export class JobScheduler {
         );
         return;
       }
+
+      this.lastScheduleTime = now;
 
       const reqPerSecond = config.universalisRequestsPerSecond;
 
