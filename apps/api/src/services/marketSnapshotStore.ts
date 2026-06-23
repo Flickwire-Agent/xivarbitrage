@@ -90,12 +90,42 @@ export class MarketSnapshotStore {
 
     if (values.length === 0) return;
 
-    const placeholders = values.map((_, i) => {
+    const soldTimes = values.map((value) => value.soldAt.getTime());
+    const existingResult = await pool.query<{
+      world_id: number;
+      price_per_unit: number;
+      sold_at: Date;
+    }>(
+      `
+        SELECT world_id, price_per_unit, sold_at
+        FROM sale_history
+        WHERE item_id = $1
+          AND sold_at BETWEEN $2 AND $3
+      `,
+      [itemId, new Date(Math.min(...soldTimes)), new Date(Math.max(...soldTimes))],
+    );
+
+    const existingKeys = new Set(
+      existingResult.rows.map(
+        (row) =>
+          `${itemId}:${row.world_id}:${row.price_per_unit}:${Math.floor(row.sold_at.getTime() / 1000)}`,
+      ),
+    );
+    const newValues = values.filter(
+      (value) =>
+        !existingKeys.has(
+          `${itemId}:${value.worldId}:${value.price}:${Math.floor(value.soldAt.getTime() / 1000)}`,
+        ),
+    );
+
+    if (newValues.length === 0) return;
+
+    const placeholders = newValues.map((_, i) => {
       const base = i * 6;
       return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
     });
 
-    const params = values.flatMap((v) => [
+    const params = newValues.flatMap((v) => [
       v.itemId,
       v.worldId,
       v.worldName,
