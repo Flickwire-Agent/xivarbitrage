@@ -1,7 +1,7 @@
 import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
 import { ChevronLeft, ChevronRight, Copy, Gauge, Moon, Save, Sun, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { useLocation, useSearchParams } from "wouter";
+import { Link, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -42,7 +42,6 @@ function normalizeSavedViewName(name: string) {
 }
 
 export function DcDisparitiesPage() {
-  const [, navigate] = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
@@ -349,7 +348,12 @@ export function DcDisparitiesPage() {
             <h2 id="saved-views-title">Saved views</h2>
             <p>Save this exact filter, sort, and page state or share it as a URL.</p>
           </div>
-          <button type="button" className="iconButton" onClick={shareCurrentView}>
+          <button
+            type="button"
+            className="iconButton"
+            onClick={shareCurrentView}
+            aria-label="Share current view URL"
+          >
             <Copy size={16} aria-hidden="true" />
             <span>Share URL</span>
           </button>
@@ -366,7 +370,12 @@ export function DcDisparitiesPage() {
               onChange={(event) => setSavedViewName(event.target.value)}
             />
           </label>
-          <button type="button" className="iconButton" onClick={saveCurrentView}>
+          <button
+            type="button"
+            className="iconButton"
+            onClick={saveCurrentView}
+            aria-label="Save current view"
+          >
             <Save size={16} aria-hidden="true" />
             <span>Save view</span>
           </button>
@@ -427,150 +436,247 @@ export function DcDisparitiesPage() {
           Loading market data...
         </div>
       ) : data && disparities.length > 0 ? (
-        <section className="tableShell" aria-label="DC disparities table">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Item</th>
-                <th scope="col">Cheapest DC</th>
-                <th scope="col">Costliest DC</th>
-                <th scope="col">Spread</th>
-                <th scope="col">Spread %</th>
-                <th scope="col">All DCs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {disparities.map(
-                (
-                  d: DcDisparity & {
-                    item: { id: number; name: string; iconUrl?: string; category?: string };
-                  },
-                ) => (
-                  <tr
-                    key={d.itemId}
-                    className="clickable"
-                    onClick={() => navigate(`/items/${d.itemId}`)}
-                  >
-                    <td>
-                      <div className="itemCell">
-                        {d.item.iconUrl ? (
-                          <img src={d.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
-                        ) : (
-                          <span className="itemIconPlaceholder" aria-hidden="true" />
-                        )}
-                        <div>
-                          <button
-                            type="button"
-                            className="itemNameButton"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/items/${d.itemId}`);
-                            }}
-                            aria-label={`View sale history for ${d.item.name}`}
-                          >
-                            <strong>{d.item.name}</strong>
-                          </button>
-                          <span>{d.item.category ?? "Uncategorized"}</span>
-                        </div>
+        <section className="marketResults" aria-label="DC disparities">
+          <div className="marketCards" aria-label="DC disparity cards">
+            {disparities.map(
+              (
+                d: DcDisparity & {
+                  item: { id: number; name: string; iconUrl?: string; category?: string };
+                },
+              ) => (
+                <article className="marketCard" key={d.itemId}>
+                  <div className="marketCardHeader">
+                    <div className="itemCell">
+                      {d.item.iconUrl ? (
+                        <img src={d.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
+                      ) : (
+                        <span className="itemIconPlaceholder" aria-hidden="true" />
+                      )}
+                      <div>
+                        <h2>{d.item.name}</h2>
+                        <span className="cellSubtext">{d.item.category ?? "Uncategorized"}</span>
                       </div>
-                    </td>
-                    {d.allDcs.length === 0 ? (
-                      <>
-                        <td>
-                          <span className="cellSubtext">No sale data</span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">No sale data</span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">—</span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">—</span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">—</span>
-                        </td>
-                      </>
-                    ) : d.lowDc.dataCenter === d.highDc.dataCenter ? (
-                      <>
-                        <td>
-                          <strong>{d.lowDc.dataCenter}</strong>
-                          <span className="cellSubtext">
-                            {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
+                    </div>
+                    <Link href={`/items/${d.itemId}`} className="marketCardAction">
+                      View history
+                    </Link>
+                  </div>
+                  {d.allDcs.length === 0 ? (
+                    <p className="marketCardEmpty">No sale data available yet.</p>
+                  ) : (
+                    <>
+                      <dl className="marketCardStats">
+                        <div>
+                          <dt>Cheapest / buy DC</dt>
+                          <dd>
+                            <strong>{d.lowDc.dataCenter}</strong>
+                            <span>
+                              {d.lowDc.region} · {d.lowDc.avgPrice.toLocaleString()} gil ·{" "}
+                              {d.lowDc.saleCount.toLocaleString()} sales
+                            </span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Costliest / target DC</dt>
+                          <dd>
+                            <strong>
+                              {d.lowDc.dataCenter === d.highDc.dataCenter
+                                ? d.allDcs.length > 1
+                                  ? "Insufficient data"
+                                  : "Only one DC"
+                                : d.highDc.dataCenter}
+                            </strong>
+                            <span>
+                              {d.lowDc.dataCenter === d.highDc.dataCenter
+                                ? "No spread calculated"
+                                : `${d.highDc.region} · ${d.highDc.avgPrice.toLocaleString()} gil · ${d.highDc.saleCount.toLocaleString()} sales`}
+                            </span>
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Spread</dt>
+                          <dd>
+                            <strong>
+                              {d.spread > 0 ? `${d.spread.toLocaleString()} gil` : "—"}
+                            </strong>
+                            <span>
+                              {d.spread > 0 ? `${d.spreadPercent}% spread` : "No disparity"}
+                            </span>
+                          </dd>
+                        </div>
+                      </dl>
+                      <div className="dcTags" aria-label="All data center prices">
+                        {d.allDcs.map((dc: DcPriceInfo) => (
+                          <span
+                            key={dc.dataCenter}
+                            className={`dcTag${
+                              dc.dataCenter === d.highDc.dataCenter
+                                ? " dcTagHigh"
+                                : dc.dataCenter === d.lowDc.dataCenter
+                                  ? " dcTagLow"
+                                  : ""
+                            }`}
+                          >
+                            <strong>{dc.dataCenter}</strong>
+                            <span>
+                              {dc.region} · {dc.avgPrice.toLocaleString()} gil ·{" "}
+                              {dc.saleCount.toLocaleString()} sales
+                            </span>
                           </span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">
-                            {d.allDcs.length > 1 ? "Insufficient data" : "Only one DC"}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">—</span>
-                        </td>
-                        <td>
-                          <span className="cellSubtext">—</span>
-                        </td>
-                        <td>
-                          <div className="dcTags">
-                            {d.allDcs.map((dc: DcPriceInfo) => (
-                              <span
-                                key={dc.dataCenter}
-                                className="dcTag"
-                                title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
-                              >
-                                {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
-                              </span>
-                            ))}
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </article>
+              ),
+            )}
+          </div>
+          <div className="tableShell" aria-label="DC disparities table">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Cheapest DC</th>
+                  <th scope="col">Costliest DC</th>
+                  <th scope="col">Spread</th>
+                  <th scope="col">Spread %</th>
+                  <th scope="col">All DCs</th>
+                </tr>
+              </thead>
+              <tbody>
+                {disparities.map(
+                  (
+                    d: DcDisparity & {
+                      item: { id: number; name: string; iconUrl?: string; category?: string };
+                    },
+                  ) => (
+                    <tr key={d.itemId}>
+                      <td>
+                        <div className="itemCell">
+                          {d.item.iconUrl ? (
+                            <img
+                              src={d.item.iconUrl}
+                              alt=""
+                              width="42"
+                              height="42"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="itemIconPlaceholder" aria-hidden="true" />
+                          )}
+                          <div>
+                            <Link
+                              href={`/items/${d.itemId}`}
+                              className="itemNameButton"
+                              aria-label={`View sale history for ${d.item.name}`}
+                            >
+                              <strong>{d.item.name}</strong>
+                            </Link>
+                            <span>{d.item.category ?? "Uncategorized"}</span>
                           </div>
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td>
-                          <strong>{d.lowDc.dataCenter}</strong>
-                          <span className="cellSubtext">
-                            {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{d.highDc.dataCenter}</strong>
-                          <span className="cellSubtext">
-                            {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
-                          </span>
-                        </td>
-                        <td>
-                          <strong>{d.spread.toLocaleString()} gil</strong>
-                        </td>
-                        <td>
-                          <strong>{d.spreadPercent}%</strong>
-                        </td>
-                        <td>
-                          <div className="dcTags">
-                            {d.allDcs.map((dc: DcPriceInfo) => (
-                              <span
-                                key={dc.dataCenter}
-                                className={`dcTag${
-                                  dc.dataCenter === d.highDc.dataCenter
-                                    ? " dcTagHigh"
-                                    : dc.dataCenter === d.lowDc.dataCenter
-                                      ? " dcTagLow"
-                                      : ""
-                                }`}
-                                title={`${dc.dataCenter} (${dc.region}): ${dc.avgPrice.toLocaleString()} gil (${dc.saleCount} sales)`}
-                              >
-                                {dc.dataCenter}&thinsp;{dc.avgPrice.toLocaleString()}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                      </>
-                    )}
-                  </tr>
-                ),
-              )}
-            </tbody>
-          </table>
+                        </div>
+                      </td>
+                      {d.allDcs.length === 0 ? (
+                        <>
+                          <td>
+                            <span className="cellSubtext">No sale data</span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">No sale data</span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">—</span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">—</span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">—</span>
+                          </td>
+                        </>
+                      ) : d.lowDc.dataCenter === d.highDc.dataCenter ? (
+                        <>
+                          <td>
+                            <strong>{d.lowDc.dataCenter}</strong>
+                            <span className="cellSubtext">
+                              {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
+                            </span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">
+                              {d.allDcs.length > 1 ? "Insufficient data" : "Only one DC"}
+                            </span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">—</span>
+                          </td>
+                          <td>
+                            <span className="cellSubtext">—</span>
+                          </td>
+                          <td>
+                            <div className="dcTags">
+                              {d.allDcs.map((dc: DcPriceInfo) => (
+                                <span key={dc.dataCenter} className="dcTag">
+                                  <strong>{dc.dataCenter}</strong>
+                                  <span>
+                                    {dc.region} · {dc.avgPrice.toLocaleString()} gil ·{" "}
+                                    {dc.saleCount.toLocaleString()} sales
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td>
+                            <strong>{d.lowDc.dataCenter}</strong>
+                            <span className="cellSubtext">
+                              {d.lowDc.region}&ensp;{d.lowDc.avgPrice.toLocaleString()} gil
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{d.highDc.dataCenter}</strong>
+                            <span className="cellSubtext">
+                              {d.highDc.region}&ensp;{d.highDc.avgPrice.toLocaleString()} gil
+                            </span>
+                          </td>
+                          <td>
+                            <strong>{d.spread.toLocaleString()} gil</strong>
+                          </td>
+                          <td>
+                            <strong>{d.spreadPercent}%</strong>
+                          </td>
+                          <td>
+                            <div className="dcTags">
+                              {d.allDcs.map((dc: DcPriceInfo) => (
+                                <span
+                                  key={dc.dataCenter}
+                                  className={`dcTag${
+                                    dc.dataCenter === d.highDc.dataCenter
+                                      ? " dcTagHigh"
+                                      : dc.dataCenter === d.lowDc.dataCenter
+                                        ? " dcTagLow"
+                                        : ""
+                                  }`}
+                                >
+                                  <strong>{dc.dataCenter}</strong>
+                                  <span>
+                                    {dc.region} · {dc.avgPrice.toLocaleString()} gil ·{" "}
+                                    {dc.saleCount.toLocaleString()} sales
+                                  </span>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
           <p className="tableFooter">
             Page {data.page} of {data.totalPages} &mdash; {data.total} total items &middot;
             Refreshed {new Date(data.generatedAt).toLocaleTimeString()}.

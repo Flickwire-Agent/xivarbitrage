@@ -65,14 +65,15 @@ export function App() {
 
   return (
     <>
-      <a
-        href="#main-content"
-        className="srOnly"
-        style={{ position: "absolute", top: 0, left: 0, zIndex: 9999 }}
-      >
+      <a href="#main-content" className="skipLink">
         Skip to main content
       </a>
-      <main className="appShell" id="main-content" aria-label="XIV Arbitrage application">
+      <main
+        className="appShell"
+        id="main-content"
+        tabIndex={-1}
+        aria-label="XIV Arbitrage application"
+      >
         <nav className="mainTabs" aria-label="Main views">
           <Link
             href="/"
