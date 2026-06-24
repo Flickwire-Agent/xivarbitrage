@@ -4,10 +4,17 @@ interface SelectFieldProps {
   label: string;
   value: string;
   options: string[];
+  optionLabels?: Record<string, string>;
   onChange: (value: string) => void;
 }
 
-export function SelectField({ label, value, options, onChange }: SelectFieldProps) {
+export function SelectField({
+  label,
+  value,
+  options,
+  optionLabels = {},
+  onChange,
+}: SelectFieldProps) {
   const generatedId = useId();
   const selectId = `select-${label.replace(/\s+/g, "-").toLowerCase()}-${generatedId}`;
 
@@ -18,7 +25,7 @@ export function SelectField({ label, value, options, onChange }: SelectFieldProp
         <option value="">Any</option>
         {options.map((option) => (
           <option value={option} key={option}>
-            {option}
+            {optionLabels[option] ?? option}
           </option>
         ))}
       </select>

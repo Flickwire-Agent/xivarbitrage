@@ -2,7 +2,7 @@ import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
 import { ChevronLeft, ChevronRight, Copy, Gauge, Moon, Save, Sun, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "wouter";
-import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
+import { useDcDisparities, useBulkItemDetails, useWorlds } from "../hooks/api.js";
 import {
   getItemDetailHref,
   rememberSourceScroll,
@@ -15,6 +15,10 @@ import { SelectField } from "./SelectField.js";
 const PAGE_SIZE = 50;
 const SAVED_VIEW_STORAGE_KEY = "xiv-arbitrage.saved-disparity-views";
 const MAX_SAVED_VIEW_NAME_LENGTH = 60;
+const SORT_LABELS = {
+  spread: "Gross spread",
+  spreadPercent: "Spread %",
+};
 
 type SavedView = {
   id: string;
@@ -79,6 +83,7 @@ export function DcDisparitiesPage() {
   );
 
   const { data, isLoading, error } = useDcDisparities(query, page);
+  const { data: worldsData } = useWorlds();
 
   useRestoreSourceScroll(Boolean(data));
 
@@ -124,26 +129,26 @@ export function DcDisparitiesPage() {
   }, [data]);
 
   const dcOptions = useMemo(() => {
-    if (!data) return [];
-    const set = new Set<string>();
-    for (const d of data.disparities) {
+    const set = new Set(worldsData?.dataCenters ?? []);
+    for (const d of data?.disparities ?? []) {
       for (const dc of d.allDcs) {
         set.add(dc.dataCenter);
       }
     }
     return [...set].sort();
-  }, [data]);
+  }, [data?.disparities, worldsData?.dataCenters]);
 
   const regionOptions = useMemo(() => {
-    if (!data) return [];
-    const set = new Set<string>();
-    for (const d of data.disparities) {
+    const set = new Set(worldsData?.regions ?? []);
+    for (const d of data?.disparities ?? []) {
       for (const dc of d.allDcs) {
         set.add(dc.region);
       }
     }
     return [...set].sort();
-  }, [data]);
+  }, [data?.disparities, worldsData?.regions]);
+
+  const hasActiveFilters = Boolean(highDc || lowDc || region || sort || minSpread);
 
   function updateFilter(key: string, value: string) {
     setSearchParams((prev) => {
@@ -156,6 +161,10 @@ export function DcDisparitiesPage() {
       next.delete("page");
       return next;
     });
+  }
+
+  function clearFilters() {
+    setSearchParams(new URLSearchParams());
   }
 
   function goToPage(p: number) {
@@ -290,21 +299,21 @@ export function DcDisparitiesPage() {
         <article>
           <Gauge size={18} aria-hidden="true" />
           <div>
-            <span>Total items</span>
+            <span>Matching items</span>
             <strong>{data ? data.total.toLocaleString() : "Loading"}</strong>
           </div>
         </article>
         <article>
           <TrendingUp size={18} aria-hidden="true" />
           <div>
-            <span>Average spread</span>
+            <span>Average spread on this page</span>
             <strong>{data ? `${summary.avgSpread.toLocaleString()} gil` : "Loading"}</strong>
           </div>
         </article>
         <article>
           <TrendingUp size={18} aria-hidden="true" />
           <div>
-            <span>Data centers</span>
+            <span>Data centers on this page</span>
             <strong>{data ? summary.dcSet.size : "Loading"}</strong>
           </div>
         </article>
@@ -312,13 +321,13 @@ export function DcDisparitiesPage() {
 
       <section className="toolbar">
         <SelectField
-          label="Costliest DC"
+          label="High-side sale DC"
           value={highDc}
           options={dcOptions}
           onChange={(v) => updateFilter("highDc", v)}
         />
         <SelectField
-          label="Cheapest DC"
+          label="Buy-side DC"
           value={lowDc}
           options={dcOptions}
           onChange={(v) => updateFilter("lowDc", v)}
@@ -333,6 +342,7 @@ export function DcDisparitiesPage() {
           label="Sort by"
           value={sort}
           options={["spread", "spreadPercent"]}
+          optionLabels={SORT_LABELS}
           onChange={(v) => updateFilter("sort", v)}
         />
         <div className="selectField">
@@ -347,6 +357,14 @@ export function DcDisparitiesPage() {
             onChange={(e) => updateFilter("minSpread", e.target.value)}
           />
         </div>
+        <button
+          type="button"
+          className="iconButton"
+          onClick={clearFilters}
+          disabled={!hasActiveFilters}
+        >
+          Clear filters
+        </button>
       </section>
 
       <section className="savedViews" aria-labelledby="saved-views-title">
@@ -547,9 +565,9 @@ export function DcDisparitiesPage() {
               <thead>
                 <tr>
                   <th scope="col">Item</th>
-                  <th scope="col">Cheapest DC</th>
-                  <th scope="col">Costliest DC</th>
-                  <th scope="col">Spread</th>
+                  <th scope="col">Buy-side DC</th>
+                  <th scope="col">High-side sale DC</th>
+                  <th scope="col">Gross spread</th>
                   <th scope="col">Spread %</th>
                   <th scope="col">All DCs</th>
                 </tr>
