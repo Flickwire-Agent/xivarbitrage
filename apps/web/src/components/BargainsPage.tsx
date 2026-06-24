@@ -1,6 +1,11 @@
 import { ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
 import { Link, useSearchParams } from "wouter";
 import { useBargains, useBulkItemDetails } from "../hooks/api.js";
+import {
+  getItemDetailHref,
+  rememberSourceScroll,
+  useRestoreSourceScroll,
+} from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
@@ -17,6 +22,8 @@ export function BargainsPage() {
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
 
   const { data, isLoading, error } = useBargains(page);
+
+  useRestoreSourceScroll(Boolean(data));
 
   const itemIds = useMemo(() => data?.bargains.map((b) => b.itemId) ?? [], [data?.bargains]);
   const itemDetails = useBulkItemDetails(itemIds, data?.itemDetails);
@@ -120,7 +127,11 @@ export function BargainsPage() {
                         <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>
                       </div>
                     </div>
-                    <Link href={`/items/${b.itemId}/listings`} className="marketCardAction">
+                    <Link
+                      href={getItemDetailHref(`/items/${b.itemId}/listings`)}
+                      className="marketCardAction"
+                      onClick={rememberSourceScroll}
+                    >
                       View listings
                     </Link>
                   </div>
@@ -196,8 +207,9 @@ export function BargainsPage() {
                           )}
                           <div>
                             <Link
-                              href={`/items/${b.itemId}/listings`}
+                              href={getItemDetailHref(`/items/${b.itemId}/listings`)}
                               className="itemNameButton"
+                              onClick={rememberSourceScroll}
                               aria-label={`View listings for ${b.item.name}`}
                             >
                               <strong>{b.item.name}</strong>

@@ -3,6 +3,11 @@ import { ChevronLeft, ChevronRight, Copy, Gauge, Moon, Save, Sun, TrendingUp } f
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails } from "../hooks/api.js";
+import {
+  getItemDetailHref,
+  rememberSourceScroll,
+  useRestoreSourceScroll,
+} from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
@@ -74,6 +79,8 @@ export function DcDisparitiesPage() {
   );
 
   const { data, isLoading, error } = useDcDisparities(query, page);
+
+  useRestoreSourceScroll(Boolean(data));
 
   useEffect(() => {
     if (!data || data.totalPages < 1 || page <= data.totalPages) return;
@@ -457,7 +464,11 @@ export function DcDisparitiesPage() {
                         <span className="cellSubtext">{d.item.category ?? "Uncategorized"}</span>
                       </div>
                     </div>
-                    <Link href={`/items/${d.itemId}`} className="marketCardAction">
+                    <Link
+                      href={getItemDetailHref(`/items/${d.itemId}`)}
+                      className="marketCardAction"
+                      onClick={rememberSourceScroll}
+                    >
                       View history
                     </Link>
                   </div>
@@ -566,8 +577,9 @@ export function DcDisparitiesPage() {
                           )}
                           <div>
                             <Link
-                              href={`/items/${d.itemId}`}
+                              href={getItemDetailHref(`/items/${d.itemId}`)}
                               className="itemNameButton"
+                              onClick={rememberSourceScroll}
                               aria-label={`View sale history for ${d.item.name}`}
                             >
                               <strong>{d.item.name}</strong>
