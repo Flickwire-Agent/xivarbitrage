@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
 import { Link, useSearchParams } from "wouter";
-import { useBargains, useBulkItemDetails } from "../hooks/api.js";
+import { useBargains, useBulkItemDetails, useWorlds } from "../hooks/api.js";
 import {
   getItemDetailHref,
   rememberSourceScroll,
@@ -8,8 +8,11 @@ import {
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
+import { SelectField } from "./SelectField.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
 import { useEffect, useMemo } from "react";
+
+const PAGE_SIZE = 50;
 
 export function BargainsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -20,8 +23,30 @@ export function BargainsPage() {
   }, []);
 
   const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+  const minAvgPrice = searchParams.get("minAvgPrice") ?? "";
+  const minDiscount = searchParams.get("minDiscount") ?? "";
+  const minDiscountPercent = searchParams.get("minDiscountPercent") ?? "";
+  const minQuantity = searchParams.get("minQuantity") ?? "";
+  const dataCenter = searchParams.get("dataCenter") ?? "";
+  const world = searchParams.get("world") ?? "";
+  const sort = searchParams.get("sort") ?? "";
 
-  const { data, isLoading, error } = useBargains(page);
+  const query = useMemo(
+    () => ({
+      minAvgPrice: minAvgPrice ? Number(minAvgPrice) : undefined,
+      minDiscount: minDiscount ? Number(minDiscount) : undefined,
+      minDiscountPercent: minDiscountPercent ? Number(minDiscountPercent) : undefined,
+      minQuantity: minQuantity ? Number(minQuantity) : undefined,
+      dataCenter: dataCenter || undefined,
+      world: world || undefined,
+      sort: (sort || undefined) as "discount" | "discountPercent" | "price" | undefined,
+      perPage: PAGE_SIZE,
+    }),
+    [dataCenter, minAvgPrice, minDiscount, minDiscountPercent, minQuantity, sort, world],
+  );
+
+  const { data, isLoading, error } = useBargains(query, page);
+  const { data: worldsData } = useWorlds();
 
   useRestoreSourceScroll(Boolean(data));
 
@@ -38,6 +63,72 @@ export function BargainsPage() {
 
   const totalPages = data?.totalPages ?? 1;
   const currentPage = data?.page ?? 1;
+  const summary = useMemo(() => {
+    const topDcCounts = new Map<string, number>();
+    const topWorldCounts = new Map<string, number>();
+    let discountTotal = 0;
+    let discountPercentTotal = 0;
+    for (const bargain of bargains) {
+      discountTotal += bargain.discount;
+      discountPercentTotal += bargain.discountPercent;
+      topDcCounts.set(bargain.dataCenter, (topDcCounts.get(bargain.dataCenter) ?? 0) + 1);
+      topWorldCounts.set(bargain.worldName, (topWorldCounts.get(bargain.worldName) ?? 0) + 1);
+    }
+    const topEntry = (counts: Map<string, number>) =>
+      [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    return {
+      avgDiscount: bargains.length > 0 ? Math.round(discountTotal / bargains.length) : 0,
+      avgDiscountPercent:
+        bargains.length > 0 ? Math.round(discountPercentTotal / bargains.length) : 0,
+      topDc: topEntry(topDcCounts),
+      topWorld: topEntry(topWorldCounts),
+    };
+  }, [bargains]);
+
+  const worldOptions = useMemo(
+    () =>
+      [...(worldsData?.worlds ?? [])]
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((worldOption) => worldOption.name),
+    [worldsData?.worlds],
+  );
+  const dcOptions = useMemo(
+    () => [...(worldsData?.dataCenters ?? [])].sort(),
+    [worldsData?.dataCenters],
+  );
+  const hasActiveFilters = Boolean(
+    minAvgPrice || minDiscount || minDiscountPercent || minQuantity || dataCenter || world || sort,
+  );
+
+  useEffect(() => {
+    if (!data || data.totalPages < 1 || page <= data.totalPages) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (data.totalPages <= 1) {
+        next.delete("page");
+      } else {
+        next.set("page", String(data.totalPages));
+      }
+      return next;
+    });
+  }, [data, page, setSearchParams]);
+
+  function updateFilter(key: string, value: string) {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (value === "" || value === "all") {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+      next.delete("page");
+      return next;
+    });
+  }
+
+  function clearFilters() {
+    setSearchParams(new URLSearchParams());
+  }
 
   function goToPage(p: number) {
     setSearchParams((prev) => {
@@ -96,6 +187,121 @@ export function BargainsPage() {
           {error instanceof Error ? error.message : "Failed to load bargains"}
         </div>
       ) : null}
+
+      <section className="metricStrip" aria-label="Bargain summary">
+        <article>
+          <div>
+            <span>Matching bargains</span>
+            <strong>{data ? data.total.toLocaleString() : "Loading"}</strong>
+          </div>
+        </article>
+        <article>
+          <div>
+            <span>Average discount on this page</span>
+            <strong>{data ? `${summary.avgDiscount.toLocaleString()} gil` : "Loading"}</strong>
+          </div>
+        </article>
+        <article>
+          <div>
+            <span>Average discount % on this page</span>
+            <strong>{data ? `${summary.avgDiscountPercent}%` : "Loading"}</strong>
+          </div>
+        </article>
+        <article>
+          <div>
+            <span>Top DC / world on this page</span>
+            <strong>
+              {data
+                ? `${summary.topDc?.[0] ?? "None"} / ${summary.topWorld?.[0] ?? "None"}`
+                : "Loading"}
+            </strong>
+          </div>
+        </article>
+      </section>
+
+      <section className="toolbar" aria-label="Bargain filters">
+        <SelectField
+          label="Data center"
+          value={dataCenter}
+          options={dcOptions}
+          onChange={(value) => updateFilter("dataCenter", value)}
+        />
+        <SelectField
+          label="World"
+          value={world}
+          options={worldOptions}
+          onChange={(value) => updateFilter("world", value)}
+        />
+        <div className="selectField">
+          <label htmlFor="bargain-sort">Sort by</label>
+          <select
+            id="bargain-sort"
+            value={sort}
+            onChange={(event) => updateFilter("sort", event.target.value)}
+          >
+            <option value="">Discount %</option>
+            <option value="discount">Discount amount</option>
+            <option value="price">Global average price</option>
+          </select>
+        </div>
+        <div className="selectField">
+          <label htmlFor="min-avg-price">Min average price</label>
+          <input
+            id="min-avg-price"
+            type="number"
+            min={0}
+            step={1000}
+            placeholder="0"
+            value={minAvgPrice}
+            onChange={(event) => updateFilter("minAvgPrice", event.target.value)}
+          />
+        </div>
+        <div className="selectField">
+          <label htmlFor="min-discount">Min discount</label>
+          <input
+            id="min-discount"
+            type="number"
+            min={0}
+            step={1000}
+            placeholder="0"
+            value={minDiscount}
+            onChange={(event) => updateFilter("minDiscount", event.target.value)}
+          />
+        </div>
+        <div className="selectField">
+          <label htmlFor="min-discount-percent">Min discount %</label>
+          <input
+            id="min-discount-percent"
+            type="number"
+            min={0}
+            max={100}
+            step={1}
+            placeholder="20"
+            value={minDiscountPercent}
+            onChange={(event) => updateFilter("minDiscountPercent", event.target.value)}
+          />
+        </div>
+        <div className="selectField">
+          <label htmlFor="min-quantity">Min quantity</label>
+          <input
+            id="min-quantity"
+            type="number"
+            min={1}
+            step={1}
+            placeholder="1"
+            value={minQuantity}
+            onChange={(event) => updateFilter("minQuantity", event.target.value)}
+          />
+        </div>
+        <button
+          type="button"
+          className="iconButton"
+          onClick={clearFilters}
+          disabled={!hasActiveFilters}
+        >
+          Clear filters
+        </button>
+      </section>
 
       {isLoading ? (
         <div className="notice contentLoading" role="status" aria-live="polite">
@@ -179,6 +385,7 @@ export function BargainsPage() {
                   <th scope="col">Server</th>
                   <th scope="col">Data Center</th>
                   <th scope="col">Listed price</th>
+                  <th scope="col">Quantity</th>
                   <th scope="col">Global avg</th>
                   <th scope="col">Discount</th>
                 </tr>
@@ -227,6 +434,7 @@ export function BargainsPage() {
                       <td>
                         <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
                       </td>
+                      <td>{b.quantity.toLocaleString()}</td>
                       <td>{b.recentAvgPrice.toLocaleString()} gil</td>
                       <td>
                         <div className="discountCell">
@@ -292,7 +500,14 @@ export function BargainsPage() {
           ) : null}
         </section>
       ) : data ? (
-        <div className="notice">No bargains found across any items yet.</div>
+        <div className="notice">
+          No bargains match these filters. Try lowering the price, discount, or quantity minimums.
+          {hasActiveFilters ? (
+            <button type="button" className="inlineAction" onClick={clearFilters}>
+              Clear filters
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </>
   );

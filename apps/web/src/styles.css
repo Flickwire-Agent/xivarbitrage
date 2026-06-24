@@ -434,6 +434,17 @@ input:focus {
   color: #3d4c5e;
 }
 
+.inlineAction {
+  margin-left: 12px;
+  color: #295cb5;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+:root[data-theme="dark"] .inlineAction {
+  color: #9dbdff;
+}
+
 .routeFrame,
 .contentLoading {
   min-height: 680px;
