@@ -1397,10 +1397,18 @@ a:hover {
   }
 }
 
+.mainNavigation {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
 .mainTabs {
   display: flex;
+  flex: 1;
   gap: 4px;
-  margin-bottom: 24px;
+  margin: 0;
   padding: 4px;
   border: 1px solid #d7dee9;
   border-radius: 8px;
@@ -1424,13 +1432,6 @@ a:hover {
   color: #243447;
   transition: all 0.2s ease;
   text-decoration: none;
-}
-
-button.mainTab {
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
 }
 
 .mainTab:hover {
@@ -1457,6 +1458,44 @@ button.mainTab {
 .mainTab.active:hover {
   color: #ffffff;
   background: #1a4795;
+}
+
+.helpButton {
+  border: 1px solid #d7dee9;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #295cb5;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+}
+
+.helpButton:hover,
+.helpButton.active {
+  border-color: #9bb6e5;
+  background: #eef4ff;
+  color: #183f86;
+}
+
+.helpButton:focus-visible {
+  outline: 3px solid #8bb3ff;
+  outline-offset: 2px;
+}
+
+:root[data-theme="dark"] .helpButton {
+  border-color: #2a3a4f;
+  background: #141d29;
+  color: #9ebcf2;
+}
+
+:root[data-theme="dark"] .helpButton:hover,
+:root[data-theme="dark"] .helpButton.active {
+  border-color: #45689f;
+  background: #1e314d;
+  color: #d5e4ff;
 }
 
 .onboardingPrompt,
@@ -1556,9 +1595,20 @@ button.mainTab {
 }
 
 @media (max-width: 620px) {
+  .mainNavigation {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   .mainTab {
     padding: 8px 12px;
     font-size: 0.82rem;
+  }
+
+  .helpButton {
+    align-self: flex-start;
+    padding: 8px 12px;
   }
 
   .onboardingPrompt,

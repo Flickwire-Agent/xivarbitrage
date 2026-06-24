@@ -74,31 +74,33 @@ export function App() {
         tabIndex={-1}
         aria-label="XIV Arbitrage application"
       >
-        <nav className="mainTabs" aria-label="Main views">
-          <Link
-            href="/"
-            className={`mainTab${isActive("/") ? " active" : ""}`}
-            aria-current={isActive("/") ? "page" : undefined}
-          >
-            Disparities
-          </Link>
-          <Link
-            href="/bargains"
-            className={`mainTab${isActive("/bargains") ? " active" : ""}`}
-            aria-current={isActive("/bargains") ? "page" : undefined}
-          >
-            Bargains
-          </Link>
+        <div className="mainNavigation">
+          <nav className="mainTabs" aria-label="Main views">
+            <Link
+              href="/"
+              className={`mainTab${isActive("/") ? " active" : ""}`}
+              aria-current={isActive("/") ? "page" : undefined}
+            >
+              Disparities
+            </Link>
+            <Link
+              href="/bargains"
+              className={`mainTab${isActive("/bargains") ? " active" : ""}`}
+              aria-current={isActive("/bargains") ? "page" : undefined}
+            >
+              Bargains
+            </Link>
+          </nav>
           <button
             type="button"
-            className={`mainTab methodologyTab${isExplainerOpen ? " active" : ""}`}
+            className={`helpButton${isExplainerOpen ? " active" : ""}`}
             onClick={() => setIsExplainerOpen((open) => !open)}
             aria-expanded={isExplainerOpen}
             aria-controls="methodology-explainer"
           >
-            Methodology
+            How this works
           </button>
-        </nav>
+        </div>
         {!isOnboardingDismissed ? (
           <section className="onboardingPrompt" aria-labelledby="onboarding-title">
             <div>
@@ -118,7 +120,7 @@ export function App() {
                   dismissOnboarding();
                 }}
               >
-                Read methodology
+                Read how this works
               </button>
               <button type="button" className="textButton" onClick={dismissOnboarding}>
                 Dismiss
