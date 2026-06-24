@@ -5,6 +5,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useWorlds } from "../hooks/api.js";
 import { getDataCenterLineColor, getDataCenterWorldColor } from "../lib/chartColors.js";
+import { getItemTabHref } from "../lib/navigationContext.js";
 import type { ItemDetails } from "../lib/xivapi.js";
 
 const SaleHistoryChart = lazy(() =>
@@ -26,6 +27,9 @@ function getUniversalisUrl(itemId: number): string {
 
 export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
   const [location] = useLocation();
+  const searchParams = new URLSearchParams(
+    typeof window === "undefined" ? "" : window.location.search,
+  );
   const [visibleWorlds, setVisibleWorlds] = useState(() => new Set(data.worlds));
   const [hiddenDcs, setHiddenDcs] = useState(() => new Set<string>());
   const { data: worldsData } = useWorlds();
@@ -194,14 +198,14 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
 
       <nav className="itemTabs" aria-label="Item details">
         <Link
-          href={`/items/${data.itemId}`}
+          href={getItemTabHref(`/items/${data.itemId}`, searchParams)}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           aria-current={location === `/items/${data.itemId}` ? "page" : undefined}
         >
           History
         </Link>
         <Link
-          href={`/items/${data.itemId}/listings`}
+          href={getItemTabHref(`/items/${data.itemId}/listings`, searchParams)}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           aria-current={location === `/items/${data.itemId}/listings` ? "page" : undefined}
         >

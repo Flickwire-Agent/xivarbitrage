@@ -1,8 +1,9 @@
 import type { ItemListing } from "@xiv-arbitrage/shared";
 import { ArrowLeft, ExternalLink, Moon, Sun } from "lucide-react";
 import { useEffect } from "react";
-import { Link, useLocation, useParams } from "wouter";
+import { Link, useLocation, useParams, useSearchParams } from "wouter";
 import { useItemListings, useRetriedItemDetails } from "../hooks/api.js";
+import { getItemTabHref, getReturnTo } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 
 function getUniversalisUrl(itemId: number): string {
@@ -11,6 +12,7 @@ function getUniversalisUrl(itemId: number): string {
 
 export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
+  const [searchParams] = useSearchParams();
   const [location, navigate] = useLocation();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
@@ -50,7 +52,7 @@ export function ListingsPage() {
           <button
             type="button"
             className="iconButton"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(getReturnTo(searchParams))}
             aria-label="Go back to opportunities"
           >
             <ArrowLeft size={18} aria-hidden="true" />
@@ -89,14 +91,14 @@ export function ListingsPage() {
 
       <nav className="itemTabs" aria-label="Item details">
         <Link
-          href={`/items/${itemId}`}
+          href={getItemTabHref(`/items/${itemId}`, searchParams)}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           aria-current={location === `/items/${itemId}` ? "page" : undefined}
         >
           History
         </Link>
         <Link
-          href={`/items/${itemId}/listings`}
+          href={getItemTabHref(`/items/${itemId}/listings`, searchParams)}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
           aria-current={location === `/items/${itemId}/listings` ? "page" : undefined}
         >

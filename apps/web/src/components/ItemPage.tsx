@@ -1,12 +1,14 @@
 import { useEffect } from "react";
 import { Moon, Sun } from "lucide-react";
-import { useLocation, useParams } from "wouter";
+import { useLocation, useParams, useSearchParams } from "wouter";
 import { useItemHistory, useRetriedItemDetails } from "../hooks/api.js";
+import { getReturnTo } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SaleHistoryView } from "./SaleHistoryView.js";
 
 export function ItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
+  const [searchParams] = useSearchParams();
   const [, navigate] = useLocation();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
@@ -62,7 +64,7 @@ export function ItemPage() {
           Failed to load item history
         </div>
       ) : (
-        <SaleHistoryView data={enrichedData} onBack={() => navigate("/")} />
+        <SaleHistoryView data={enrichedData} onBack={() => navigate(getReturnTo(searchParams))} />
       )}
     </>
   );
