@@ -84,6 +84,13 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
     [dcs, hiddenDcs],
   );
 
+  const chartSummary = useMemo(() => {
+    if (!saleStats) return "No sale history is available for this item.";
+    const visibleWorldNames = data.worlds.filter((world) => visibleWorlds.has(world));
+    const hiddenWorldCount = data.worlds.length - visibleWorldNames.length;
+    return `${saleStats.count.toLocaleString()} sales range from ${saleStats.min.toLocaleString()} to ${saleStats.max.toLocaleString()} gil, averaging ${saleStats.avg.toLocaleString()} gil. Showing ${visibleWorldNames.length.toLocaleString()} of ${data.worlds.length.toLocaleString()} worlds across ${visibleDcs.size.toLocaleString()} of ${dcs.length.toLocaleString()} data centers${hiddenWorldCount > 0 ? `; ${hiddenWorldCount.toLocaleString()} worlds are hidden` : ""}.`;
+  }, [data.worlds, dcs.length, saleStats, visibleDcs.size, visibleWorlds]);
+
   function toggleWorld(world: string) {
     setVisibleWorlds((prev) => {
       const next = new Set(prev);
@@ -143,7 +150,12 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
     <div>
       <section className="topBar">
         <div className="topBarLeft">
-          <button type="button" className="iconButton" onClick={onBack}>
+          <button
+            type="button"
+            className="iconButton"
+            onClick={onBack}
+            aria-label="Go back to opportunities"
+          >
             <ArrowLeft size={18} aria-hidden="true" />
             <span>Back</span>
           </button>
@@ -180,20 +192,18 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
         </div>
       </section>
 
-      <nav className="itemTabs" role="tablist" aria-label="Item details">
+      <nav className="itemTabs" aria-label="Item details">
         <Link
           href={`/items/${data.itemId}`}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
-          role="tab"
-          aria-selected={location === `/items/${data.itemId}`}
+          aria-current={location === `/items/${data.itemId}` ? "page" : undefined}
         >
           History
         </Link>
         <Link
           href={`/items/${data.itemId}/listings`}
           className={(isActive) => `itemTab${isActive ? " active" : ""}`}
-          role="tab"
-          aria-selected={location === `/items/${data.itemId}/listings`}
+          aria-current={location === `/items/${data.itemId}/listings` ? "page" : undefined}
         >
           Listings
         </Link>
@@ -324,6 +334,7 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
       </section>
 
       <section className="chartShell" aria-label="Sale history chart">
+        <p className="chartSummary">{chartSummary}</p>
         <Suspense
           fallback={
             <div className="notice" role="status" aria-live="polite">

@@ -1,5 +1,5 @@
 import { ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
-import { useLocation, useSearchParams } from "wouter";
+import { Link, useSearchParams } from "wouter";
 import { useBargains, useBulkItemDetails } from "../hooks/api.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SearchBox } from "./SearchBox.js";
@@ -7,7 +7,6 @@ import type { BargainListing } from "@xiv-arbitrage/shared";
 import { useEffect, useMemo } from "react";
 
 export function BargainsPage() {
-  const [, navigate] = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
 
@@ -96,65 +95,141 @@ export function BargainsPage() {
           Scanning market for bargains...
         </div>
       ) : data && bargains.length > 0 ? (
-        <section className="tableShell" aria-label="Bargains table">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Item</th>
-                <th scope="col">Server</th>
-                <th scope="col">Data Center</th>
-                <th scope="col">Listed price</th>
-                <th scope="col">Global avg</th>
-                <th scope="col">Discount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bargains.map(
-                (
-                  b: BargainListing & {
-                    item: { id: number; name: string; iconUrl?: string; category?: string };
-                  },
-                  i: number,
-                ) => (
-                  <tr
-                    key={`${b.itemId}-${b.worldId}-${b.pricePerUnit}-${i}`}
-                    className="clickable"
-                    onClick={() => navigate(`/items/${b.itemId}/listings`)}
-                  >
-                    <td>
-                      <div className="itemCell">
-                        {b.item.iconUrl ? (
-                          <img src={b.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
-                        ) : (
-                          <span className="itemIconPlaceholder" aria-hidden="true" />
-                        )}
-                        <div>
-                          <strong>{b.item.name}</strong>
-                          <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>
-                        </div>
+        <section className="marketResults" aria-label="Market bargains">
+          <div className="marketCards" aria-label="Bargain cards">
+            {bargains.map(
+              (
+                b: BargainListing & {
+                  item: { id: number; name: string; iconUrl?: string; category?: string };
+                },
+                i: number,
+              ) => (
+                <article
+                  className="marketCard"
+                  key={`${b.itemId}-${b.worldId}-${b.pricePerUnit}-${i}`}
+                >
+                  <div className="marketCardHeader">
+                    <div className="itemCell">
+                      {b.item.iconUrl ? (
+                        <img src={b.item.iconUrl} alt="" width="42" height="42" loading="lazy" />
+                      ) : (
+                        <span className="itemIconPlaceholder" aria-hidden="true" />
+                      )}
+                      <div>
+                        <h2>{b.item.name}</h2>
+                        <span className="cellSubtext">{b.item.category ?? "Uncategorized"}</span>
                       </div>
-                    </td>
-                    <td>
-                      <strong>{b.worldName}</strong>
-                    </td>
-                    <td>{b.dataCenter}</td>
-                    <td>
-                      <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
-                    </td>
-                    <td>{b.recentAvgPrice.toLocaleString()} gil</td>
-                    <td>
-                      <div className="discountCell">
+                    </div>
+                    <Link href={`/items/${b.itemId}/listings`} className="marketCardAction">
+                      View listings
+                    </Link>
+                  </div>
+                  <dl className="marketCardStats">
+                    <div>
+                      <dt>World / DC</dt>
+                      <dd>
+                        <strong>{b.worldName}</strong>
+                        <span>{b.dataCenter}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Listed price</dt>
+                      <dd>
+                        <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
+                        <span>Quantity {b.quantity.toLocaleString()}</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Global average</dt>
+                      <dd>
+                        <strong>{b.recentAvgPrice.toLocaleString()} gil</strong>
+                        <span>Recent IQR average</span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Discount</dt>
+                      <dd>
                         <strong className="discountPositive">
                           {b.discount.toLocaleString()} gil
                         </strong>
-                        <span className="discountPct">{b.discountPercent}% below avg</span>
-                      </div>
-                    </td>
-                  </tr>
-                ),
-              )}
-            </tbody>
-          </table>
+                        <span>{b.discountPercent}% below avg</span>
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              ),
+            )}
+          </div>
+          <div className="tableShell" aria-label="Bargains table">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Item</th>
+                  <th scope="col">Server</th>
+                  <th scope="col">Data Center</th>
+                  <th scope="col">Listed price</th>
+                  <th scope="col">Global avg</th>
+                  <th scope="col">Discount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bargains.map(
+                  (
+                    b: BargainListing & {
+                      item: { id: number; name: string; iconUrl?: string; category?: string };
+                    },
+                    i: number,
+                  ) => (
+                    <tr key={`${b.itemId}-${b.worldId}-${b.pricePerUnit}-${i}`}>
+                      <td>
+                        <div className="itemCell">
+                          {b.item.iconUrl ? (
+                            <img
+                              src={b.item.iconUrl}
+                              alt=""
+                              width="42"
+                              height="42"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="itemIconPlaceholder" aria-hidden="true" />
+                          )}
+                          <div>
+                            <Link
+                              href={`/items/${b.itemId}/listings`}
+                              className="itemNameButton"
+                              aria-label={`View listings for ${b.item.name}`}
+                            >
+                              <strong>{b.item.name}</strong>
+                            </Link>
+                            <span className="cellSubtext">
+                              {b.item.category ?? "Uncategorized"}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <strong>{b.worldName}</strong>
+                      </td>
+                      <td>{b.dataCenter}</td>
+                      <td>
+                        <strong>{b.pricePerUnit.toLocaleString()} gil</strong>
+                      </td>
+                      <td>{b.recentAvgPrice.toLocaleString()} gil</td>
+                      <td>
+                        <div className="discountCell">
+                          <strong className="discountPositive">
+                            {b.discount.toLocaleString()} gil
+                          </strong>
+                          <span className="discountPct">{b.discountPercent}% below avg</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
           <p className="tableFooter">
             Page {data.page} of {data.totalPages} &mdash; {data.total} total bargains &middot;
             Refreshed {new Date(data.generatedAt).toLocaleTimeString()}.
