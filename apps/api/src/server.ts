@@ -363,6 +363,21 @@ app.get("/api/openapi.json", async (request, reply) => {
           summary: "Market bargains",
           description:
             "Items with current listings priced at least 20% below the global IQR average price. Collapsed to one entry per item showing the cheapest listing.",
+          parameters: [
+            { name: "minAvgPrice", in: "query", schema: { type: "number" } },
+            { name: "minDiscount", in: "query", schema: { type: "number" } },
+            { name: "minDiscountPercent", in: "query", schema: { type: "number" } },
+            { name: "minQuantity", in: "query", schema: { type: "integer" } },
+            { name: "dataCenter", in: "query", schema: { type: "string" } },
+            { name: "world", in: "query", schema: { type: "string" } },
+            {
+              name: "sort",
+              in: "query",
+              schema: { type: "string", enum: ["discount", "discountPercent", "price"] },
+            },
+            { name: "page", in: "query", schema: { type: "integer" } },
+            { name: "perPage", in: "query", schema: { type: "integer", maximum: 200 } },
+          ],
           responses: {
             "200": jsonResponse(
               "List of bargain listings",

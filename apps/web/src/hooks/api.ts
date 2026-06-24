@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   ItemHistoryResponse,
   ListingsResponse,
+  BargainsQuery,
   BargainsResponse,
   DcDisparityResponse,
   DcDisparityQuery,
@@ -87,11 +88,19 @@ export function useItemListings(itemId: number | undefined) {
   });
 }
 
-export function useBargains(page: number) {
+export function useBargains(query: BargainsQuery, page: number) {
   return useQuery({
-    queryKey: ["bargains", page],
+    queryKey: ["bargains", query, page],
     queryFn: async () => {
       const params = new URLSearchParams();
+      if (query.minAvgPrice) params.set("minAvgPrice", String(query.minAvgPrice));
+      if (query.minDiscount) params.set("minDiscount", String(query.minDiscount));
+      if (query.minDiscountPercent)
+        params.set("minDiscountPercent", String(query.minDiscountPercent));
+      if (query.minQuantity) params.set("minQuantity", String(query.minQuantity));
+      if (query.dataCenter) params.set("dataCenter", query.dataCenter);
+      if (query.world) params.set("world", query.world);
+      if (query.sort) params.set("sort", query.sort);
       if (page > 1) params.set("page", String(page));
       params.set("perPage", String(50));
       const response = await fetch(`/api/bargains?${params.toString()}`);

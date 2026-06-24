@@ -183,6 +183,13 @@ export async function apiRoutes(app: FastifyInstance) {
   const bargainsQuerySchema = z.object({
     page: z.coerce.number().int().positive().optional(),
     perPage: z.coerce.number().int().positive().max(200).optional(),
+    minAvgPrice: z.coerce.number().nonnegative().optional(),
+    minDiscount: z.coerce.number().nonnegative().optional(),
+    minDiscountPercent: z.coerce.number().nonnegative().optional(),
+    minQuantity: z.coerce.number().int().positive().optional(),
+    dataCenter: z.string().trim().optional(),
+    world: z.string().trim().optional(),
+    sort: z.enum(["discount", "discountPercent", "price"]).optional(),
   });
 
   app.get("/bargains", async (request) => {
@@ -190,10 +197,39 @@ export async function apiRoutes(app: FastifyInstance) {
     const page = query.page ?? 1;
     const perPage = query.perPage ?? 50;
     const { generatedAt, bargains: allBargains } = await bargainsCache.get();
-    const total = allBargains.length;
+    let filtered = allBargains;
+
+    if (query.minAvgPrice !== undefined) {
+      filtered = filtered.filter((b) => b.recentAvgPrice >= query.minAvgPrice!);
+    }
+    if (query.minDiscount !== undefined) {
+      filtered = filtered.filter((b) => b.discount >= query.minDiscount!);
+    }
+    if (query.minDiscountPercent !== undefined) {
+      filtered = filtered.filter((b) => b.discountPercent >= query.minDiscountPercent!);
+    }
+    if (query.minQuantity !== undefined) {
+      filtered = filtered.filter((b) => b.quantity >= query.minQuantity!);
+    }
+    if (query.dataCenter) {
+      const dc = query.dataCenter.toLowerCase();
+      filtered = filtered.filter((b) => b.dataCenter.toLowerCase() === dc);
+    }
+    if (query.world) {
+      const world = query.world.toLowerCase();
+      filtered = filtered.filter((b) => b.worldName.toLowerCase() === world);
+    }
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (query.sort === "discount") return b.discount - a.discount;
+      if (query.sort === "price") return b.recentAvgPrice - a.recentAvgPrice;
+      return b.discountPercent - a.discountPercent;
+    });
+
+    const total = sorted.length;
     const totalPages = Math.ceil(total / perPage);
     const start = (page - 1) * perPage;
-    const bargains = allBargains.slice(start, start + perPage);
+    const bargains = sorted.slice(start, start + perPage);
     const metadata = await xivapiProxy.fetchItemDetailsBatch(
       bargains.map((b) => b.itemId),
       3000,

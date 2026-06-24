@@ -61,6 +61,18 @@ export interface BargainListing {
   discountPercent: number;
 }
 
+export interface BargainsQuery {
+  minAvgPrice?: number;
+  minDiscount?: number;
+  minDiscountPercent?: number;
+  minQuantity?: number;
+  dataCenter?: string;
+  world?: string;
+  sort?: "discount" | "discountPercent" | "price";
+  page?: number;
+  perPage?: number;
+}
+
 export interface BargainsResponse {
   generatedAt: string;
   bargains: BargainListing[];
