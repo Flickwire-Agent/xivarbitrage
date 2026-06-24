@@ -1156,8 +1156,146 @@ a:hover {
   display: block;
 }
 
+.bestListingCard {
+  border: 1px solid #b9c9e2;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #eef5ff, #ffffff 62%);
+  box-shadow: 0 16px 36px rgba(31, 72, 127, 0.12);
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+  margin-bottom: 18px;
+  padding: 18px;
+}
+
+.bestListingCard h2 {
+  font-size: 1.35rem;
+  margin: 4px 0 0;
+}
+
+.bestListingCard h2 span {
+  color: #4a5b70;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.bestListingStats {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+}
+
+.bestListingStats div {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px;
+}
+
+.bestListingStats dt {
+  color: #4a5b70;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.bestListingStats dd {
+  font-size: 0.96rem;
+  font-weight: 800;
+  margin: 4px 0 0;
+}
+
 .marketCards {
   display: none;
+}
+
+.dcAverageSummary {
+  border: 1px solid #d7dee9;
+  border-radius: 10px;
+  background: #ffffff;
+  margin: -4px 0 16px;
+  padding: 10px 12px;
+}
+
+.dcAverageSummary summary {
+  color: #2f3f53;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.dcAverageChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.dcAverageChip {
+  align-items: baseline;
+  background: #eef2f7;
+  border-radius: 999px;
+  color: #3d4c5e;
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.dcAverageChip small {
+  color: #687586;
+  font-size: 0.72rem;
+}
+
+.listingsEmpty {
+  display: grid;
+  gap: 6px;
+}
+
+.listingsEmpty strong {
+  color: #17202e;
+}
+
+.listingsEmpty span {
+  color: #3d4c5e;
+}
+
+:root[data-theme="dark"] .bestListingCard {
+  border-color: #315681;
+  background: linear-gradient(135deg, #10233a, #1a2332 62%);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+:root[data-theme="dark"] .bestListingCard h2 span,
+:root[data-theme="dark"] .bestListingStats dt {
+  color: #a3b3c5;
+}
+
+:root[data-theme="dark"] .bestListingStats div {
+  background: rgba(16, 24, 39, 0.72);
+}
+
+:root[data-theme="dark"] .dcAverageSummary {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+:root[data-theme="dark"] .dcAverageSummary summary {
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .dcAverageChip {
+  background: #1e2d3d;
+  color: #d7e1ec;
+}
+
+:root[data-theme="dark"] .dcAverageChip small,
+:root[data-theme="dark"] .listingsEmpty span {
+  color: #a3b3c5;
+}
+
+:root[data-theme="dark"] .listingsEmpty strong {
+  color: #e1e8f0;
 }
 
 :root[data-theme="dark"] .discountPct {
@@ -1281,6 +1419,32 @@ a:hover {
 }
 
 @media (max-width: 640px) {
+  .bestListingCard {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .bestListingStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dcAverageSummary {
+    margin-top: -2px;
+  }
+
+  .dcAverageChips {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dcAverageChip {
+    align-items: flex-start;
+    border-radius: 10px;
+    flex-direction: column;
+    gap: 2px;
+    white-space: normal;
+  }
+
   .marketResults > .tableShell {
     display: none;
   }

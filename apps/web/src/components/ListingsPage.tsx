@@ -10,6 +10,19 @@ function getUniversalisUrl(itemId: number): string {
   return `https://universalis.app/market/${itemId}`;
 }
 
+function getBestListing(listings: ItemListing[]): ItemListing | undefined {
+  return listings.reduce<ItemListing | undefined>((best, listing) => {
+    if (!best) return listing;
+    if (listing.discountPercent !== best.discountPercent) {
+      return listing.discountPercent > best.discountPercent ? listing : best;
+    }
+    if (listing.discount !== best.discount) {
+      return listing.discount > best.discount ? listing : best;
+    }
+    return listing.pricePerUnit < best.pricePerUnit ? listing : best;
+  }, undefined);
+}
+
 export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const [searchParams] = useSearchParams();
@@ -19,6 +32,10 @@ export function ListingsPage() {
 
   const { data, isLoading, error } = useItemListings(id);
   const itemDetails = useRetriedItemDetails(id, data?.itemDetails?.[data.itemId]);
+  const bestListing = data ? getBestListing(data.listings) : undefined;
+  const dcAverages = data?.saleStats?.perDataCenter
+    ? Object.entries(data.saleStats.perDataCenter)
+    : [];
 
   useEffect(() => {
     document.title = itemDetails
@@ -131,22 +148,69 @@ export function ListingsPage() {
                 <strong>{data.listings.length.toLocaleString()}</strong>
               </div>
             </article>
-            {data.saleStats?.perDataCenter
-              ? Object.entries(data.saleStats.perDataCenter).map(([dc, stats]) => (
-                  <article key={dc}>
-                    <div>
-                      <span>{dc} avg</span>
-                      <strong>{stats.avgPrice.toLocaleString()} gil</strong>
-                    </div>
-                  </article>
-                ))
-              : null}
+            <article>
+              <div>
+                <span>Recent average</span>
+                <strong>{data.saleStats?.avgPrice.toLocaleString() ?? "N/A"}</strong>
+              </div>
+            </article>
           </section>
 
+          {dcAverages.length > 0 ? (
+            <details className="dcAverageSummary">
+              <summary>Data-center averages</summary>
+              <div className="dcAverageChips">
+                {dcAverages.map(([dc, stats]) => (
+                  <span className="dcAverageChip" key={dc}>
+                    <strong>{dc}</strong>
+                    {stats.avgPrice.toLocaleString()} gil
+                    <small>{stats.count.toLocaleString()} sales</small>
+                  </span>
+                ))}
+              </div>
+            </details>
+          ) : null}
+
           {data.listings.length === 0 ? (
-            <div className="notice">No current listings are priced below the recent average.</div>
+            <div className="notice listingsEmpty">
+              <strong>No below-average current listings found.</strong>
+              <span>
+                The table only shows listings priced below the recent data-center average. Check the
+                History tab for sale trends or open Universalis for the full live market board.
+              </span>
+            </div>
           ) : (
             <section className="marketResults" aria-label="Item listings">
+              {bestListing ? (
+                <article className="bestListingCard" aria-label="Best current listing">
+                  <div>
+                    <p className="eyebrow">Best current listing</p>
+                    <h2>
+                      {bestListing.worldName} <span>{bestListing.dataCenter}</span>
+                    </h2>
+                  </div>
+                  <dl className="bestListingStats">
+                    <div>
+                      <dt>Listed price</dt>
+                      <dd>{bestListing.pricePerUnit.toLocaleString()} gil</dd>
+                    </div>
+                    <div>
+                      <dt>Quantity</dt>
+                      <dd>{bestListing.quantity.toLocaleString()}</dd>
+                    </div>
+                    <div>
+                      <dt>Comparison avg</dt>
+                      <dd>{bestListing.recentAvgPrice.toLocaleString()} gil</dd>
+                    </div>
+                    <div>
+                      <dt>Discount</dt>
+                      <dd className="discountPositive">
+                        {bestListing.discount.toLocaleString()} gil ({bestListing.discountPercent}%)
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              ) : null}
               <div className="marketCards" aria-label="Listing cards">
                 {data.listings.map((listing: ItemListing, i: number) => (
                   <article
