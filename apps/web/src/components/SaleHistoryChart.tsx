@@ -158,47 +158,48 @@ export function SaleHistoryChart({
   return (
     <div
       role="img"
-      aria-label="Sale history chart showing individual world sales as scatter points and data center daily average prices as lines"
+      aria-label="Sale history chart showing data center daily average prices as lines with optional individual world sales as scatter points"
     >
       <ResponsiveContainer width="100%" height={450}>
-        <ComposedChart margin={{ top: 20, right: 20, bottom: 30, left: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#2a3a4f" opacity={0.3} />
+        <ComposedChart margin={{ top: 16, right: 12, bottom: 24, left: 12 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid, #d3dce8)" opacity={0.65} />
           <XAxis
             dataKey="soldAtMs"
             domain={xDomain}
             tickFormatter={formatDateTick}
             type="number"
             scale="time"
-            stroke="#687586"
-            tick={{ fontSize: 12 }}
+            stroke="var(--chart-axis, #58677a)"
+            tick={{ fontSize: 12, fill: "var(--chart-axis, #58677a)" }}
             tickCount={6}
             label={{
               value: "Date",
               position: "bottom",
               offset: 10,
-              style: { fill: "#687586", fontSize: 12 },
+              style: { fill: "var(--chart-axis, #58677a)", fontSize: 12 },
             }}
           />
           <YAxis
             dataKey="pricePerUnit"
             tickFormatter={(v: number) => v.toLocaleString()}
-            stroke="#687586"
-            tick={{ fontSize: 12 }}
+            stroke="var(--chart-axis, #58677a)"
+            tick={{ fontSize: 12, fill: "var(--chart-axis, #58677a)" }}
             label={{
               value: "Gil",
               angle: -90,
               position: "insideLeft",
-              style: { fill: "#687586", fontSize: 12 },
+              style: { fill: "var(--chart-axis, #58677a)", fontSize: 12 },
             }}
           />
           <Tooltip
             contentStyle={{
-              background: "#1a2332",
-              border: "1px solid #2a3a4f",
+              background: "var(--chart-tooltip-bg, #ffffff)",
+              border: "1px solid var(--chart-tooltip-border, #c9d2df)",
               borderRadius: 6,
               fontSize: 13,
+              color: "var(--chart-tooltip-text, #17202e)",
             }}
-            labelStyle={{ color: "#e1e8f0" }}
+            labelStyle={{ color: "var(--chart-tooltip-text, #17202e)" }}
             formatter={(value, name) => {
               if (Array.isArray(value)) {
                 return [`${safeString(value[0])} - ${safeString(value[1])} gil`, safeString(name)];
@@ -207,7 +208,16 @@ export function SaleHistoryChart({
             }}
             labelFormatter={(label) => new Date(Number(label)).toLocaleString()}
           />
-          <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+          <Legend
+            iconSize={10}
+            wrapperStyle={{
+              color: "var(--chart-legend, #2f3f53)",
+              fontSize: 12,
+              maxHeight: 48,
+              overflowY: "auto",
+              paddingTop: 4,
+            }}
+          />
           {dcs.map((dc) =>
             visibleDcs.has(dc) ? (
               <Area
@@ -235,6 +245,7 @@ export function SaleHistoryChart({
                 strokeWidth={2}
                 dot={false}
                 connectNulls
+                isAnimationActive={false}
               />
             ) : null,
           )}
@@ -248,6 +259,8 @@ export function SaleHistoryChart({
                 line={false}
                 shape="circle"
                 opacity={0.7}
+                legendType="none"
+                isAnimationActive={false}
               />
             ) : null,
           )}

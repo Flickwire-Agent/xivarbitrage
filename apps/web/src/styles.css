@@ -907,6 +907,12 @@ a:hover {
 }
 
 .chartShell {
+  --chart-axis: #58677a;
+  --chart-grid: #d3dce8;
+  --chart-legend: #2f3f53;
+  --chart-tooltip-bg: #ffffff;
+  --chart-tooltip-border: #c9d2df;
+  --chart-tooltip-text: #17202e;
   border: 1px solid #d7dee9;
   border-radius: 8px;
   background: #ffffff;
@@ -925,8 +931,18 @@ a:hover {
 }
 
 :root[data-theme="dark"] .chartShell {
+  --chart-axis: #a3b3c5;
+  --chart-grid: #3a4a5f;
+  --chart-legend: #d7e1ec;
+  --chart-tooltip-bg: #101827;
+  --chart-tooltip-border: #3a4a5f;
+  --chart-tooltip-text: #e1e8f0;
   border-color: #2a3a4f;
   background: #1a2332;
+}
+
+.chartControls {
+  padding-bottom: 12px;
 }
 
 .chartServerFilter {
@@ -967,6 +983,47 @@ a:hover {
   margin-bottom: 16px;
 }
 
+.chartDetailFilters {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.chartDetailFilters summary {
+  align-items: center;
+  color: #2f3f53;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.9rem;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: space-between;
+  list-style: none;
+}
+
+.chartDetailFilters summary::-webkit-details-marker {
+  display: none;
+}
+
+.chartDetailFilters summary::before {
+  content: "+";
+  color: #295cb5;
+  font-weight: 900;
+}
+
+.chartDetailFilters[open] summary::before {
+  content: "-";
+}
+
+.chartDetailFilters summary span {
+  color: #687586;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.chartDetailFilters[open] summary {
+  margin-bottom: 12px;
+}
+
 .chartSummary {
   margin: 0 0 16px;
   color: #3d4c5e;
@@ -974,6 +1031,18 @@ a:hover {
 }
 
 :root[data-theme="dark"] .chartSummary {
+  color: #a3b3c5;
+}
+
+:root[data-theme="dark"] .chartDetailFilters {
+  border-top-color: #2a3a4f;
+}
+
+:root[data-theme="dark"] .chartDetailFilters summary {
+  color: #e1e8f0;
+}
+
+:root[data-theme="dark"] .chartDetailFilters summary span {
   color: #a3b3c5;
 }
 
