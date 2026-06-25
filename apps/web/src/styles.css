@@ -29,6 +29,15 @@
 body {
   margin: 0;
   min-width: 320px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(41, 92, 181, 0.1), transparent 30rem),
+    linear-gradient(135deg, rgba(17, 24, 39, 0.04) 0 1px, transparent 1px 18px), #f5f7fb;
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(123, 163, 232, 0.14), transparent 30rem),
+    linear-gradient(135deg, rgba(123, 163, 232, 0.06) 0 1px, transparent 1px 18px), #0f1419;
 }
 
 button,
@@ -536,16 +545,18 @@ input:focus {
 .savedViews {
   display: grid;
   gap: 12px;
-  border: 1px solid #d7dee9;
-  border-radius: 8px;
-  background: #ffffff;
+  border: 1px solid #cbd7e6;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(41, 92, 181, 0.08), transparent 34%), #ffffff;
   padding: 16px;
   margin: -2px 0 18px;
+  box-shadow: 0 10px 30px rgba(23, 33, 43, 0.06);
 }
 
 :root[data-theme="dark"] .savedViews {
   border-color: #2a3a4f;
-  background: #1a2332;
+  background: linear-gradient(135deg, rgba(123, 163, 232, 0.12), transparent 36%), #1a2332;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
 }
 
 .savedViewsHeader,
@@ -601,22 +612,29 @@ input:focus {
 
 .savedViewsList li > button,
 .savedViewsList li div button {
-  border: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(41, 92, 181, 0.08);
   color: #295cb5;
   cursor: pointer;
   font-weight: 700;
-  padding: 4px 0;
+  padding: 5px 9px;
 }
 
 :root[data-theme="dark"] .savedViewsList li > button,
 :root[data-theme="dark"] .savedViewsList li div button {
+  background: rgba(123, 163, 232, 0.12);
   color: #7ba3e8;
 }
 
 .savedViewsList li > button:hover,
 .savedViewsList li div button:hover {
-  text-decoration: underline;
+  border-color: rgba(41, 92, 181, 0.25);
+  background: rgba(41, 92, 181, 0.14);
+  text-decoration: none;
 }
 
 .savedViewsList li > span {
@@ -636,6 +654,28 @@ input:focus {
 .savedViewsList li div {
   display: flex;
   gap: 10px;
+}
+
+.savedViewRenameField {
+  flex: 0 1 260px;
+  min-width: min(260px, 100%);
+}
+
+.savedViewRenameField input {
+  width: 100%;
+  border: 1px solid #9bb6e5;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17212b;
+  padding: 7px 9px;
+  font: inherit;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .savedViewRenameField input {
+  border-color: #45689f;
+  background: #101827;
+  color: #e1e8f0;
 }
 
 .savedViewsMessage {
@@ -1565,6 +1605,11 @@ a:hover {
     padding: 12px 0;
   }
 
+  h1 {
+    font-size: clamp(1.75rem, 11vw, 2.75rem);
+    line-height: 1.05;
+  }
+
   .routeFrame,
   .contentLoading,
   .pageSkeleton {
@@ -1764,8 +1809,9 @@ a:hover {
   margin: 0;
   padding: 4px;
   border: 1px solid #d7dee9;
-  border-radius: 8px;
-  background: #ffffff;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(41, 92, 181, 0.08), transparent 42%), #ffffff;
+  box-shadow: 0 8px 24px rgba(23, 33, 43, 0.05);
 }
 
 :root[data-theme="dark"] .mainTabs {
@@ -1805,12 +1851,12 @@ a:hover {
 .mainTab.active,
 :root[data-theme="dark"] .mainTab.active {
   color: #ffffff;
-  background: #1a4795;
+  background: linear-gradient(135deg, #123a7c, #1f65c2);
 }
 
 .mainTab.active:hover {
   color: #ffffff;
-  background: #1a4795;
+  background: linear-gradient(135deg, #123a7c, #1f65c2);
 }
 
 .helpButton {
@@ -1853,9 +1899,9 @@ a:hover {
 
 .onboardingPrompt,
 .methodologyExplainer {
-  border: 1px solid #d7dee9;
-  border-radius: 10px;
-  background: #ffffff;
+  border: 1px solid #cbd7e6;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(13, 107, 90, 0.08), transparent 34%), #ffffff;
   margin-bottom: 18px;
   padding: 18px;
 }
@@ -1863,7 +1909,7 @@ a:hover {
 :root[data-theme="dark"] .onboardingPrompt,
 :root[data-theme="dark"] .methodologyExplainer {
   border-color: #2a3a4f;
-  background: #1a2332;
+  background: linear-gradient(135deg, rgba(110, 231, 183, 0.08), transparent 34%), #1a2332;
 }
 
 .onboardingPrompt {
@@ -1978,13 +2024,15 @@ a:hover {
 }
 
 .appFooter {
-  border-top: 1px solid #d7dee9;
+  border-top: 1px solid #cbd7e6;
+  background: linear-gradient(180deg, transparent, rgba(41, 92, 181, 0.04));
   margin-top: 32px;
   padding: 24px 0 32px;
 }
 
 :root[data-theme="dark"] .appFooter {
   border-top-color: #2a3a4f;
+  background: linear-gradient(180deg, transparent, rgba(123, 163, 232, 0.05));
 }
 
 .appFooterInner {
