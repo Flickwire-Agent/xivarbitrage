@@ -4,28 +4,38 @@ import { useLocation } from "wouter";
 import { useItemSearch } from "../hooks/api.js";
 import type { ItemDetails } from "../lib/xivapi.js";
 
+const SEARCH_DEBOUNCE_MS = 250;
+
 export function SearchBox() {
   const [, navigate] = useLocation();
   const [query, setQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { data: results } = useItemSearch(query);
+  const { data: results, error, isFetching, refetch } = useItemSearch(searchQuery);
+  const normalizedQuery = query.trim();
 
   useEffect(() => {
-    if (query.length < 2) {
-      setIsOpen(false);
-      return;
+    setSelectedIndex(-1);
+    if (!normalizedQuery) {
+      setSearchQuery("");
+      return undefined;
     }
-    if (results && results.length > 0) {
-      setIsOpen(true);
-      setSelectedIndex(-1);
-    } else {
-      setIsOpen(false);
+
+    if (normalizedQuery.length < 2) {
+      setSearchQuery("");
+      return undefined;
     }
-  }, [query, results]);
+
+    const timeoutId = globalThis.setTimeout(
+      () => setSearchQuery(normalizedQuery),
+      SEARCH_DEBOUNCE_MS,
+    );
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [normalizedQuery]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -40,12 +50,13 @@ export function SearchBox() {
   function selectItem(item: ItemDetails) {
     navigate(`/items/${item.id}`);
     setQuery("");
+    setSearchQuery("");
     setIsOpen(false);
     inputRef.current?.blur();
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    const items = results ?? [];
+    const items = searchQuery === query.trim() && !isFetching && !error ? (results ?? []) : [];
     if (!isOpen || items.length === 0) {
       if (e.key === "Escape") {
         inputRef.current?.blur();
@@ -77,6 +88,15 @@ export function SearchBox() {
 
   const listboxId = "search-listbox";
   const items = results ?? [];
+  const showPanel = isOpen && normalizedQuery.length > 0;
+  const isWaitingForSearch =
+    normalizedQuery.length >= 2 && (searchQuery !== normalizedQuery || isFetching);
+  const hasNoResults =
+    normalizedQuery.length >= 2 &&
+    searchQuery === normalizedQuery &&
+    !isFetching &&
+    !error &&
+    items.length === 0;
 
   return (
     <div className="searchBox" ref={containerRef}>
@@ -86,8 +106,11 @@ export function SearchBox() {
         type="text"
         placeholder="Search items..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        onFocus={() => items.length > 0 && setIsOpen(true)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setIsOpen(e.target.value.trim().length > 0);
+        }}
+        onFocus={() => normalizedQuery.length > 0 && setIsOpen(true)}
         onKeyDown={handleKeyDown}
         aria-label="Search items"
         aria-controls={listboxId}
@@ -96,40 +119,62 @@ export function SearchBox() {
             ? `search-result-${items[selectedIndex].id}`
             : undefined
         }
-        aria-expanded={isOpen && items.length > 0}
+        aria-expanded={showPanel}
         aria-autocomplete="list"
         autoComplete="off"
         role="combobox"
         spellCheck={false}
       />
-      {isOpen && items.length > 0 ? (
+      {showPanel ? (
         <div className="searchDropdown" role="listbox" id={listboxId}>
-          {items.map((item, i) => (
-            <div
-              key={item.id}
-              id={`search-result-${item.id}`}
-              className={`searchResult${i === selectedIndex ? " active" : ""}`}
-              role="option"
-              aria-selected={i === selectedIndex}
-              onClick={() => selectItem(item)}
-              onMouseEnter={() => setSelectedIndex(i)}
-            >
-              {item.iconUrl ? (
-                <img
-                  src={item.iconUrl}
-                  alt=""
-                  width="32"
-                  height="32"
-                  className="searchResultIcon"
-                  loading="lazy"
-                />
-              ) : null}
-              <div className="searchResultInfo">
-                <strong>{item.name}</strong>
-                {item.category ? <span>{item.category}</span> : null}
-              </div>
+          {normalizedQuery.length < 2 ? (
+            <div className="searchMessage">Type at least 2 characters to search items.</div>
+          ) : isWaitingForSearch ? (
+            <div className="searchMessage" role="status" aria-live="polite">
+              Searching items...
             </div>
-          ))}
+          ) : error ? (
+            <div className="searchMessage searchError" role="alert">
+              <span>Search failed. Check your connection and try again.</span>
+              <button
+                type="button"
+                className="searchRetry"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => refetch()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : hasNoResults ? (
+            <div className="searchMessage">No items found for &ldquo;{normalizedQuery}&rdquo;.</div>
+          ) : (
+            items.map((item, i) => (
+              <div
+                key={item.id}
+                id={`search-result-${item.id}`}
+                className={`searchResult${i === selectedIndex ? " active" : ""}`}
+                role="option"
+                aria-selected={i === selectedIndex}
+                onClick={() => selectItem(item)}
+                onMouseEnter={() => setSelectedIndex(i)}
+              >
+                {item.iconUrl ? (
+                  <img
+                    src={item.iconUrl}
+                    alt=""
+                    width="32"
+                    height="32"
+                    className="searchResultIcon"
+                    loading="lazy"
+                  />
+                ) : null}
+                <div className="searchResultInfo">
+                  <strong>{item.name}</strong>
+                  {item.category ? <span>{item.category}</span> : null}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       ) : null}
     </div>

@@ -7,7 +7,6 @@ import {
   useRestoreSourceScroll,
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
-import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
 import { useEffect, useMemo } from "react";
@@ -165,7 +164,6 @@ export function BargainsPage() {
           <p className="eyebrow">Best Deals</p>
           <h1>Market Bargains</h1>
         </div>
-        <SearchBox />
         <div className="topBarActions">
           <button
             type="button"

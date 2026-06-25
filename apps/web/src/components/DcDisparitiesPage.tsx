@@ -9,7 +9,6 @@ import {
   useRestoreSourceScroll,
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
-import { SearchBox } from "./SearchBox.js";
 import { SelectField } from "./SelectField.js";
 
 const PAGE_SIZE = 50;
@@ -278,7 +277,6 @@ export function DcDisparitiesPage() {
           <p className="eyebrow">Final Fantasy XIV Market Board</p>
           <h1>DC Disparities</h1>
         </div>
-        <SearchBox />
         <div className="topBarActions">
           <button
             type="button"

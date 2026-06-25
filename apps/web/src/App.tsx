@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { Link, Route, Switch, useLocation } from "wouter";
+import { SearchBox } from "./components/SearchBox.js";
 
 const ItemPage = lazy(() =>
   import("./components/ItemPage.js").then((m) => ({ default: m.ItemPage })),
@@ -91,6 +92,9 @@ export function App() {
               Bargains
             </Link>
           </nav>
+          <div className="appSearch">
+            <SearchBox />
+          </div>
           <button
             type="button"
             className={`helpButton${isExplainerOpen ? " active" : ""}`}
