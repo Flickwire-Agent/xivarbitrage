@@ -13,6 +13,23 @@ import { useEffect, useMemo } from "react";
 
 const PAGE_SIZE = 50;
 
+function MarketResultsSkeleton() {
+  return (
+    <section className="marketResults marketResultsLoading" role="status" aria-live="polite">
+      <span className="srOnly">Scanning market for bargains</span>
+      <div className="marketCards skeletonCardGrid" aria-hidden="true">
+        {[0, 1, 2].map((key) => (
+          <article className="marketCard skeletonMarketCard" key={key}>
+            <div className="skeletonItemHeader" />
+            <div className="skeletonStatGrid" />
+          </article>
+        ))}
+      </div>
+      <div className="tableShell skeletonRows" aria-hidden="true" />
+    </section>
+  );
+}
+
 export function BargainsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
@@ -44,7 +61,7 @@ export function BargainsPage() {
     [dataCenter, minAvgPrice, minDiscount, minDiscountPercent, minQuantity, sort, world],
   );
 
-  const { data, isLoading, error } = useBargains(query, page);
+  const { data, isLoading, error, refetch } = useBargains(query, page);
   const { data: worldsData } = useWorlds();
 
   useRestoreSourceScroll(Boolean(data));
@@ -182,7 +199,11 @@ export function BargainsPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error instanceof Error ? error.message : "Failed to load bargains"}
+          <strong>Failed to load bargains.</strong>
+          <span>{error instanceof Error ? error.message : "The bargains request failed."}</span>
+          <button type="button" className="inlineAction" onClick={() => refetch()}>
+            Retry
+          </button>
         </div>
       ) : null}
 
@@ -190,28 +211,42 @@ export function BargainsPage() {
         <article>
           <div>
             <span>Matching bargains</span>
-            <strong>{data ? data.total.toLocaleString() : "Loading"}</strong>
+            {data ? (
+              <strong>{data.total.toLocaleString()}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading matching bargains" />
+            )}
           </div>
         </article>
         <article>
           <div>
             <span>Average discount on this page</span>
-            <strong>{data ? `${summary.avgDiscount.toLocaleString()} gil` : "Loading"}</strong>
+            {data ? (
+              <strong>{`${summary.avgDiscount.toLocaleString()} gil`}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading average discount" />
+            )}
           </div>
         </article>
         <article>
           <div>
             <span>Average discount % on this page</span>
-            <strong>{data ? `${summary.avgDiscountPercent}%` : "Loading"}</strong>
+            {data ? (
+              <strong>{`${summary.avgDiscountPercent}%`}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading average discount percent" />
+            )}
           </div>
         </article>
         <article>
           <div>
             <span>Top DC / world on this page</span>
             <strong>
-              {data
-                ? `${summary.topDc?.[0] ?? "None"} / ${summary.topWorld?.[0] ?? "None"}`
-                : "Loading"}
+              {data ? (
+                `${summary.topDc?.[0] ?? "None"} / ${summary.topWorld?.[0] ?? "None"}`
+              ) : (
+                <span className="metricValueSkeleton" aria-label="Loading top world" />
+              )}
             </strong>
           </div>
         </article>
@@ -302,9 +337,7 @@ export function BargainsPage() {
       </section>
 
       {isLoading ? (
-        <div className="notice contentLoading" role="status" aria-live="polite">
-          Scanning market for bargains...
-        </div>
+        <MarketResultsSkeleton />
       ) : data && bargains.length > 0 ? (
         <section className="marketResults" aria-label="Market bargains">
           <div className="marketCards" aria-label="Bargain cards">
@@ -498,8 +531,12 @@ export function BargainsPage() {
           ) : null}
         </section>
       ) : data ? (
-        <div className="notice">
-          No bargains match these filters. Try lowering the price, discount, or quantity minimums.
+        <div className="notice emptyState">
+          <strong>No bargains match these filters.</strong>
+          <span>
+            Try lowering the price, discount, or quantity minimums, or remove world/data-center
+            filters to widen the search.
+          </span>
           {hasActiveFilters ? (
             <button type="button" className="inlineAction" onClick={clearFilters}>
               Clear filters

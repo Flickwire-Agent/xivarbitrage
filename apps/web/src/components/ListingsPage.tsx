@@ -23,6 +23,31 @@ function getBestListing(listings: ItemListing[]): ItemListing | undefined {
   }, undefined);
 }
 
+function ListingsSkeleton() {
+  return (
+    <section className="marketResults marketResultsLoading" role="status" aria-live="polite">
+      <span className="srOnly">Loading current listings</span>
+      <section className="metricStrip skeletonMetrics" aria-hidden="true">
+        <article />
+        <article />
+        <article />
+      </section>
+      <article className="bestListingCard skeletonMarketCard" aria-hidden="true">
+        <div className="skeletonItemHeader" />
+        <div className="skeletonStatGrid" />
+      </article>
+      <div className="marketCards skeletonCardGrid" aria-hidden="true">
+        {[0, 1].map((key) => (
+          <article className="marketCard skeletonMarketCard" key={key}>
+            <div className="skeletonItemHeader" />
+            <div className="skeletonStatGrid" />
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function ListingsPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const [searchParams] = useSearchParams();
@@ -30,7 +55,7 @@ export function ListingsPage() {
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
 
-  const { data, isLoading, error } = useItemListings(id);
+  const { data, isLoading, error, refetch } = useItemListings(id);
   const itemDetails = useRetriedItemDetails(id, data?.itemDetails?.[data.itemId]);
   const bestListing = data ? getBestListing(data.listings) : undefined;
   const dcAverages = data?.saleStats?.perDataCenter
@@ -125,14 +150,18 @@ export function ListingsPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error instanceof Error ? error.message : "Failed to load listings"}
+          <strong>Failed to load listings.</strong>
+          <span>
+            {error instanceof Error ? error.message : "The current listings request failed."}
+          </span>
+          <button type="button" className="inlineAction" onClick={() => refetch()}>
+            Retry
+          </button>
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className="notice contentLoading" role="status" aria-live="polite">
-          Loading listings...
-        </div>
+        <ListingsSkeleton />
       ) : data ? (
         <>
           <section className="metricStrip" aria-label="Market summary">
@@ -172,12 +201,18 @@ export function ListingsPage() {
           ) : null}
 
           {data.listings.length === 0 ? (
-            <div className="notice listingsEmpty">
+            <div className="notice listingsEmpty emptyState">
               <strong>No below-average current listings found.</strong>
               <span>
                 The table only shows listings priced below the recent data-center average. Check the
                 History tab for sale trends or open Universalis for the full live market board.
               </span>
+              <Link
+                className="inlineAction"
+                href={getItemTabHref(`/items/${itemId}`, searchParams)}
+              >
+                View history
+              </Link>
             </div>
           ) : (
             <section className="marketResults" aria-label="Item listings">

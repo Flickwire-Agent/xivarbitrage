@@ -6,6 +6,21 @@ import { getReturnTo } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
 import { SaleHistoryView } from "./SaleHistoryView.js";
 
+function ItemHistorySkeleton() {
+  return (
+    <section className="itemHistoryLoading" role="status" aria-live="polite">
+      <span className="srOnly">Loading item history</span>
+      <section className="metricStrip skeletonMetrics" aria-hidden="true">
+        <article />
+        <article />
+        <article />
+      </section>
+      <section className="chartShell skeletonChart" aria-hidden="true" />
+      <div className="tableShell skeletonRows" aria-hidden="true" />
+    </section>
+  );
+}
+
 export function ItemPage() {
   const { itemId } = useParams<{ itemId: string }>();
   const [searchParams] = useSearchParams();
@@ -13,7 +28,7 @@ export function ItemPage() {
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const id = itemId ? Number(itemId) : undefined;
 
-  const { data, isLoading, error } = useItemHistory(id);
+  const { data, isLoading, error, refetch } = useItemHistory(id);
   const itemDetails = useRetriedItemDetails(id, data?.itemDetails?.[data.itemId]);
 
   useEffect(() => {
@@ -30,12 +45,20 @@ export function ItemPage() {
     );
   }
 
-  if (isLoading || !data) {
+  if (error) {
     return (
-      <div className="notice contentLoading" role="status" aria-live="polite">
-        Loading...
+      <div className="notice error" role="alert">
+        <strong>Failed to load item history.</strong>
+        <span>{error instanceof Error ? error.message : "The item history request failed."}</span>
+        <button type="button" className="inlineAction" onClick={() => refetch()}>
+          Retry
+        </button>
       </div>
     );
+  }
+
+  if (isLoading || !data) {
+    return <ItemHistorySkeleton />;
   }
 
   const enrichedData = {
@@ -59,13 +82,7 @@ export function ItemPage() {
           )}
         </button>
       </div>
-      {error ? (
-        <div className="notice error" role="alert">
-          Failed to load item history
-        </div>
-      ) : (
-        <SaleHistoryView data={enrichedData} onBack={() => navigate(getReturnTo(searchParams))} />
-      )}
+      <SaleHistoryView data={enrichedData} onBack={() => navigate(getReturnTo(searchParams))} />
     </>
   );
 }
