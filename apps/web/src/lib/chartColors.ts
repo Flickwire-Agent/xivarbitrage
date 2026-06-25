@@ -1,5 +1,5 @@
 const DATA_CENTER_HUES = [214, 12, 174, 31, 164, 262, 88, 334, 194, 48];
-const WORLD_LIGHTNESS = [40, 48, 56, 64, 72];
+const WORLD_LIGHTNESS = [36, 44, 52, 60, 68];
 
 function hueAt(index: number): number {
   return DATA_CENTER_HUES[index % DATA_CENTER_HUES.length]!;
