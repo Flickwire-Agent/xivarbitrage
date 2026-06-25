@@ -136,6 +136,16 @@ select {
   min-width: 0;
 }
 
+.appSearch {
+  flex: 0 1 340px;
+  min-width: min(340px, 100%);
+}
+
+.appSearch .searchBox {
+  width: 100%;
+  flex-basis: auto;
+}
+
 .searchBox input {
   width: 100%;
   padding: 9px 12px 9px 36px;
@@ -263,7 +273,47 @@ select {
   color: #a3b3c5;
 }
 
+.searchMessage {
+  padding: 12px;
+  color: #3d4c5e;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.searchError {
+  display: grid;
+  gap: 8px;
+  color: #8a1f1f;
+}
+
+.searchRetry {
+  justify-self: start;
+  border: 0;
+  background: transparent;
+  color: #295cb5;
+  padding: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .searchMessage {
+  color: #a3b3c5;
+}
+
+:root[data-theme="dark"] .searchError {
+  color: #ffb4b4;
+}
+
+:root[data-theme="dark"] .searchRetry {
+  color: #9dbcf0;
+}
+
 @media (max-width: 780px) {
+  .appSearch {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
   .searchBox {
     flex: 1 1 100%;
     order: 3;
