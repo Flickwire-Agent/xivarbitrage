@@ -63,6 +63,11 @@ select {
 .skeletonTitle,
 .skeletonSearch,
 .skeletonButton,
+.metricValueSkeleton,
+.skeletonItemHeader,
+.skeletonStatGrid,
+.skeletonRows,
+.skeletonChart,
 .skeletonToolbar div,
 .skeletonMetrics article,
 .skeletonTable {
@@ -119,6 +124,11 @@ select {
 :root[data-theme="dark"] .skeletonTitle,
 :root[data-theme="dark"] .skeletonSearch,
 :root[data-theme="dark"] .skeletonButton,
+:root[data-theme="dark"] .metricValueSkeleton,
+:root[data-theme="dark"] .skeletonItemHeader,
+:root[data-theme="dark"] .skeletonStatGrid,
+:root[data-theme="dark"] .skeletonRows,
+:root[data-theme="dark"] .skeletonChart,
 :root[data-theme="dark"] .skeletonToolbar div,
 :root[data-theme="dark"] .skeletonMetrics article,
 :root[data-theme="dark"] .skeletonTable {
@@ -358,6 +368,14 @@ td span {
   font-size: 1.25rem;
 }
 
+.metricValueSkeleton {
+  display: block;
+  width: min(150px, 100%);
+  height: 1.55rem;
+  margin-top: 4px;
+  border-radius: 999px;
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: auto repeat(6, minmax(150px, 1fr));
@@ -457,6 +475,8 @@ input:focus {
 }
 
 .notice.error {
+  display: grid;
+  gap: 8px;
   border-color: #e89a90;
   background: #fff4f2;
   color: #882b1f;
@@ -583,6 +603,45 @@ input:focus {
   border: 1px solid #d7dee9;
   border-radius: 8px;
   background: #ffffff;
+}
+
+.marketResultsLoading,
+.itemHistoryLoading {
+  display: grid;
+  gap: 16px;
+}
+
+.skeletonCardGrid {
+  display: grid;
+}
+
+.skeletonMarketCard {
+  min-height: 180px;
+  pointer-events: none;
+}
+
+.skeletonItemHeader {
+  width: min(260px, 80%);
+  height: 48px;
+  border-radius: 8px;
+}
+
+.skeletonStatGrid {
+  min-height: 86px;
+  border-radius: 8px;
+}
+
+.skeletonRows {
+  min-height: 260px;
+}
+
+.skeletonChart {
+  min-height: 360px;
+}
+
+.emptyState {
+  display: grid;
+  gap: 8px;
 }
 
 .tableFooter {

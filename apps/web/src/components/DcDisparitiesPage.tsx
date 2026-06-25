@@ -20,6 +20,23 @@ const SORT_LABELS = {
   spreadPercent: "Spread %",
 };
 
+function MarketResultsSkeleton() {
+  return (
+    <section className="marketResults marketResultsLoading" role="status" aria-live="polite">
+      <span className="srOnly">Loading market data</span>
+      <div className="marketCards skeletonCardGrid" aria-hidden="true">
+        {[0, 1, 2].map((key) => (
+          <article className="marketCard skeletonMarketCard" key={key}>
+            <div className="skeletonItemHeader" />
+            <div className="skeletonStatGrid" />
+          </article>
+        ))}
+      </div>
+      <div className="tableShell skeletonRows" aria-hidden="true" />
+    </section>
+  );
+}
+
 type SavedView = {
   id: string;
   name: string;
@@ -82,7 +99,7 @@ export function DcDisparitiesPage() {
     [highDc, lowDc, region, sort, minSpread],
   );
 
-  const { data, isLoading, error } = useDcDisparities(query, page);
+  const { data, isLoading, error, refetch } = useDcDisparities(query, page);
   const { data: worldsData } = useWorlds();
 
   useRestoreSourceScroll(Boolean(data));
@@ -300,21 +317,33 @@ export function DcDisparitiesPage() {
           <Gauge size={18} aria-hidden="true" />
           <div>
             <span>Matching items</span>
-            <strong>{data ? data.total.toLocaleString() : "Loading"}</strong>
+            {data ? (
+              <strong>{data.total.toLocaleString()}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading matching items" />
+            )}
           </div>
         </article>
         <article>
           <TrendingUp size={18} aria-hidden="true" />
           <div>
             <span>Average spread on this page</span>
-            <strong>{data ? `${summary.avgSpread.toLocaleString()} gil` : "Loading"}</strong>
+            {data ? (
+              <strong>{`${summary.avgSpread.toLocaleString()} gil`}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading average spread" />
+            )}
           </div>
         </article>
         <article>
           <TrendingUp size={18} aria-hidden="true" />
           <div>
             <span>Data centers on this page</span>
-            <strong>{data ? summary.dcSet.size : "Loading"}</strong>
+            {data ? (
+              <strong>{summary.dcSet.size}</strong>
+            ) : (
+              <span className="metricValueSkeleton" aria-label="Loading data center count" />
+            )}
           </div>
         </article>
       </section>
@@ -452,14 +481,16 @@ export function DcDisparitiesPage() {
 
       {error ? (
         <div className="notice error" role="alert">
-          {error instanceof Error ? error.message : "Failed to load disparities"}
+          <strong>Failed to load disparities.</strong>
+          <span>{error instanceof Error ? error.message : "The market data request failed."}</span>
+          <button type="button" className="inlineAction" onClick={() => refetch()}>
+            Retry
+          </button>
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className="notice contentLoading" role="status" aria-live="polite">
-          Loading market data...
-        </div>
+        <MarketResultsSkeleton />
       ) : data && disparities.length > 0 ? (
         <section className="marketResults" aria-label="DC disparities">
           <div className="marketCards" aria-label="DC disparity cards">
@@ -757,7 +788,18 @@ export function DcDisparitiesPage() {
           ) : null}
         </section>
       ) : data ? (
-        <div className="notice">No market data available yet.</div>
+        <div className="notice emptyState">
+          <strong>No market data matches this view.</strong>
+          <span>
+            The current filters may be too restrictive, or this market has not produced enough
+            recent sale data yet.
+          </span>
+          {hasActiveFilters ? (
+            <button type="button" className="inlineAction" onClick={clearFilters}>
+              Clear filters
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </>
   );
