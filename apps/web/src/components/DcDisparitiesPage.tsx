@@ -1,5 +1,17 @@
 import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
-import { ChevronLeft, ChevronRight, Copy, Gauge, Moon, Save, Sun, TrendingUp } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Gauge,
+  Moon,
+  Pencil,
+  Save,
+  Sun,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails, useWorlds } from "../hooks/api.js";
@@ -72,6 +84,8 @@ export function DcDisparitiesPage() {
   const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
   const [savedViewName, setSavedViewName] = useState("");
   const [savedViewMessage, setSavedViewMessage] = useState("");
+  const [editingSavedViewId, setEditingSavedViewId] = useState<string | null>(null);
+  const [editingSavedViewName, setEditingSavedViewName] = useState("");
 
   useEffect(() => {
     document.title = "DC Disparities | XIV Arbitrage";
@@ -231,10 +245,20 @@ export function DcDisparitiesPage() {
     setSavedViewMessage(`Loaded "${view.name}".`);
   }
 
-  function renameSavedView(id: string) {
+  function startRenamingSavedView(id: string) {
     const view = savedViews.find((saved) => saved.id === id);
     if (!view) return;
-    const nextName = normalizeSavedViewName(window.prompt("Rename saved view", view.name) ?? "");
+    setEditingSavedViewId(id);
+    setEditingSavedViewName(view.name);
+  }
+
+  function cancelRenamingSavedView() {
+    setEditingSavedViewId(null);
+    setEditingSavedViewName("");
+  }
+
+  function renameSavedView(id: string) {
+    const nextName = normalizeSavedViewName(editingSavedViewName);
     if (!nextName) {
       setSavedViewMessage("Saved view names cannot be empty.");
       return;
@@ -250,6 +274,7 @@ export function DcDisparitiesPage() {
     persistSavedViews(
       savedViews.map((saved) => (saved.id === id ? { ...saved, name: nextName } : saved)),
     );
+    cancelRenamingSavedView();
     setSavedViewMessage(`Renamed view to "${nextName}".`);
   }
 
@@ -454,17 +479,50 @@ export function DcDisparitiesPage() {
           <ul className="savedViewsList" aria-label="Saved opportunity views">
             {savedViews.map((view) => (
               <li key={view.id}>
-                <button type="button" onClick={() => loadSavedView(view.id)}>
-                  {view.name}
-                </button>
+                {editingSavedViewId === view.id ? (
+                  <label className="savedViewRenameField">
+                    <span className="srOnly">Rename {view.name}</span>
+                    <input
+                      type="text"
+                      maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
+                      value={editingSavedViewName}
+                      onChange={(event) => setEditingSavedViewName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") renameSavedView(view.id);
+                        if (event.key === "Escape") cancelRenamingSavedView();
+                      }}
+                      autoFocus
+                    />
+                  </label>
+                ) : (
+                  <button type="button" onClick={() => loadSavedView(view.id)}>
+                    {view.name}
+                  </button>
+                )}
                 <span>{view.query || "Default filters"}</span>
                 <div>
-                  <button type="button" onClick={() => renameSavedView(view.id)}>
-                    Rename
-                  </button>
-                  <button type="button" onClick={() => deleteSavedView(view.id)}>
-                    Delete
-                  </button>
+                  {editingSavedViewId === view.id ? (
+                    <>
+                      <button type="button" onClick={() => renameSavedView(view.id)}>
+                        <Check size={14} aria-hidden="true" />
+                        Save
+                      </button>
+                      <button type="button" onClick={cancelRenamingSavedView}>
+                        <X size={14} aria-hidden="true" />
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" onClick={() => startRenamingSavedView(view.id)}>
+                        <Pencil size={14} aria-hidden="true" />
+                        Rename
+                      </button>
+                      <button type="button" onClick={() => deleteSavedView(view.id)}>
+                        Delete
+                      </button>
+                    </>
+                  )}
                 </div>
               </li>
             ))}
