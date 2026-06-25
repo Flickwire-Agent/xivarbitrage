@@ -18,6 +18,7 @@
 }
 
 :root[data-theme="dark"] {
+  --color-focus-ring: rgba(123, 163, 232, 0.48);
   color: #e1e8f0;
   background: #0f1419;
 }
@@ -44,6 +45,15 @@ button,
 input,
 select {
   font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 3px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .appShell {
@@ -997,18 +1007,23 @@ a:hover {
 }
 
 .iconButton:disabled {
-  opacity: 0.4;
+  border-color: #d7dee9;
+  background: #eef2f7;
+  color: #64758a;
   cursor: not-allowed;
+  opacity: 1;
 }
 
 .iconButton:disabled:hover {
-  border-color: #c9d2df;
-  background: #ffffff;
+  border-color: #d7dee9;
+  background: #eef2f7;
 }
 
+:root[data-theme="dark"] .iconButton:disabled,
 :root[data-theme="dark"] .iconButton:disabled:hover {
   border-color: #2a3a4f;
-  background: #1a2332;
+  background: #172234;
+  color: #8798ad;
 }
 
 .topBarLeft {
@@ -1056,11 +1071,11 @@ a:hover {
 }
 
 .chartShell {
-  --chart-axis: #58677a;
-  --chart-grid: #d3dce8;
-  --chart-legend: #2f3f53;
+  --chart-axis: #46576c;
+  --chart-grid: #bfccdc;
+  --chart-legend: #243447;
   --chart-tooltip-bg: #ffffff;
-  --chart-tooltip-border: #c9d2df;
+  --chart-tooltip-border: #aebed1;
   --chart-tooltip-text: #17202e;
   border: 1px solid #d7dee9;
   border-radius: 8px;
@@ -1080,11 +1095,11 @@ a:hover {
 }
 
 :root[data-theme="dark"] .chartShell {
-  --chart-axis: #a3b3c5;
-  --chart-grid: #3a4a5f;
+  --chart-axis: #c4d2e3;
+  --chart-grid: #50627a;
   --chart-legend: #d7e1ec;
   --chart-tooltip-bg: #101827;
-  --chart-tooltip-border: #3a4a5f;
+  --chart-tooltip-border: #60738c;
   --chart-tooltip-text: #e1e8f0;
   border-color: #2a3a4f;
   background: #1a2332;
@@ -1244,6 +1259,7 @@ a:hover {
   border: 1px solid #c9d2df;
   border-radius: 6px;
   background: #ffffff;
+  color: #243447;
   cursor: pointer;
   font-size: 0.82rem;
   transition: all 0.2s ease;
@@ -1256,9 +1272,9 @@ a:hover {
 }
 
 .serverTag[aria-pressed="true"] {
-  border-color: var(--tag-color, #295cb5);
+  border-color: #295cb5;
   background: #e8effa;
-  color: var(--tag-color, #295cb5);
+  color: #183f86;
   font-weight: 700;
 }
 
@@ -1271,9 +1287,9 @@ a:hover {
 }
 
 :root[data-theme="dark"] .serverTag[aria-pressed="true"] {
-  border-color: var(--tag-color, #7ba3e8);
+  border-color: #7ba3e8;
   background: #1a2f4a;
-  color: var(--tag-color, #7ba3e8);
+  color: #d7e5ff;
 }
 
 :root[data-theme="dark"] .chartDcGroup {
@@ -1535,8 +1551,8 @@ a:hover {
   border-radius: 4px;
   font-size: 0.78rem;
   font-weight: 600;
-  background: #eef2f7;
-  color: #3d4c5e;
+  background: #e8eef6;
+  color: #2f3f53;
   white-space: nowrap;
 }
 
@@ -1551,13 +1567,13 @@ a:hover {
 }
 
 :root[data-theme="dark"] .dcTag {
-  background: #1e2d3d;
-  color: #a3b3c5;
+  background: #223249;
+  color: #c4d2e3;
 }
 
 .dcTagHigh {
-  background: #d4f0e8;
-  color: #0d6b5a;
+  background: #c4eadf;
+  color: #075343;
 }
 
 :root[data-theme="dark"] .dcTagHigh {
@@ -1566,8 +1582,8 @@ a:hover {
 }
 
 .dcTagLow {
-  background: #fde8e6;
-  color: #9b2c20;
+  background: #fbd8d4;
+  color: #7d2117;
 }
 
 :root[data-theme="dark"] .dcTagLow {
@@ -1576,7 +1592,11 @@ a:hover {
 }
 
 .recharts-legend-item-text {
-  color: #e1e8f0 !important;
+  color: var(--chart-legend, #243447) !important;
+}
+
+:root[data-theme="dark"] .recharts-legend-item-text {
+  color: var(--chart-legend, #d7e1ec) !important;
 }
 
 .itemNameButton {
