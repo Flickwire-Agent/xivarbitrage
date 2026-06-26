@@ -1,6 +1,7 @@
 import type { DcDisparity, DcPriceInfo } from "@xiv-arbitrage/shared";
 import {
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Copy,
@@ -78,12 +79,31 @@ function normalizeSavedViewName(name: string) {
   return name.trim().replace(/\s+/g, " ").slice(0, MAX_SAVED_VIEW_NAME_LENGTH);
 }
 
+function formatSavedViewSummary(queryString: string) {
+  const params = new URLSearchParams(queryString);
+  const parts = [
+    params.get("region") ? `Region: ${params.get("region")}` : null,
+    params.get("highDc") ? `Costliest: ${params.get("highDc")}` : null,
+    params.get("lowDc") ? `Cheapest: ${params.get("lowDc")}` : null,
+    params.get("sort")
+      ? `Sort: ${SORT_LABELS[params.get("sort") as keyof typeof SORT_LABELS] ?? params.get("sort")}`
+      : null,
+    params.get("minSpread")
+      ? `Min spread: ${Number(params.get("minSpread")).toLocaleString()}`
+      : null,
+    params.get("page") ? `Page ${params.get("page")}` : null,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" · ") : "Default filters";
+}
+
 export function DcDisparitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
   const [savedViews, setSavedViews] = useState<SavedView[]>(loadSavedViews);
   const [savedViewName, setSavedViewName] = useState("");
   const [savedViewMessage, setSavedViewMessage] = useState("");
+  const [areSavedViewsOpen, setAreSavedViewsOpen] = useState(false);
   const [editingSavedViewId, setEditingSavedViewId] = useState<string | null>(null);
   const [editingSavedViewName, setEditingSavedViewName] = useState("");
 
@@ -179,6 +199,7 @@ export function DcDisparitiesPage() {
   }, [data?.disparities, worldsData?.regions]);
 
   const hasActiveFilters = Boolean(highDc || lowDc || region || sort || minSpread);
+  const currentViewSummary = formatSavedViewSummary(currentQueryString);
 
   function updateFilter(key: string, value: string) {
     setSearchParams((prev) => {
@@ -423,110 +444,134 @@ export function DcDisparitiesPage() {
         <div className="savedViewsHeader">
           <div>
             <h2 id="saved-views-title">Saved views</h2>
-            <p>Save this exact filter, sort, and page state or share it as a URL.</p>
+            <p>{currentViewSummary}</p>
           </div>
-          <button
-            type="button"
-            className="iconButton"
-            onClick={shareCurrentView}
-            aria-label="Share current view URL"
-          >
-            <Copy size={16} aria-hidden="true" />
-            <span>Share URL</span>
-          </button>
-        </div>
-        <div className="savedViewsControls">
-          <label className="selectField" htmlFor="saved-view-name">
-            New view name
-            <input
-              id="saved-view-name"
-              type="text"
-              maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
-              placeholder="e.g. NA high-spread crafts"
-              value={savedViewName}
-              onChange={(event) => setSavedViewName(event.target.value)}
-            />
-          </label>
-          <button
-            type="button"
-            className="iconButton"
-            onClick={saveCurrentView}
-            aria-label="Save current view"
-          >
-            <Save size={16} aria-hidden="true" />
-            <span>Save view</span>
-          </button>
-          <label className="selectField" htmlFor="saved-view-select">
-            Load saved view
-            <select
-              id="saved-view-select"
-              value=""
-              onChange={(event) => loadSavedView(event.target.value)}
-              disabled={savedViews.length === 0}
+          <div className="savedViewsHeaderActions">
+            <button
+              type="button"
+              className="iconButton"
+              onClick={() => setAreSavedViewsOpen((open) => !open)}
+              aria-controls="saved-views-panel"
+              aria-expanded={areSavedViewsOpen}
             >
-              <option value="">
-                {savedViews.length === 0 ? "No saved views" : "Choose a view"}
-              </option>
-              {savedViews.map((view) => (
-                <option key={view.id} value={view.id}>
-                  {view.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              <ChevronDown size={16} aria-hidden="true" />
+              <span>{areSavedViewsOpen ? "Hide saved views" : "Manage saved views"}</span>
+            </button>
+            <button
+              type="button"
+              className="iconButton"
+              onClick={shareCurrentView}
+              aria-label="Share current view URL"
+            >
+              <Copy size={16} aria-hidden="true" />
+              <span>Share URL</span>
+            </button>
+          </div>
         </div>
-        {savedViews.length > 0 ? (
-          <ul className="savedViewsList" aria-label="Saved opportunity views">
-            {savedViews.map((view) => (
-              <li key={view.id}>
-                {editingSavedViewId === view.id ? (
-                  <label className="savedViewRenameField">
-                    <span className="srOnly">Rename {view.name}</span>
-                    <input
-                      type="text"
-                      maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
-                      value={editingSavedViewName}
-                      onChange={(event) => setEditingSavedViewName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") renameSavedView(view.id);
-                        if (event.key === "Escape") cancelRenamingSavedView();
-                      }}
-                      autoFocus
-                    />
-                  </label>
-                ) : (
-                  <button type="button" onClick={() => loadSavedView(view.id)}>
-                    {view.name}
-                  </button>
-                )}
-                <span>{view.query || "Default filters"}</span>
-                <div>
-                  {editingSavedViewId === view.id ? (
-                    <>
-                      <button type="button" onClick={() => renameSavedView(view.id)}>
-                        <Check size={14} aria-hidden="true" />
-                        Save
+        {areSavedViewsOpen ? (
+          <div id="saved-views-panel" className="savedViewsPanel">
+            <div className="savedViewsControls">
+              <label className="selectField" htmlFor="saved-view-name">
+                New view name
+                <input
+                  id="saved-view-name"
+                  type="text"
+                  maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
+                  placeholder="e.g. NA high-spread crafts"
+                  value={savedViewName}
+                  onChange={(event) => setSavedViewName(event.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="iconButton"
+                onClick={saveCurrentView}
+                aria-label="Save current view"
+              >
+                <Save size={16} aria-hidden="true" />
+                <span>Save view</span>
+              </button>
+              <label className="selectField" htmlFor="saved-view-select">
+                Load saved view
+                <select
+                  id="saved-view-select"
+                  value=""
+                  onChange={(event) => loadSavedView(event.target.value)}
+                  disabled={savedViews.length === 0}
+                >
+                  <option value="">
+                    {savedViews.length === 0 ? "No saved views" : "Choose a view"}
+                  </option>
+                  {savedViews.map((view) => (
+                    <option key={view.id} value={view.id}>
+                      {view.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {savedViews.length > 0 ? (
+              <ul className="savedViewsList" aria-label="Saved opportunity views">
+                {savedViews.map((view) => (
+                  <li key={view.id}>
+                    {editingSavedViewId === view.id ? (
+                      <label className="savedViewRenameField">
+                        <span className="srOnly">Rename {view.name}</span>
+                        <input
+                          type="text"
+                          maxLength={MAX_SAVED_VIEW_NAME_LENGTH}
+                          value={editingSavedViewName}
+                          onChange={(event) => setEditingSavedViewName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") renameSavedView(view.id);
+                            if (event.key === "Escape") cancelRenamingSavedView();
+                          }}
+                          autoFocus
+                        />
+                      </label>
+                    ) : (
+                      <button type="button" onClick={() => loadSavedView(view.id)}>
+                        {view.name}
                       </button>
-                      <button type="button" onClick={cancelRenamingSavedView}>
-                        <X size={14} aria-hidden="true" />
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" onClick={() => startRenamingSavedView(view.id)}>
-                        <Pencil size={14} aria-hidden="true" />
-                        Rename
-                      </button>
-                      <button type="button" onClick={() => deleteSavedView(view.id)}>
-                        Delete
-                      </button>
-                    </>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+                    )}
+                    <span>{formatSavedViewSummary(view.query)}</span>
+                    <div>
+                      {editingSavedViewId === view.id ? (
+                        <>
+                          <button type="button" onClick={() => renameSavedView(view.id)}>
+                            <Check size={14} aria-hidden="true" />
+                            Save
+                          </button>
+                          <button type="button" onClick={cancelRenamingSavedView}>
+                            <X size={14} aria-hidden="true" />
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => startRenamingSavedView(view.id)}
+                            aria-label={`Rename ${view.name}`}
+                          >
+                            <Pencil size={14} aria-hidden="true" />
+                            Rename
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => deleteSavedView(view.id)}
+                            aria-label={`Delete ${view.name}`}
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
         {savedViewMessage ? (
           <p className="savedViewsMessage" role="status" aria-live="polite">
