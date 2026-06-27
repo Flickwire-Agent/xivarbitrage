@@ -252,6 +252,7 @@ function jsonResponse(description: string, schemaRef: string) {
 
 const app = Fastify({
   logger: true,
+  pluginTimeout: 120_000,
 });
 
 await app.register(cors, {
