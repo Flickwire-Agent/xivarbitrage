@@ -111,10 +111,10 @@ pnpm workspace monorepo for finding FFXIV item arbitrage opportunities across wo
 
 ## Production
 
-- **Process**: pm2 manages `xivarbitrage` (runs `apps/api/dist/server.js`)
-- **After API update**: `pnpm run -r --filter=@xiv-arbitrage/api build` then `pm2 restart xivarbitrage`
+- **Process**: systemd user service manages `xivarbitrage` (runs `apps/api/dist/server.js`)
+- **After API update**: `pnpm run -r --filter=@xiv-arbitrage/api build` then `systemctl --user restart xivarbitrage`
 - **After web update**: `pnpm run -r --filter=@xiv-arbitrage/web build` (served statically by API)
-- **Redeploy rule**: After ANY build step, always run `pm2 restart xivarbitrage` to redeploy. This applies to both API and web builds since the API serves the web statically.
+- **Redeploy rule**: After ANY build step, always run `systemctl --user restart xivarbitrage` to redeploy. This applies to both API and web builds since the API serves the web statically.
 - **Host**: Railway.app (alternative), auto-deploys on `git push`
 - **Health**: `GET /api/health` returns `{ ok, database, redis }`
 - **Worker status**: `GET /api/worker/status` shows queue depth, completion %, 24h stats
@@ -244,7 +244,7 @@ pnpm run -r --filter=@xiv-arbitrage/web build
 
 If reactivating this project after a gap, check:
 
-1. `pm2 status` — restart `xivarbitrage` if needed
+1. `systemctl --user status xivarbitrage` — restart if needed
 2. `pnpm build` — recheck build works with current toolchain
 3. Redis and PostgreSQL are running
 4. The Universalis API rate limit hasn't changed
