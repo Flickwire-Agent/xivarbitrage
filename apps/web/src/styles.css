@@ -1566,6 +1566,78 @@ a:hover {
   max-width: 420px;
 }
 
+.marketWarnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 12px;
+}
+
+.marketWarnings.compact {
+  margin: 6px 0 0;
+}
+
+.marketWarning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid #d7c98d;
+  border-radius: 999px;
+  background: #fff8d8;
+  color: #594506;
+  padding: 4px 9px;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.marketWarning strong {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.marketWarning span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marketWarnings.compact .marketWarning {
+  max-width: min(360px, 100%);
+}
+
+.marketWarning-critical {
+  border-color: #e8a29a;
+  background: #fff0ed;
+  color: #84281d;
+}
+
+.marketWarning-info {
+  border-color: #b8c8e7;
+  background: #edf4ff;
+  color: #244c88;
+}
+
+:root[data-theme="dark"] .marketWarning {
+  border-color: #6b5a21;
+  background: #2b2512;
+  color: #f3d978;
+}
+
+:root[data-theme="dark"] .marketWarning-critical {
+  border-color: #6b302b;
+  background: #321a18;
+  color: #ffb2a7;
+}
+
+:root[data-theme="dark"] .marketWarning-info {
+  border-color: #2d4265;
+  background: #15233a;
+  color: #9cc2ff;
+}
+
 .dcTag {
   display: inline-flex;
   flex-direction: column;

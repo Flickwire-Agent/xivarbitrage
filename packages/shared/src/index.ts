@@ -49,6 +49,22 @@ export interface ItemListing {
   discountPercent: number;
 }
 
+export type MarketWarningCode =
+  | "missing_listings"
+  | "stale_snapshot"
+  | "stale_average"
+  | "low_sales"
+  | "thin_price_history"
+  | "limited_dc_coverage";
+
+export type MarketWarningSeverity = "info" | "warning" | "critical";
+
+export interface MarketWarning {
+  code: MarketWarningCode;
+  severity: MarketWarningSeverity;
+  message: string;
+}
+
 export interface BargainListing {
   itemId: number;
   worldId: number;
@@ -87,6 +103,7 @@ export interface ListingsResponse {
   itemId: number;
   itemDetails?: Record<number, ItemDetails>;
   listings: ItemListing[];
+  warnings: MarketWarning[];
   saleStats: {
     avgPrice: number;
     count: number;
@@ -108,6 +125,7 @@ export interface DcDisparity {
   highDc: DcPriceInfo;
   lowDc: DcPriceInfo;
   allDcs: DcPriceInfo[];
+  warnings: MarketWarning[];
 }
 
 export interface DcDisparityQuery {

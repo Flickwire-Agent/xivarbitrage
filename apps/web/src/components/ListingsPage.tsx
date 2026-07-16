@@ -5,6 +5,7 @@ import { Link, useLocation, useParams, useSearchParams } from "wouter";
 import { useItemListings, useRetriedItemDetails } from "../hooks/api.js";
 import { getItemTabHref, getReturnTo } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
+import { MarketWarnings } from "./MarketWarnings.js";
 
 function getUniversalisUrl(itemId: number): string {
   return `https://universalis.app/market/${itemId}`;
@@ -184,6 +185,8 @@ export function ListingsPage() {
               </div>
             </article>
           </section>
+
+          <MarketWarnings warnings={data.warnings} />
 
           {dcAverages.length > 0 ? (
             <details className="dcAverageSummary">

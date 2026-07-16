@@ -25,8 +25,11 @@ Optional environment variables:
 - `UNIVERSALIS_BASE_URL`: Defaults to `https://universalis.app/api/v2`.
 - `XIVAPI_BASE_URL`: Defaults to `https://v2.xivapi.com/api`.
 - `UNIVERSALIS_REQS_PER_SECOND`: Defaults to `20`, below the documented `25 req/s` API limit.
-- `ARBITRAGE_ITEM_LIMIT`: Number of marketable item IDs to inspect per request. Defaults to `80`.
-- `ARBITRAGE_MAX_CONCURRENCY`: Market request concurrency. Defaults to `4`.
+- `ARBITRAGE_REFRESH_MINUTES`: DC disparity and bargain cache refresh interval. Defaults to `15`.
+- `MARKET_SNAPSHOT_FRESH_HOURS`: Current listing snapshot freshness window. Defaults to `6`.
+- `MARKET_WARNING_LOW_SALE_COUNT`: Recent-sale threshold for low-liquidity warnings. Defaults to `7`.
+- `MARKET_WARNING_MIN_DATA_CENTERS`: Minimum DC coverage before limited-coverage warnings appear. Defaults to `2`.
+- `MARKET_WARNING_STALE_AVERAGE_HOURS`: DC average age threshold for stale-average warnings. Defaults to `6`.
 - `VITE_PLAUSIBLE_DOMAIN`: Domain for Plausible analytics (EU-based, privacy-friendly). Set to your domain to enable analytics. Omit to disable. Must be set during web build.
 
 ## Notes

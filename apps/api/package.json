@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc -b tsconfig.json",
-    "check": "tsc -b tsconfig.json --noEmit",
+    "check": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx watch src/server.ts",
-    "lint": "tsc -b tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
     "reset-db": "tsx scripts/reset-db.ts",
     "start": "node dist/server.js"
   },

@@ -143,13 +143,17 @@ export class DcAverageStore {
       region: string;
       avg_price: number;
       sale_count: number;
-    }>("SELECT item_id, data_center, region, avg_price, sale_count FROM dc_item_averages");
+      computed_at: Date;
+    }>(
+      "SELECT item_id, data_center, region, avg_price, sale_count, computed_at FROM dc_item_averages",
+    );
     return result.rows.map((r) => ({
       itemId: r.item_id,
       dataCenter: r.data_center,
       region: r.region,
       avgPrice: r.avg_price,
       saleCount: r.sale_count,
+      computedAt: r.computed_at.toISOString(),
     }));
   }
 }

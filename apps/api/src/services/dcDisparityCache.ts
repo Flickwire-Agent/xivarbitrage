@@ -1,8 +1,10 @@
-import type { DcDisparity, DcDisparityQuery } from "@xiv-arbitrage/shared";
+import type { DcDisparity, DcDisparityQuery, MarketWarning } from "@xiv-arbitrage/shared";
 import { config } from "../config.js";
 import { dcAverageStore } from "./dcAverageStore.js";
 import pool from "../db/pool.js";
 import type { DcItemAverage } from "./stats.js";
+
+const HOURS_MS = 60 * 60 * 1000;
 
 export class DcDisparityCache {
   private latest: DcDisparity[] = [];
@@ -102,6 +104,7 @@ export class DcDisparityCache {
       if (!dcAverages || dcAverages.length < 2) {
         if (dcAverages?.length === 1) {
           const single = dcAverages[0]!;
+          const warnings = this.getWarnings(dcAverages);
           allDisparities.push({
             itemId,
             spread: 0,
@@ -126,6 +129,7 @@ export class DcDisparityCache {
                 saleCount: single.saleCount,
               },
             ],
+            warnings,
           });
         } else {
           allDisparities.push({
@@ -145,6 +149,7 @@ export class DcDisparityCache {
               saleCount: 0,
             },
             allDcs: [],
+            warnings: this.getWarnings([]),
           });
         }
         continue;
@@ -178,6 +183,7 @@ export class DcDisparityCache {
 
       if (isUnreliable) {
         const bestDc = sorted.reduce((best, dc) => (dc.saleCount > best.saleCount ? dc : best));
+        const warnings = this.getWarnings(sorted, true);
         allDisparities.push({
           itemId,
           spread: 0,
@@ -200,10 +206,12 @@ export class DcDisparityCache {
             avgPrice: a.avgPrice,
             saleCount: a.saleCount,
           })),
+          warnings,
         });
         continue;
       }
 
+      const warnings = this.getWarnings(sorted);
       allDisparities.push({
         itemId,
         spread,
@@ -226,6 +234,7 @@ export class DcDisparityCache {
           avgPrice: a.avgPrice,
           saleCount: a.saleCount,
         })),
+        warnings,
       });
     }
 
@@ -263,6 +272,60 @@ export class DcDisparityCache {
       return [...filtered].sort((a, b) => b.spreadPercent - a.spreadPercent);
     }
     return [...filtered].sort((a, b) => b.spread - a.spread);
+  }
+
+  private getWarnings(averages: DcItemAverage[], outlierGuarded = false): MarketWarning[] {
+    const warnings: MarketWarning[] = [];
+    const staleAfter = Date.now() - config.marketWarningStaleAverageHours * HOURS_MS;
+
+    if (averages.length === 0) {
+      warnings.push({
+        code: "thin_price_history",
+        severity: "critical",
+        message: "No recent completed-sale history is available for this item.",
+      });
+      return warnings;
+    }
+
+    if (averages.length < config.marketWarningMinDataCenters) {
+      warnings.push({
+        code: "limited_dc_coverage",
+        severity: "warning",
+        message: `Only ${averages.length} data center has recent sale data.`,
+      });
+    }
+
+    const lowSaleDcs = averages.filter((a) => a.saleCount < config.marketWarningLowSaleCount);
+    if (lowSaleDcs.length > 0) {
+      warnings.push({
+        code: "low_sales",
+        severity: "warning",
+        message: `${lowSaleDcs.length} data center${lowSaleDcs.length === 1 ? "" : "s"} below ${config.marketWarningLowSaleCount} recent sales.`,
+      });
+    }
+
+    const hasStaleAverage = averages.some((a) => {
+      if (!a.computedAt) return false;
+      const computedAt = new Date(a.computedAt).getTime();
+      return Number.isFinite(computedAt) && computedAt < staleAfter;
+    });
+    if (hasStaleAverage) {
+      warnings.push({
+        code: "stale_average",
+        severity: "warning",
+        message: `One or more data-center averages are older than ${config.marketWarningStaleAverageHours} hours.`,
+      });
+    }
+
+    if (outlierGuarded) {
+      warnings.push({
+        code: "thin_price_history",
+        severity: "warning",
+        message: "Extreme cross-DC prices were ignored because the spread looked unreliable.",
+      });
+    }
+
+    return warnings;
   }
 }
 

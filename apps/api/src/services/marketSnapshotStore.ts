@@ -172,12 +172,22 @@ export class MarketSnapshotStore {
     listings: { worldId: number; worldName: string; pricePerUnit: number; quantity: number }[];
     sales: { worldId: number; pricePerUnit: number }[];
     saleStats: { count: number };
+    snapshotFetchedAt: string | null;
+    rawListingCount: number;
   }> {
-    if (!pool) return { listings: [], sales: [], saleStats: { count: 0 } };
+    if (!pool) {
+      return {
+        listings: [],
+        sales: [],
+        saleStats: { count: 0 },
+        snapshotFetchedAt: null,
+        rawListingCount: 0,
+      };
+    }
 
     const [snapshotResult, saleRecordsResult] = await Promise.all([
-      pool.query<{ data: UniversalisMarketData }>(
-        `SELECT data FROM market_snapshots WHERE item_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
+      pool.query<{ data: UniversalisMarketData; fetched_at: Date }>(
+        `SELECT data, fetched_at FROM market_snapshots WHERE item_id = $1 ORDER BY fetched_at DESC LIMIT 1`,
         [itemId],
       ),
       pool.query<{ world_id: number; price_per_unit: number }>(
@@ -188,8 +198,20 @@ export class MarketSnapshotStore {
       ),
     ]);
 
-    const data = snapshotResult.rows[0]?.data;
-    if (!data?.listings) return { listings: [], sales: [], saleStats: { count: 0 } };
+    const snapshot = snapshotResult.rows[0];
+    const data = snapshot?.data;
+    if (!data?.listings) {
+      return {
+        listings: [],
+        sales: saleRecordsResult.rows.map((r) => ({
+          worldId: r.world_id,
+          pricePerUnit: r.price_per_unit,
+        })),
+        saleStats: { count: saleRecordsResult.rows.length },
+        snapshotFetchedAt: snapshot?.fetched_at.toISOString() ?? null,
+        rawListingCount: 0,
+      };
+    }
 
     return {
       listings: data.listings
@@ -205,6 +227,8 @@ export class MarketSnapshotStore {
         pricePerUnit: r.price_per_unit,
       })),
       saleStats: { count: saleRecordsResult.rows.length },
+      snapshotFetchedAt: snapshot?.fetched_at.toISOString() ?? null,
+      rawListingCount: data.listings.length,
     };
   }
 

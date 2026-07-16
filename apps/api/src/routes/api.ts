@@ -9,6 +9,9 @@ import { iqrAverage } from "../services/stats.js";
 import pool from "../db/pool.js";
 import { createClient } from "redis";
 import { apiUsageMonitor } from "../services/apiUsageMonitor.js";
+import type { MarketWarning } from "@xiv-arbitrage/shared";
+
+const HOURS_MS = 60 * 60 * 1000;
 
 const dcDisparityQuerySchema = z.object({
   highDc: z.string().optional(),
@@ -67,6 +70,67 @@ function msUntilWednesdayMidnight(): number {
   next.setHours(0, 0, 0, 0);
   if (next <= now) next.setDate(next.getDate() + 7);
   return next.getTime() - now.getTime();
+}
+
+function getListingWarnings(
+  listingData: {
+    saleStats: { count: number };
+    snapshotFetchedAt: string | null;
+    rawListingCount: number;
+  },
+  dataCenterAverageCount: number,
+): MarketWarning[] {
+  const warnings: MarketWarning[] = [];
+
+  if (!listingData.snapshotFetchedAt) {
+    warnings.push({
+      code: "missing_listings",
+      severity: "critical",
+      message: "No current market-board snapshot is available for this item.",
+    });
+  } else {
+    const fetchedAt = new Date(listingData.snapshotFetchedAt).getTime();
+    const staleAfter = Date.now() - config.marketSnapshotFreshHours * HOURS_MS;
+    if (Number.isFinite(fetchedAt) && fetchedAt < staleAfter) {
+      warnings.push({
+        code: "stale_snapshot",
+        severity: "warning",
+        message: `Current listing snapshot is older than ${config.marketSnapshotFreshHours} hours.`,
+      });
+    }
+  }
+
+  if (listingData.rawListingCount === 0) {
+    warnings.push({
+      code: "missing_listings",
+      severity: "warning",
+      message: "The latest snapshot did not include any active listings.",
+    });
+  }
+
+  if (listingData.saleStats.count === 0) {
+    warnings.push({
+      code: "thin_price_history",
+      severity: "critical",
+      message: "No completed sales were recorded in the last 30 days.",
+    });
+  } else if (listingData.saleStats.count < config.marketWarningLowSaleCount) {
+    warnings.push({
+      code: "low_sales",
+      severity: "warning",
+      message: `Only ${listingData.saleStats.count} completed sales in the last 30 days.`,
+    });
+  }
+
+  if (dataCenterAverageCount < config.marketWarningMinDataCenters) {
+    warnings.push({
+      code: "limited_dc_coverage",
+      severity: "warning",
+      message: `${dataCenterAverageCount === 0 ? "No data centers have" : `Only ${dataCenterAverageCount} data center${dataCenterAverageCount === 1 ? " has" : "s have"}`} enough sales for a comparison average.`,
+    });
+  }
+
+  return warnings;
 }
 
 export async function apiRoutes(app: FastifyInstance) {
@@ -172,6 +236,7 @@ export async function apiRoutes(app: FastifyInstance) {
       itemId,
       itemDetails: metadata.itemDetails,
       listings,
+      warnings: getListingWarnings(listingData, Object.keys(dcAverages).length),
       saleStats: {
         avgPrice: globalAvg ?? 0,
         count: listingData.saleStats.count,

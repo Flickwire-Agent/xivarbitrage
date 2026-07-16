@@ -45,4 +45,5 @@ export interface DcItemAverage {
   region: string;
   avgPrice: number;
   saleCount: number;
+  computedAt?: string;
 }

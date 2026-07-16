@@ -80,9 +80,28 @@ const schemas = {
       saleCount: { type: "integer" },
     },
   },
+  MarketWarning: {
+    type: "object",
+    required: ["code", "severity", "message"],
+    properties: {
+      code: {
+        type: "string",
+        enum: [
+          "missing_listings",
+          "stale_snapshot",
+          "stale_average",
+          "low_sales",
+          "thin_price_history",
+          "limited_dc_coverage",
+        ],
+      },
+      severity: { type: "string", enum: ["info", "warning", "critical"] },
+      message: { type: "string" },
+    },
+  },
   DcDisparity: {
     type: "object",
-    required: ["itemId", "spread", "spreadPercent", "highDc", "lowDc", "allDcs"],
+    required: ["itemId", "spread", "spreadPercent", "highDc", "lowDc", "allDcs", "warnings"],
     properties: {
       itemId: { type: "integer" },
       spread: { type: "number" },
@@ -90,6 +109,7 @@ const schemas = {
       highDc: { $ref: "#/components/schemas/DcPriceInfo" },
       lowDc: { $ref: "#/components/schemas/DcPriceInfo" },
       allDcs: { type: "array", items: { $ref: "#/components/schemas/DcPriceInfo" } },
+      warnings: { type: "array", items: { $ref: "#/components/schemas/MarketWarning" } },
     },
   },
   DcDisparityResponse: {
@@ -157,7 +177,7 @@ const schemas = {
   },
   ListingsResponse: {
     type: "object",
-    required: ["itemId", "listings", "saleStats"],
+    required: ["itemId", "listings", "warnings", "saleStats"],
     properties: {
       itemId: { type: "integer" },
       itemDetails: {
@@ -165,6 +185,7 @@ const schemas = {
         additionalProperties: { $ref: "#/components/schemas/ItemDetails" },
       },
       listings: { type: "array", items: { $ref: "#/components/schemas/ItemListing" } },
+      warnings: { type: "array", items: { $ref: "#/components/schemas/MarketWarning" } },
       saleStats: {
         type: "object",
         required: ["avgPrice", "count", "perDataCenter"],

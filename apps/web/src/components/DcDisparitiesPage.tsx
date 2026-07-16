@@ -22,6 +22,7 @@ import {
   useRestoreSourceScroll,
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
+import { MarketWarnings } from "./MarketWarnings.js";
 import { SelectField } from "./SelectField.js";
 
 const PAGE_SIZE = 50;
@@ -623,9 +624,13 @@ export function DcDisparitiesPage() {
                     </Link>
                   </div>
                   {d.allDcs.length === 0 ? (
-                    <p className="marketCardEmpty">No sale data available yet.</p>
+                    <>
+                      <MarketWarnings warnings={d.warnings} />
+                      <p className="marketCardEmpty">No sale data available yet.</p>
+                    </>
                   ) : (
                     <>
+                      <MarketWarnings warnings={d.warnings} />
                       <dl className="marketCardStats">
                         <div>
                           <dt>Cheapest / buy DC</dt>
@@ -735,6 +740,7 @@ export function DcDisparitiesPage() {
                               <strong>{d.item.name}</strong>
                             </Link>
                             <span>{d.item.category ?? "Uncategorized"}</span>
+                            <MarketWarnings warnings={d.warnings} compact />
                           </div>
                         </div>
                       </td>
