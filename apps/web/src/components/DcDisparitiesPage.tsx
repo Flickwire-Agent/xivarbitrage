@@ -13,9 +13,10 @@ import {
   TrendingUp,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { Link, useSearchParams } from "wouter";
 import { useDcDisparities, useBulkItemDetails, useWorlds } from "../hooks/api.js";
+import { useDebouncedFilter } from "../hooks/useDebouncedFilter.js";
 import {
   getItemDetailHref,
   rememberSourceScroll,
@@ -202,18 +203,23 @@ export function DcDisparitiesPage() {
   const hasActiveFilters = Boolean(highDc || lowDc || region || sort || minSpread);
   const currentViewSummary = formatSavedViewSummary(currentQueryString);
 
-  function updateFilter(key: string, value: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === "" || value === "all") {
-        next.delete(key);
-      } else {
-        next.set(key, value);
-      }
-      next.delete("page");
-      return next;
-    });
-  }
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === "" || value === "all") {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+        next.delete("page");
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
+  const minSpreadFilter = useDebouncedFilter("minSpread", minSpread, updateFilter);
 
   function clearFilters() {
     setSearchParams(new URLSearchParams());
@@ -427,8 +433,12 @@ export function DcDisparitiesPage() {
             min={0}
             step={1000}
             placeholder="0"
-            value={minSpread}
-            onChange={(e) => updateFilter("minSpread", e.target.value)}
+            value={minSpreadFilter.localValue}
+            onChange={(e) => minSpreadFilter.onChange(e.target.value)}
+            onBlur={minSpreadFilter.commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") minSpreadFilter.commit();
+            }}
           />
         </div>
         <button

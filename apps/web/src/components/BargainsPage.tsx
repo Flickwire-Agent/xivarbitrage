@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, Moon, Sun } from "lucide-react";
 import { Link, useSearchParams } from "wouter";
 import { useBargains, useBulkItemDetails, useWorlds } from "../hooks/api.js";
+import { useDebouncedFilter } from "../hooks/useDebouncedFilter.js";
 import {
   getItemDetailHref,
   rememberSourceScroll,
@@ -9,7 +10,7 @@ import {
 import { useUiStore } from "../stores/uiStore.js";
 import { SelectField } from "./SelectField.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 const PAGE_SIZE = 50;
 
@@ -129,18 +130,30 @@ export function BargainsPage() {
     });
   }, [data, page, setSearchParams]);
 
-  function updateFilter(key: string, value: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value === "" || value === "all") {
-        next.delete(key);
-      } else {
-        next.set(key, value);
-      }
-      next.delete("page");
-      return next;
-    });
-  }
+  const updateFilter = useCallback(
+    (key: string, value: string) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === "" || value === "all") {
+          next.delete(key);
+        } else {
+          next.set(key, value);
+        }
+        next.delete("page");
+        return next;
+      });
+    },
+    [setSearchParams],
+  );
+
+  const minAvgPriceFilter = useDebouncedFilter("minAvgPrice", minAvgPrice, updateFilter);
+  const minDiscountFilter = useDebouncedFilter("minDiscount", minDiscount, updateFilter);
+  const minDiscountPercentFilter = useDebouncedFilter(
+    "minDiscountPercent",
+    minDiscountPercent,
+    updateFilter,
+  );
+  const minQuantityFilter = useDebouncedFilter("minQuantity", minQuantity, updateFilter);
 
   function clearFilters() {
     setSearchParams(new URLSearchParams());
@@ -285,8 +298,12 @@ export function BargainsPage() {
             min={0}
             step={1000}
             placeholder="0"
-            value={minAvgPrice}
-            onChange={(event) => updateFilter("minAvgPrice", event.target.value)}
+            value={minAvgPriceFilter.localValue}
+            onChange={(event) => minAvgPriceFilter.onChange(event.target.value)}
+            onBlur={minAvgPriceFilter.commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") minAvgPriceFilter.commit();
+            }}
           />
         </div>
         <div className="selectField">
@@ -297,8 +314,12 @@ export function BargainsPage() {
             min={0}
             step={1000}
             placeholder="0"
-            value={minDiscount}
-            onChange={(event) => updateFilter("minDiscount", event.target.value)}
+            value={minDiscountFilter.localValue}
+            onChange={(event) => minDiscountFilter.onChange(event.target.value)}
+            onBlur={minDiscountFilter.commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") minDiscountFilter.commit();
+            }}
           />
         </div>
         <div className="selectField">
@@ -310,8 +331,12 @@ export function BargainsPage() {
             max={100}
             step={1}
             placeholder="20"
-            value={minDiscountPercent}
-            onChange={(event) => updateFilter("minDiscountPercent", event.target.value)}
+            value={minDiscountPercentFilter.localValue}
+            onChange={(event) => minDiscountPercentFilter.onChange(event.target.value)}
+            onBlur={minDiscountPercentFilter.commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") minDiscountPercentFilter.commit();
+            }}
           />
         </div>
         <div className="selectField">
@@ -322,8 +347,12 @@ export function BargainsPage() {
             min={1}
             step={1}
             placeholder="1"
-            value={minQuantity}
-            onChange={(event) => updateFilter("minQuantity", event.target.value)}
+            value={minQuantityFilter.localValue}
+            onChange={(event) => minQuantityFilter.onChange(event.target.value)}
+            onBlur={minQuantityFilter.commit}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") minQuantityFilter.commit();
+            }}
           />
         </div>
         <button
