@@ -43,7 +43,7 @@ export async function fetchItemDetailsBatch(itemIds: number[]): Promise<BulkItem
   return response.json() as Promise<BulkItemDetailsResponse>;
 }
 
-export async function searchItems(query: string): Promise<ItemDetails[]> {
+export async function searchItems(query: string, signal?: AbortSignal): Promise<ItemDetails[]> {
   const url = new URL(`${XIVAPI_PROXY_BASE_URL}/search`);
   const sanitized = query.replace(/["\\]/g, "").trim();
   url.searchParams.set("query", `Name~"${sanitized}"`);
@@ -51,7 +51,7 @@ export async function searchItems(query: string): Promise<ItemDetails[]> {
   url.searchParams.set("fields", "Name,Icon,ItemUICategory.Name");
   url.searchParams.set("limit", "20");
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   if (!response.ok) {
     throw new Error(`XIVAPI search failed: ${response.status}`);
   }

@@ -133,10 +133,11 @@ export function useDcDisparities(query: DcDisparityQuery, page: number) {
 }
 
 export function useItemSearch(query: string) {
+  const normalizedKey = query.trim().toLowerCase();
   return useQuery({
-    queryKey: ["xivapi-search", query],
-    queryFn: () => searchItems(query),
-    enabled: query.length >= 2,
+    queryKey: ["xivapi-search", normalizedKey],
+    queryFn: ({ signal }) => searchItems(normalizedKey, signal),
+    enabled: normalizedKey.length >= 2,
     staleTime: 5 * 60 * 1000,
   });
 }
