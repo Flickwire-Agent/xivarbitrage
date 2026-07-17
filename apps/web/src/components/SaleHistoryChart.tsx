@@ -88,72 +88,80 @@ export function SaleHistoryChart({
   worldIdToDc,
   worldToDc,
 }: SaleHistoryChartProps) {
-  const { byWorld, worlds, worldColor, dcs, dcDailyAverages, dcColor, dcBandColor, xDomain } =
-    useMemo(() => {
-      const chartSales = sales
+  const chartSales = useMemo(
+    () =>
+      sales
         .map((sale) => ({ ...sale, soldAtMs: new Date(sale.soldAt).getTime() }))
-        .filter((sale) => Number.isFinite(sale.soldAtMs));
+        .filter((sale) => Number.isFinite(sale.soldAtMs)),
+    [sales],
+  );
 
-      const nextByWorld = new Map<string, ChartSaleRecord[]>();
-      for (const sale of chartSales) {
-        const group = nextByWorld.get(sale.worldName) ?? [];
-        group.push(sale);
-        nextByWorld.set(sale.worldName, group);
-      }
+  const { byWorld, worlds, dcs, byDc, xDomain } = useMemo(() => {
+    const nextByWorld = new Map<string, ChartSaleRecord[]>();
+    for (const sale of chartSales) {
+      const group = nextByWorld.get(sale.worldName) ?? [];
+      group.push(sale);
+      nextByWorld.set(sale.worldName, group);
+    }
 
-      const nextWorlds = [...nextByWorld.keys()].sort();
+    const nextWorlds = [...nextByWorld.keys()].sort();
 
-      const nextByDc = new Map<string, ChartSaleRecord[]>();
-      for (const sale of chartSales) {
-        const dc = worldIdToDc[sale.worldId] ?? "Unknown";
-        const group = nextByDc.get(dc) ?? [];
-        group.push(sale);
-        nextByDc.set(dc, group);
-      }
+    const nextByDc = new Map<string, ChartSaleRecord[]>();
+    for (const sale of chartSales) {
+      const dc = worldIdToDc[sale.worldId] ?? "Unknown";
+      const group = nextByDc.get(dc) ?? [];
+      group.push(sale);
+      nextByDc.set(dc, group);
+    }
 
-      const nextDcs = [...nextByDc.keys()].sort();
-      const nextDcDailyAverages = new Map<string, ReturnType<typeof computeDailyAverages>>();
-      for (const dc of nextDcs) {
-        nextDcDailyAverages.set(dc, computeDailyAverages(nextByDc.get(dc)!));
-      }
+    const nextDcs = [...nextByDc.keys()].sort();
 
-      const nextDcColor = new Map<string, string>();
-      const nextDcBandColor = new Map<string, string>();
-      nextDcs.forEach((dc, i) => {
-        nextDcColor.set(dc, getDataCenterLineColor(i));
-        nextDcBandColor.set(dc, getDataCenterBandColor(i));
-      });
+    const timestamps = chartSales.map((sale) => sale.soldAtMs);
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const nextXDomain: [number, number] =
+      Number.isFinite(minTime) && Number.isFinite(maxTime)
+        ? minTime === maxTime
+          ? [minTime - 12 * 60 * 60 * 1000, maxTime + 12 * 60 * 60 * 1000]
+          : [minTime, maxTime]
+        : [Date.now() - 24 * 60 * 60 * 1000, Date.now()];
 
-      const nextWorldColor = new Map<string, string>();
-      nextDcs.forEach((dc, dcIndex) => {
-        nextWorlds
-          .filter((world) => (worldToDc.get(world) ?? "Unknown") === dc)
-          .forEach((world, worldIndex) => {
-            nextWorldColor.set(world, getDataCenterWorldColor(dcIndex, worldIndex));
-          });
-      });
+    return {
+      byWorld: nextByWorld,
+      worlds: nextWorlds,
+      dcs: nextDcs,
+      byDc: nextByDc,
+      xDomain: nextXDomain,
+    };
+  }, [chartSales, worldIdToDc]);
 
-      const timestamps = chartSales.map((sale) => sale.soldAtMs);
-      const minTime = Math.min(...timestamps);
-      const maxTime = Math.max(...timestamps);
-      const nextXDomain: [number, number] =
-        Number.isFinite(minTime) && Number.isFinite(maxTime)
-          ? minTime === maxTime
-            ? [minTime - 12 * 60 * 60 * 1000, maxTime + 12 * 60 * 60 * 1000]
-            : [minTime, maxTime]
-          : [Date.now() - 24 * 60 * 60 * 1000, Date.now()];
+  const dcDailyAverages = useMemo(() => {
+    const nextDcDailyAverages = new Map<string, ReturnType<typeof computeDailyAverages>>();
+    for (const dc of dcs) {
+      nextDcDailyAverages.set(dc, computeDailyAverages(byDc.get(dc)!));
+    }
+    return nextDcDailyAverages;
+  }, [dcs, byDc]);
 
-      return {
-        byWorld: nextByWorld,
-        worlds: nextWorlds,
-        worldColor: nextWorldColor,
-        dcs: nextDcs,
-        dcDailyAverages: nextDcDailyAverages,
-        dcColor: nextDcColor,
-        dcBandColor: nextDcBandColor,
-        xDomain: nextXDomain,
-      };
-    }, [sales, worldIdToDc, worldToDc]);
+  const { worldColor, dcColor, dcBandColor } = useMemo(() => {
+    const nextDcColor = new Map<string, string>();
+    const nextDcBandColor = new Map<string, string>();
+    dcs.forEach((dc, i) => {
+      nextDcColor.set(dc, getDataCenterLineColor(i));
+      nextDcBandColor.set(dc, getDataCenterBandColor(i));
+    });
+
+    const nextWorldColor = new Map<string, string>();
+    dcs.forEach((dc, dcIndex) => {
+      worlds
+        .filter((world) => (worldToDc.get(world) ?? "Unknown") === dc)
+        .forEach((world, worldIndex) => {
+          nextWorldColor.set(world, getDataCenterWorldColor(dcIndex, worldIndex));
+        });
+    });
+
+    return { worldColor: nextWorldColor, dcColor: nextDcColor, dcBandColor: nextDcBandColor };
+  }, [dcs, worlds, worldToDc]);
 
   return (
     <div
