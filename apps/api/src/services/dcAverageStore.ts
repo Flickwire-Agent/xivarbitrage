@@ -40,9 +40,11 @@ export class DcAverageStore {
     const computeStart = new Date();
 
     const itemResult = await pool.query<{ item_id: number }>(
-      `SELECT DISTINCT item_id
+      `SELECT item_id
        FROM sale_history
-       WHERE sold_at > now() - interval '30 days'`,
+       WHERE sold_at > now() - interval '30 days'
+       GROUP BY item_id
+       ORDER BY MAX(sold_at) DESC`,
     );
     if (itemResult.rows.length === 0) {
       this.lastCompute = Date.now();
