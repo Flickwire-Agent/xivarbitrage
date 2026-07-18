@@ -27,8 +27,8 @@ class TtlCache {
     return entry.data;
   }
 
-  set(key: string, data: unknown): void {
-    this.store.set(key, { data, expiresAt: Date.now() + this.ttlMs });
+  set(key: string, data: unknown, ttlMs?: number): void {
+    this.store.set(key, { data, expiresAt: Date.now() + (ttlMs ?? this.ttlMs) });
   }
 
   private evictStale(): void {
@@ -41,6 +41,8 @@ class TtlCache {
 
 const ITEM_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const SEARCH_CACHE_TTL = 60 * 60 * 1000;
+const NEGATIVE_CACHE_404_TTL = 60 * 60 * 1000;
+const NEGATIVE_CACHE_ERROR_TTL = 5 * 60 * 1000;
 const RATE_LIMIT_RPS = 20;
 const ITEM_DETAIL_FIELDS = "Name,Icon,ItemUICategory.Name";
 
@@ -76,6 +78,7 @@ class XivapiProxy {
   private readonly rateLimiter: RateLimiter;
   private readonly itemCache: TtlCache;
   private readonly searchCache: TtlCache;
+  private readonly negativeCache = new TtlCache(NEGATIVE_CACHE_ERROR_TTL);
   private readonly inFlightItemRequests = new Map<string, Promise<unknown>>();
   private cleanupInterval: ReturnType<typeof setInterval>;
 
@@ -93,6 +96,8 @@ class XivapiProxy {
     const l1Hit = this.itemCache.get(cacheKey);
     if (l1Hit) return l1Hit;
 
+    if (this.negativeCache.get(cacheKey)) return null;
+
     const l2Hit = await this.queryDb(cacheKey);
     if (l2Hit !== null) {
       this.itemCache.set(cacheKey, l2Hit);
@@ -105,6 +110,7 @@ class XivapiProxy {
     const request = this.rateLimiter.schedule(async () => {
       const recheck = this.itemCache.get(cacheKey);
       if (recheck) return recheck;
+      if (this.negativeCache.get(cacheKey)) return null;
 
       const url = new URL(`${config.xivapiBaseUrl}/sheet/Item/${itemId}`);
       url.searchParams.set("fields", fields);
@@ -112,6 +118,8 @@ class XivapiProxy {
       if (config.xivapiApiKey) headers["X-API-Key"] = config.xivapiApiKey;
       const response = await fetch(url, { headers });
       if (!response.ok) {
+        const ttl = response.status === 404 ? NEGATIVE_CACHE_404_TTL : NEGATIVE_CACHE_ERROR_TTL;
+        this.negativeCache.set(cacheKey, { status: response.status }, ttl);
         throw new Error(`XIVAPI request failed: ${response.status}`);
       }
       const data: unknown = await response.json();
@@ -162,7 +170,7 @@ class XivapiProxy {
       const parsed = parseItemDetails(itemId, cached);
       if (parsed) {
         details[itemId] = parsed;
-      } else {
+      } else if (!this.negativeCache.get(cacheKey)) {
         missing.push(itemId);
       }
     }
