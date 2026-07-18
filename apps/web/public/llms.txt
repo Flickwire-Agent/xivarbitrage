@@ -44,7 +44,7 @@ Returns DC average price disparities across all marketable items. Items without 
 - `highDc` (string): Filter by expensive data center
 - `lowDc` (string): Filter by cheap data center
 - `region` (string): Filter by region (NA, EU, OCE)
-- `sort` (enum): `spread`, `spreadPercent`
+- `sort` (enum): `spread`, `spreadPercent`, `item`
 - `minSpread` (number): Minimum gil spread
 - `minSpreadPercent` (number): Minimum percentage spread
 - `page` (number): Page number

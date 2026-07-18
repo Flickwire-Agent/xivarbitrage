@@ -134,7 +134,7 @@ export interface DcDisparityQuery {
   minSpread?: number;
   minSpreadPercent?: number;
   region?: string;
-  sort?: "spread" | "spreadPercent";
+  sort?: "spread" | "spreadPercent" | "item";
   page?: number;
   perPage?: number;
 }

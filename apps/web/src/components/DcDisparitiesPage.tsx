@@ -32,6 +32,7 @@ const MAX_SAVED_VIEW_NAME_LENGTH = 60;
 const SORT_LABELS = {
   spread: "Gross spread",
   spreadPercent: "Spread %",
+  item: "Item name",
 };
 
 function MarketResultsSkeleton() {
@@ -127,7 +128,7 @@ export function DcDisparitiesPage() {
       highDc: highDc || undefined,
       lowDc: lowDc || undefined,
       region: region || undefined,
-      sort: (sort || undefined) as "spread" | "spreadPercent" | undefined,
+      sort: (sort || undefined) as "spread" | "spreadPercent" | "item" | undefined,
       minSpread: minSpread ? Number(minSpread) : undefined,
       perPage: PAGE_SIZE,
     }),
@@ -421,7 +422,7 @@ export function DcDisparitiesPage() {
         <SelectField
           label="Sort by"
           value={sort}
-          options={["spread", "spreadPercent"]}
+          options={["spread", "spreadPercent", "item"]}
           optionLabels={SORT_LABELS}
           onChange={(v) => updateFilter("sort", v)}
         />

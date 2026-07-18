@@ -11,6 +11,7 @@ export class DcDisparityCache {
   private generatedAt = "";
   private hasLoaded = false;
   private refreshPromise: Promise<void> | null = null;
+  private itemNameCache = new Map<number, string>();
 
   start() {
     void this.refresh();
@@ -42,10 +43,11 @@ export class DcDisparityCache {
   async refresh(): Promise<void> {
     if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.scan()
-      .then((disparities) => {
+      .then(async (disparities) => {
         this.latest = disparities;
         this.generatedAt = new Date().toISOString();
         this.hasLoaded = true;
+        await this.loadItemNames(disparities.map((d) => d.itemId));
         console.log(`[DcDisparityCache] Refreshed with ${disparities.length} disparities`);
       })
       .catch((error) => {
@@ -137,14 +139,14 @@ export class DcDisparityCache {
             spread: 0,
             spreadPercent: 0,
             highDc: {
-              dataCenter: "—",
-              region: "—",
+              dataCenter: "\u2014",
+              region: "\u2014",
               avgPrice: 0,
               saleCount: 0,
             },
             lowDc: {
-              dataCenter: "—",
-              region: "—",
+              dataCenter: "\u2014",
+              region: "\u2014",
               avgPrice: 0,
               saleCount: 0,
             },
@@ -164,11 +166,6 @@ export class DcDisparityCache {
       const spread = highDc.avgPrice - lowDc.avgPrice;
       const spreadPercent = lowDc.avgPrice > 0 ? Math.round((spread / lowDc.avgPrice) * 100) : 0;
 
-      // Wash-trade / outlier guard: downgrade to single-DC (the DC with the most
-      // sales) when the spread is unreliable. Three heuristics detect this:
-      //   1) price ratio >=10x between high and low AND either side has <5 sales
-      //   2) high DC avg is >=10x the second-highest DC (cross-DC inconsistency)
-      //   3) low DC avg is <=1/10th the second-lowest DC (cross-DC inconsistency)
       const MAX_REASONABLE_RATIO = 10;
       const priceRatio = lowDc.avgPrice > 0 ? highDc.avgPrice / lowDc.avgPrice : Infinity;
       const highVsSecond =
@@ -271,7 +268,43 @@ export class DcDisparityCache {
     if (query?.sort === "spreadPercent") {
       return [...filtered].sort((a, b) => b.spreadPercent - a.spreadPercent);
     }
+    if (query?.sort === "item") {
+      return [...filtered].sort((a, b) => {
+        const nameA = this.itemNameCache.get(a.itemId) ?? `Item #${a.itemId}`;
+        const nameB = this.itemNameCache.get(b.itemId) ?? `Item #${b.itemId}`;
+        return nameA.localeCompare(nameB);
+      });
+    }
     return [...filtered].sort((a, b) => b.spread - a.spread);
+  }
+
+  private async loadItemNames(itemIds: number[]): Promise<void> {
+    if (itemIds.length === 0 || !config.databaseUrl) return;
+    try {
+      const cachePrefix = "item:";
+      const cacheSuffix = ":Name,Icon,ItemUICategory.Name";
+      const keys = itemIds.map((id) => `${cachePrefix}${id}${cacheSuffix}`);
+      const result = await pool.query<{ cache_key: string; data: unknown }>(
+        `SELECT cache_key, data FROM xivapi_cache WHERE cache_key = ANY($1) AND expires_at > NOW()`,
+        [keys],
+      );
+      for (const row of result.rows) {
+        const idStr = row.cache_key.slice(
+          cachePrefix.length,
+          row.cache_key.length - cacheSuffix.length,
+        );
+        const itemId = Number(idStr);
+        const fields = (row.data as { fields?: { Name?: string } })?.fields;
+        if (itemId && fields?.Name) {
+          this.itemNameCache.set(itemId, fields.Name);
+        }
+      }
+      console.log(
+        `[DcDisparityCache] Loaded ${result.rows.length} item names into cache (${this.itemNameCache.size} total)`,
+      );
+    } catch (error) {
+      console.error(`[DcDisparityCache] Failed to load item names: ${error}`);
+    }
   }
 
   private getWarnings(averages: DcItemAverage[], outlierGuarded = false): MarketWarning[] {

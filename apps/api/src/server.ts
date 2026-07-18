@@ -420,7 +420,7 @@ app.get("/api/openapi.json", async (request, reply) => {
             {
               name: "sort",
               in: "query",
-              schema: { type: "string", enum: ["spread", "spreadPercent"] },
+              schema: { type: "string", enum: ["spread", "spreadPercent", "item"] },
             },
             { name: "minSpread", in: "query", schema: { type: "number" } },
             { name: "minSpreadPercent", in: "query", schema: { type: "number" } },

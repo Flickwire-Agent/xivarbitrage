@@ -19,7 +19,7 @@ const dcDisparityQuerySchema = z.object({
   minSpread: z.coerce.number().nonnegative().optional(),
   minSpreadPercent: z.coerce.number().nonnegative().optional(),
   region: z.string().optional(),
-  sort: z.enum(["spread", "spreadPercent"]).optional(),
+  sort: z.enum(["spread", "spreadPercent", "item"]).optional(),
   page: z.coerce.number().int().positive().optional(),
   perPage: z.coerce.number().int().positive().max(200).optional(),
 });
