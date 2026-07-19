@@ -49,11 +49,8 @@ export async function runMigrations(): Promise<void> {
     `);
   console.log("✓ Created job_history table");
 
-  await pool.query(`
-      CREATE INDEX IF NOT EXISTS job_history_status_idx
-        ON job_history (status, completed_at DESC);
-    `);
-  console.log("✓ Created index on job_history (status, completed_at)");
+  await pool.query(`DROP INDEX IF EXISTS job_history_status_idx`);
+  console.log("✓ Dropped unused job_history_status_idx");
 
   await pool.query(`
       CREATE INDEX IF NOT EXISTS job_history_created_at_idx
@@ -106,11 +103,8 @@ export async function runMigrations(): Promise<void> {
     `);
   console.log("✓ Created index on sale_history (item_id, sold_at)");
 
-  await pool.query(`
-      CREATE INDEX IF NOT EXISTS sale_history_item_world_idx
-        ON sale_history (item_id, world_id);
-    `);
-  console.log("✓ Created index on sale_history (item_id, world_id)");
+  await pool.query(`DROP INDEX IF EXISTS sale_history_item_world_idx`);
+  console.log("✓ Dropped redundant sale_history_item_world_idx");
 
   await pool.query(`
       CREATE INDEX CONCURRENTLY IF NOT EXISTS sale_history_item_sold_world_price_idx
