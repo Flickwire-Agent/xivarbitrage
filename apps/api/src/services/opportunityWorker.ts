@@ -117,7 +117,7 @@ export async function initializeWorker(): Promise<void> {
           const params: unknown[] = [job.id, itemId];
           for (const result of regionResults) {
             const offset = params.length;
-            values.push(`($1, $2, ${offset + 1}, ${offset + 2}, now(), now())`);
+            values.push(`($1, $2, $${offset + 1}, $${offset + 2}, now(), now())`);
             params.push(result.region, result.status);
           }
           await pool.query(
