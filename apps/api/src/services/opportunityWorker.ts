@@ -82,6 +82,7 @@ export async function initializeWorker(): Promise<void> {
       const startTime = Date.now();
       let processedRegions = 0;
       let skippedFreshRegions = 0;
+      const regionResults: { region: string; status: string }[] = [];
 
       try {
         const regionsToScan = region ? [region] : TARGET_REGIONS;
@@ -90,14 +91,8 @@ export async function initializeWorker(): Promise<void> {
           const freshData = await marketSnapshotStore.getFresh(targetRegion, itemId);
 
           if (freshData) {
-            await pool.query(
-              `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
-               VALUES ($1, $2, $3, $4, now(), now())`,
-              [job.id, itemId, targetRegion, "skipped_fresh"],
-            );
-
             await recordRegionScan(itemId, targetRegion, "skipped_fresh");
-
+            regionResults.push({ region: targetRegion, status: "skipped_fresh" });
             skippedFreshRegions++;
             continue;
           }
@@ -112,15 +107,24 @@ export async function initializeWorker(): Promise<void> {
 
           await marketSnapshotStore.storeSales(itemId, data);
 
+          await recordRegionScan(itemId, targetRegion, "completed");
+          regionResults.push({ region: targetRegion, status: "completed" });
+          processedRegions++;
+        }
+
+        if (regionResults.length > 0) {
+          const values: string[] = [];
+          const params: unknown[] = [job.id, itemId];
+          for (const result of regionResults) {
+            const offset = params.length;
+            values.push(`($1, $2, ${offset + 1}, ${offset + 2}, now(), now())`);
+            params.push(result.region, result.status);
+          }
           await pool.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
-             VALUES ($1, $2, $3, $4, now(), now())`,
-            [job.id, itemId, targetRegion, "completed"],
+             VALUES ${values.join(", ")}`,
+            params,
           );
-
-          await recordRegionScan(itemId, targetRegion, "completed");
-
-          processedRegions++;
         }
 
         const duration = Date.now() - startTime;
