@@ -40,6 +40,10 @@ export class DcDisparityCache {
     return { generatedAt: this.generatedAt, disparities, total, page, perPage, totalPages };
   }
 
+  getGeneratedAt(): string {
+    return this.generatedAt;
+  }
+
   async refresh(): Promise<void> {
     if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.scan()

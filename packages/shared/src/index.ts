@@ -148,3 +148,20 @@ export interface DcDisparityResponse {
   perPage: number;
   totalPages: number;
 }
+
+export type FreshnessState = "healthy" | "warning" | "stale";
+
+export interface FreshnessStatusResponse {
+  api: { database: boolean; redis: boolean };
+  queue: { pending: number; active: number; failed: number };
+  marketData: {
+    oldestSnapshotAt: string | null;
+    newestSnapshotAt: string | null;
+    lastWorkerActivityAt: string | null;
+  };
+  caches: { bargainsGeneratedAt: string | null; dcDisparitiesGeneratedAt: string | null };
+  freshness: Record<
+    "snapshots" | "worker" | "bargainsCache" | "dcDisparitiesCache",
+    FreshnessState
+  >;
+}

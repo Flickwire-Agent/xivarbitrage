@@ -22,6 +22,10 @@ export class BargainsCache {
     return { generatedAt: this.generatedAt, bargains: this.latest };
   }
 
+  getGeneratedAt(): string {
+    return this.generatedAt;
+  }
+
   async refresh(): Promise<void> {
     if (this.refreshPromise) return this.refreshPromise;
     this.refreshPromise = this.scan()

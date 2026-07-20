@@ -7,6 +7,7 @@ import type {
   BargainsResponse,
   DcDisparityResponse,
   DcDisparityQuery,
+  FreshnessStatusResponse,
   WorldsResponse,
 } from "@xiv-arbitrage/shared";
 import {
@@ -19,6 +20,7 @@ import {
 const STALE_TIME_API = 15 * 60 * 1000;
 const STALE_TIME_XIVAPI = 60 * 60 * 1000;
 const STALE_TIME_WORLDS = 7 * 24 * 60 * 60 * 1000;
+const STALE_TIME_FRESHNESS = 30 * 1000;
 const METADATA_RETRY_INTERVAL_MS = 1500;
 const MAX_METADATA_FAILURES = 5;
 const MAX_METADATA_PENDING_POLLS = 20;
@@ -57,6 +59,19 @@ export function useWorlds() {
       return response.json() as Promise<WorldsResponse>;
     },
     staleTime: STALE_TIME_WORLDS,
+  });
+}
+
+export function useFreshnessStatus() {
+  return useQuery({
+    queryKey: ["freshness-status"],
+    queryFn: async () => {
+      const response = await fetch("/api/freshness");
+      if (!response.ok) throw new Error(`API returned ${response.status}`);
+      return response.json() as Promise<FreshnessStatusResponse>;
+    },
+    staleTime: STALE_TIME_FRESHNESS,
+    refetchInterval: STALE_TIME_FRESHNESS,
   });
 }
 

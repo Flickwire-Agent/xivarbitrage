@@ -445,6 +445,72 @@ td span {
   border-radius: 999px;
 }
 
+.freshnessPage {
+  display: grid;
+  gap: 20px;
+}
+
+.pageHeading h1 {
+  margin: 4px 0 6px;
+}
+
+.pageHeading p:last-child {
+  margin: 0;
+  color: #3d4c5e;
+}
+
+.freshnessGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.freshnessCard {
+  border: 1px solid #d7dee9;
+  border-left: 4px solid #6d7b8d;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 14px 16px;
+}
+
+.freshnessCardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #3d4c5e;
+  font-size: 0.85rem;
+}
+
+.freshnessCardHeader strong {
+  text-transform: capitalize;
+}
+
+.freshnessCard time {
+  display: block;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.freshness-healthy {
+  border-left-color: #27825d;
+}
+.freshness-warning {
+  border-left-color: #b67a16;
+}
+.freshness-stale {
+  border-left-color: #c7473a;
+}
+
+:root[data-theme="dark"] .freshnessCard {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+:root[data-theme="dark"] .freshnessCardHeader,
+:root[data-theme="dark"] .pageHeading p:last-child {
+  color: #a3b3c5;
+}
+
 .toolbar {
   display: grid;
   grid-template-columns: auto repeat(6, minmax(150px, 1fr));

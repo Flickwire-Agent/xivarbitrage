@@ -13,6 +13,16 @@ import type { MarketWarning } from "@xiv-arbitrage/shared";
 
 const HOURS_MS = 60 * 60 * 1000;
 
+function getFreshnessState(
+  timestamp: string | null,
+  warningAfterHours: number,
+): "healthy" | "warning" | "stale" {
+  if (!timestamp || !Number.isFinite(new Date(timestamp).getTime())) return "stale";
+  const ageMs = Date.now() - new Date(timestamp).getTime();
+  if (ageMs > warningAfterHours * 2 * HOURS_MS) return "stale";
+  return ageMs > warningAfterHours * HOURS_MS ? "warning" : "healthy";
+}
+
 const dcDisparityQuerySchema = z.object({
   highDc: z.string().optional(),
   lowDc: z.string().optional(),
@@ -430,6 +440,54 @@ export async function apiRoutes(app: FastifyInstance) {
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     }
+  });
+
+  app.get("/freshness", async () => {
+    const [{ bargainsCache }, { dcDisparityCache }] = await Promise.all([
+      import("../services/bargainsCache.js"),
+      import("../services/dcDisparityCache.js"),
+    ]);
+    const [database, redis] = await Promise.all([checkDatabaseHealth(), checkRedisHealth()]);
+    const emptyStats = Promise.resolve({ rows: [] as Record<string, string | null>[] });
+    const [queue, snapshotStats, workerStats] = await Promise.all([
+      getQueueStats().catch(() => ({ pending: 0, active: 0, failed: 0 })),
+      database
+        ? pool.query<{ oldest_snapshot_at: string | null; newest_snapshot_at: string | null }>(
+            `SELECT MIN(fetched_at) AS oldest_snapshot_at, MAX(fetched_at) AS newest_snapshot_at
+             FROM (
+               SELECT DISTINCT ON (item_id, region) fetched_at
+               FROM market_snapshots
+               ORDER BY item_id, region, fetched_at DESC
+             ) latest_snapshots`,
+          )
+        : emptyStats,
+      database
+        ? pool.query<{ last_worker_activity_at: string | null }>(
+            `SELECT MAX(completed_at) AS last_worker_activity_at FROM job_history`,
+          )
+        : emptyStats,
+    ]);
+    const oldestSnapshotAt = snapshotStats.rows[0]?.oldest_snapshot_at ?? null;
+    const newestSnapshotAt = snapshotStats.rows[0]?.newest_snapshot_at ?? null;
+    const lastWorkerActivityAt = workerStats.rows[0]?.last_worker_activity_at ?? null;
+    const bargainsGeneratedAt = bargainsCache.getGeneratedAt() || null;
+    const dcDisparitiesGeneratedAt = dcDisparityCache.getGeneratedAt() || null;
+
+    return {
+      api: { database, redis },
+      queue: { pending: queue.pending, active: queue.active, failed: queue.failed },
+      marketData: { oldestSnapshotAt, newestSnapshotAt, lastWorkerActivityAt },
+      caches: { bargainsGeneratedAt, dcDisparitiesGeneratedAt },
+      freshness: {
+        snapshots: getFreshnessState(oldestSnapshotAt, config.marketSnapshotFreshHours),
+        worker: getFreshnessState(lastWorkerActivityAt, 24),
+        bargainsCache: getFreshnessState(bargainsGeneratedAt, config.arbitrageRefreshMinutes / 60),
+        dcDisparitiesCache: getFreshnessState(
+          dcDisparitiesGeneratedAt,
+          config.arbitrageRefreshMinutes / 60,
+        ),
+      },
+    };
   });
 
   app.get<{ Params: { itemId: string } }>("/xivapi/sheet/Item/:itemId", async (request, reply) => {

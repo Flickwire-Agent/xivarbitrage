@@ -247,6 +247,11 @@ const schemas = {
       error: { type: "string" },
     },
   },
+  FreshnessStatusResponse: {
+    type: "object",
+    required: ["api", "queue", "marketData", "caches", "freshness"],
+    additionalProperties: true,
+  },
   UsageResponse: {
     type: "object",
     additionalProperties: true,
@@ -298,7 +303,7 @@ await app.register(compress, {
 app.addHook("onRequest", async (request, reply) => {
   const url = request.raw.url ?? "";
 
-  if (/^\/api\/(?:health|worker\/status|monitoring\/usage)(?:\?|$)/.test(url)) {
+  if (/^\/api\/(?:health|worker\/status|freshness|monitoring\/usage)(?:\?|$)/.test(url)) {
     reply.header("Cache-Control", "no-store");
     return;
   }
@@ -487,6 +492,19 @@ app.get("/api/openapi.json", async (request, reply) => {
             "200": jsonResponse(
               "Queue depth and scan progress",
               "#/components/schemas/WorkerStatusResponse",
+            ),
+          },
+        },
+      },
+      "/api/freshness": {
+        get: {
+          summary: "Market-data freshness status",
+          description:
+            "Aggregate API health, queue depth, scan freshness, and cache generation timestamps. No infrastructure credentials or identifiers are exposed.",
+          responses: {
+            "200": jsonResponse(
+              "Freshness state for market data and API dependencies",
+              "#/components/schemas/FreshnessStatusResponse",
             ),
           },
         },
