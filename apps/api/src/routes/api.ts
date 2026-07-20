@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { xivapiProxy } from "../services/xivapiProxy.js";
 import { getQueueStats } from "../services/jobQueue.js";
@@ -133,6 +133,19 @@ function getListingWarnings(
   return warnings;
 }
 
+function sendNotModifiedIfCurrent(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  generatedAt: string,
+): FastifyReply | undefined {
+  const etag = `"${Buffer.from(`${generatedAt}:${request.raw.url ?? ""}`).toString("base64url")}"`;
+  reply.header("ETag", etag);
+
+  if (request.headers["if-none-match"]?.split(",").some((value) => value.trim() === etag)) {
+    return reply.code(304).send();
+  }
+}
+
 export async function apiRoutes(app: FastifyInstance) {
   await worldDcMapping.refresh();
 
@@ -257,11 +270,13 @@ export async function apiRoutes(app: FastifyInstance) {
     sort: z.enum(["discount", "discountPercent", "price"]).optional(),
   });
 
-  app.get("/bargains", async (request) => {
+  app.get("/bargains", async (request, reply) => {
     const query = bargainsQuerySchema.parse(request.query);
     const page = query.page ?? 1;
     const perPage = query.perPage ?? 50;
     const { generatedAt, bargains: allBargains } = await bargainsCache.get();
+    const notModified = sendNotModifiedIfCurrent(request, reply, generatedAt);
+    if (notModified) return notModified;
     let filtered = allBargains;
 
     if (query.minAvgPrice !== undefined) {
@@ -310,9 +325,11 @@ export async function apiRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/dc-disparities", async (request) => {
+  app.get("/dc-disparities", async (request, reply) => {
     const query = dcDisparityQuerySchema.parse(request.query);
     const result = await dcDisparityCache.get(query);
+    const notModified = sendNotModifiedIfCurrent(request, reply, result.generatedAt);
+    if (notModified) return notModified;
     const metadata = await xivapiProxy.fetchItemDetailsBatch(
       result.disparities.map((d) => d.itemId),
       3000,
