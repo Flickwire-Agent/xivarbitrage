@@ -13,7 +13,7 @@ import { apiRoutes } from "./routes/api.js";
 import { runMigrations } from "./db/migrations.js";
 import { getScheduler } from "./services/jobScheduler.js";
 import { initializeWorker, closeWorker } from "./services/opportunityWorker.js";
-import { closeQueue } from "./services/jobQueue.js";
+import { clearFailedScanJobs, closeQueue } from "./services/jobQueue.js";
 import { apiUsageMonitor } from "./services/apiUsageMonitor.js";
 import { xivapiProxy } from "./services/xivapiProxy.js";
 
@@ -649,6 +649,13 @@ if (config.databaseUrl) {
   try {
     await runMigrations();
     await initializeWorker();
+
+    // Scan jobs have deterministic IDs. Durable job_history preserves errors, so
+    // stale failed queue entries can be safely removed before recovery scheduling.
+    const removedFailedJobs = await clearFailedScanJobs();
+    if (removedFailedJobs > 0) {
+      console.log(`[JobScheduler] Cleared ${removedFailedJobs} stale failed scan job(s)`);
+    }
 
     const scheduler = getScheduler();
     await scheduler.initialize();
