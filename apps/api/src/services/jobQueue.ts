@@ -32,7 +32,7 @@ export function getQueue(): Queue<EvaluateItemJob> {
           age: 300, // Keep completed jobs briefly for status without blocking the next scan cycle
         },
         removeOnFail: {
-          age: 86400, // Keep failed jobs for 24 hours for debugging
+          age: 300, // job_history keeps diagnostics; stale IDs must not block the next scan
         },
       },
     });
@@ -90,4 +90,9 @@ export async function getQueueStats(): Promise<{
     prioritized: counts.prioritized ?? 0,
     paused: counts.paused ?? 0,
   };
+}
+
+export async function clearFailedScanJobs(): Promise<number> {
+  const removed = await getQueue().clean(0, 100_000, "failed");
+  return removed.length;
 }
