@@ -23,6 +23,7 @@ import {
   useRestoreSourceScroll,
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
+import { getTradeNoteHref } from "../stores/tradeNotesStore.js";
 import { MarketWarnings } from "./MarketWarnings.js";
 import { SelectField } from "./SelectField.js";
 
@@ -633,6 +634,19 @@ export function DcDisparitiesPage() {
                     >
                       View history
                     </Link>
+                    <Link
+                      className="marketCardAction"
+                      href={getTradeNoteHref({
+                        itemId: d.itemId,
+                        itemName: d.item.name,
+                        buyWorld: d.lowDc.dataCenter,
+                        sellLocation: d.highDc.dataCenter,
+                        buyPrice: d.lowDc.avgPrice,
+                        expectedSellPrice: d.highDc.avgPrice,
+                      })}
+                    >
+                      Add note
+                    </Link>
                   </div>
                   {d.allDcs.length === 0 ? (
                     <>
@@ -751,6 +765,19 @@ export function DcDisparitiesPage() {
                               <strong>{d.item.name}</strong>
                             </Link>
                             <span>{d.item.category ?? "Uncategorized"}</span>
+                            <Link
+                              className="inlineAction"
+                              href={getTradeNoteHref({
+                                itemId: d.itemId,
+                                itemName: d.item.name,
+                                buyWorld: d.lowDc.dataCenter,
+                                sellLocation: d.highDc.dataCenter,
+                                buyPrice: d.lowDc.avgPrice,
+                                expectedSellPrice: d.highDc.avgPrice,
+                              })}
+                            >
+                              Add note
+                            </Link>
                             <MarketWarnings warnings={d.warnings} compact />
                           </div>
                         </div>

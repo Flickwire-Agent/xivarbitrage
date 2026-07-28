@@ -548,7 +548,8 @@ td span {
 }
 
 select,
-input {
+input,
+textarea {
   min-height: 42px;
   width: 100%;
   border: 1px solid #c7d0dd;
@@ -560,23 +561,119 @@ input {
 }
 
 :root[data-theme="dark"] select,
-:root[data-theme="dark"] input {
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] textarea {
   border-color: #2a3a4f;
   background: #1a2332;
   color: #e1e8f0;
 }
 
 select:focus,
-input:focus {
+input:focus,
+textarea:focus {
   outline: none;
   border-color: #295cb5;
   box-shadow: 0 0 0 3px rgba(41, 92, 181, 0.35);
 }
 
 :root[data-theme="dark"] select:focus,
-:root[data-theme="dark"] input:focus {
+:root[data-theme="dark"] input:focus,
+:root[data-theme="dark"] textarea:focus {
   border-color: #7ba3e8;
   box-shadow: 0 0 0 3px rgba(123, 163, 232, 0.4);
+}
+
+.tradeNotesPage,
+.tradeNotesList {
+  display: grid;
+  gap: 18px;
+}
+
+.tradeNoteForm,
+.tradeNote {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #d7dee9;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 18px;
+}
+
+:root[data-theme="dark"] .tradeNoteForm,
+:root[data-theme="dark"] .tradeNote {
+  border-color: #2a3a4f;
+  background: #1a2332;
+}
+
+.tradeNoteForm h2,
+.tradeNotesHeader h2,
+.tradeNote h3,
+.tradeNote p {
+  margin: 0;
+}
+
+.tradeNoteFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.tradeNoteForm textarea {
+  padding: 10px;
+  resize: vertical;
+  font: inherit;
+}
+
+.tradeNoteActions,
+.tradeNotesHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tradeNote {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.tradeNote dl {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+
+.tradeNote dt {
+  color: #3d4c5e;
+  font-size: 0.8rem;
+}
+
+.tradeNote dd {
+  margin: 3px 0 0;
+  font-weight: 700;
+}
+
+.tradeNoteText {
+  grid-column: 1 / -1;
+  white-space: pre-wrap;
+}
+
+.dangerAction {
+  color: #b42318;
+}
+
+:root[data-theme="dark"] .tradeNote dt {
+  color: #a3b3c5;
+}
+
+@media (max-width: 640px) {
+  .tradeNote {
+    grid-template-columns: 1fr;
+  }
+
+  .tradeNote dl {
+    flex-wrap: wrap;
+  }
 }
 
 .notice {

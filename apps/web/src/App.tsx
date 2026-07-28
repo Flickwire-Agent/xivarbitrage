@@ -17,6 +17,9 @@ const DcDisparitiesPage = lazy(() =>
 const FreshnessPage = lazy(() =>
   import("./components/FreshnessPage.js").then((m) => ({ default: m.FreshnessPage })),
 );
+const TradeNotesPage = lazy(() =>
+  import("./components/TradeNotesPage.js").then((m) => ({ default: m.TradeNotesPage })),
+);
 const ONBOARDING_STORAGE_KEY = "xiv-arbitrage.onboarding-dismissed";
 
 function hasDismissedOnboarding() {
@@ -100,6 +103,13 @@ export function App() {
               aria-current={isActive("/status") ? "page" : undefined}
             >
               Status
+            </Link>
+            <Link
+              href="/notes"
+              className={`mainTab${isActive("/notes") ? " active" : ""}`}
+              aria-current={isActive("/notes") ? "page" : undefined}
+            >
+              Notes
             </Link>
           </nav>
           <div className="appSearch">
@@ -229,6 +239,7 @@ export function App() {
                   <FreshnessPage />
                 </Suspense>
               </Route>
+              <Route path="/notes/:rest*" component={TradeNotesPage} />
               <Route path="/" component={DcDisparitiesPage} />
               <Route path="/bargains" component={BargainsPage} />
               <Route path="/items/:itemId/listings" component={ListingsPage} />

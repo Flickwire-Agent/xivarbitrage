@@ -7,6 +7,7 @@ import { useWorlds } from "../hooks/api.js";
 import { getDataCenterLineColor, getDataCenterWorldColor } from "../lib/chartColors.js";
 import { getItemTabHref } from "../lib/navigationContext.js";
 import type { ItemDetails } from "../lib/xivapi.js";
+import { getTradeNoteHref } from "../stores/tradeNotesStore.js";
 
 const SaleHistoryChart = lazy(() =>
   import("./SaleHistoryChart.js").then((m) => ({ default: m.SaleHistoryChart })),
@@ -227,6 +228,12 @@ export function SaleHistoryView({ data, onBack }: SaleHistoryViewProps) {
             <ExternalLink size={18} aria-hidden="true" />
             <span>Universalis</span>
           </a>
+          <Link
+            className="iconButton"
+            href={getTradeNoteHref({ itemId: data.itemId, itemName: data.item.name })}
+          >
+            Add note
+          </Link>
         </div>
       </section>
 
