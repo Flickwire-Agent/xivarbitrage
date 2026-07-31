@@ -5,6 +5,7 @@ import { Link, useLocation, useParams, useSearchParams } from "wouter";
 import { useItemListings, useRetriedItemDetails } from "../hooks/api.js";
 import { getItemTabHref, getReturnTo } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
+import { getTradeNoteHref } from "../stores/tradeNotesStore.js";
 import { MarketWarnings } from "./MarketWarnings.js";
 
 function getUniversalisUrl(itemId: number): string {
@@ -260,6 +261,20 @@ export function ListingsPage() {
                         <h2>{listing.worldName}</h2>
                         <span className="cellSubtext">{listing.dataCenter}</span>
                       </div>
+                      <Link
+                        className="marketCardAction"
+                        href={getTradeNoteHref({
+                          itemId: data.itemId,
+                          itemName: itemDetails?.name ?? `Item ${data.itemId}`,
+                          buyWorld: listing.worldName,
+                          sellLocation: listing.dataCenter,
+                          buyPrice: listing.pricePerUnit,
+                          expectedSellPrice: listing.recentAvgPrice,
+                          quantity: listing.quantity,
+                        })}
+                      >
+                        Add note
+                      </Link>
                     </div>
                     <dl className="marketCardStats">
                       <div>
@@ -298,6 +313,7 @@ export function ListingsPage() {
                       <th scope="col">Listed price</th>
                       <th scope="col">Quantity</th>
                       <th scope="col">Discount</th>
+                      <th scope="col">Note</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -320,6 +336,22 @@ export function ListingsPage() {
                               {listing.discountPercent}% below avg
                             </span>
                           </div>
+                        </td>
+                        <td>
+                          <Link
+                            className="inlineAction"
+                            href={getTradeNoteHref({
+                              itemId: data.itemId,
+                              itemName: itemDetails?.name ?? `Item ${data.itemId}`,
+                              buyWorld: listing.worldName,
+                              sellLocation: listing.dataCenter,
+                              buyPrice: listing.pricePerUnit,
+                              expectedSellPrice: listing.recentAvgPrice,
+                              quantity: listing.quantity,
+                            })}
+                          >
+                            Add note
+                          </Link>
                         </td>
                       </tr>
                     ))}

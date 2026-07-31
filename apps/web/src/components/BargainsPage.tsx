@@ -8,6 +8,7 @@ import {
   useRestoreSourceScroll,
 } from "../lib/navigationContext.js";
 import { useUiStore } from "../stores/uiStore.js";
+import { getTradeNoteHref } from "../stores/tradeNotesStore.js";
 import { SelectField } from "./SelectField.js";
 import type { BargainListing } from "@xiv-arbitrage/shared";
 import { useCallback, useEffect, useMemo } from "react";
@@ -400,6 +401,20 @@ export function BargainsPage() {
                     >
                       View listings
                     </Link>
+                    <Link
+                      className="marketCardAction"
+                      href={getTradeNoteHref({
+                        itemId: b.itemId,
+                        itemName: b.item.name,
+                        buyWorld: b.worldName,
+                        sellLocation: b.dataCenter,
+                        buyPrice: b.pricePerUnit,
+                        expectedSellPrice: b.recentAvgPrice,
+                        quantity: b.quantity,
+                      })}
+                    >
+                      Add note
+                    </Link>
                   </div>
                   <dl className="marketCardStats">
                     <div>
@@ -484,6 +499,20 @@ export function BargainsPage() {
                             <span className="cellSubtext">
                               {b.item.category ?? "Uncategorized"}
                             </span>
+                            <Link
+                              className="inlineAction"
+                              href={getTradeNoteHref({
+                                itemId: b.itemId,
+                                itemName: b.item.name,
+                                buyWorld: b.worldName,
+                                sellLocation: b.dataCenter,
+                                buyPrice: b.pricePerUnit,
+                                expectedSellPrice: b.recentAvgPrice,
+                                quantity: b.quantity,
+                              })}
+                            >
+                              Add note
+                            </Link>
                           </div>
                         </div>
                       </td>
