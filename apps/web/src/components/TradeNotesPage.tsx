@@ -64,7 +64,18 @@ export function TradeNotesPage() {
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft.itemName.trim() || draft.itemId <= 0 || draft.quantity <= 0) return;
+    if (
+      !draft.itemName.trim() ||
+      !Number.isSafeInteger(draft.itemId) ||
+      draft.itemId <= 0 ||
+      !Number.isFinite(draft.buyPrice) ||
+      draft.buyPrice < 0 ||
+      !Number.isFinite(draft.expectedSellPrice) ||
+      draft.expectedSellPrice < 0 ||
+      !Number.isSafeInteger(draft.quantity) ||
+      draft.quantity <= 0
+    )
+      return;
     if (editingId) updateNote(editingId, draft);
     else createNote(draft);
     setEditingId(null);

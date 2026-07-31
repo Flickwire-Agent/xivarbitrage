@@ -28,12 +28,20 @@ function isTradeNote(value: unknown): value is TradeNote {
   return (
     typeof note.id === "string" &&
     typeof note.itemId === "number" &&
+    Number.isSafeInteger(note.itemId) &&
+    note.itemId > 0 &&
     typeof note.itemName === "string" &&
     typeof note.buyWorld === "string" &&
     typeof note.sellLocation === "string" &&
     typeof note.buyPrice === "number" &&
+    Number.isFinite(note.buyPrice) &&
+    note.buyPrice >= 0 &&
     typeof note.expectedSellPrice === "number" &&
+    Number.isFinite(note.expectedSellPrice) &&
+    note.expectedSellPrice >= 0 &&
     typeof note.quantity === "number" &&
+    Number.isSafeInteger(note.quantity) &&
+    note.quantity > 0 &&
     typeof note.notes === "string" &&
     typeof note.status === "string" &&
     TRADE_NOTE_STATUSES.includes(note.status as TradeNoteStatus) &&
