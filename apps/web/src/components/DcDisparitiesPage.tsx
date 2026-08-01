@@ -60,6 +60,16 @@ type SavedView = {
   createdAt: string;
 };
 
+type RouteOpportunity = {
+  id: string;
+  itemName: string;
+  buyDataCenter: string;
+  sellDataCenter: string;
+  buyPrice: number;
+  expectedSellPrice: number;
+  estimatedSpread: number;
+};
+
 function loadSavedViews(): SavedView[] {
   if (typeof window === "undefined") return [];
   try {
@@ -101,6 +111,42 @@ function formatSavedViewSummary(queryString: string) {
   return parts.length > 0 ? parts.join(" · ") : "Default filters";
 }
 
+function getRoutePlanText(opportunities: RouteOpportunity[], markdown: boolean) {
+  const groups = new Map<string, RouteOpportunity[]>();
+  for (const opportunity of opportunities) {
+    const key = `${opportunity.buyDataCenter} → ${opportunity.sellDataCenter}`;
+    groups.set(key, [...(groups.get(key) ?? []), opportunity]);
+  }
+  const totalSpread = opportunities.reduce(
+    (total, opportunity) => total + opportunity.estimatedSpread,
+    0,
+  );
+  const lines = markdown
+    ? [
+        "# XIV Arbitrage Route Plan",
+        "",
+        "Estimated spread is pre-fee and based on recent DC averages.",
+        "",
+      ]
+    : [
+        "XIV Arbitrage Route Plan",
+        "Estimated spread is pre-fee and based on recent DC averages.",
+        "",
+      ];
+
+  for (const [route, entries] of groups) {
+    lines.push(markdown ? `## ${route}` : route);
+    for (const entry of entries) {
+      const detail = `Qty 1 | Buy ${entry.buyPrice.toLocaleString()} gil | Sell ${entry.expectedSellPrice.toLocaleString()} gil | Spread ${entry.estimatedSpread.toLocaleString()} gil`;
+      lines.push(markdown ? `- ${entry.itemName}: ${detail}` : `- ${entry.itemName}: ${detail}`);
+    }
+    lines.push("");
+  }
+
+  lines.push(`Total estimated spread: ${totalSpread.toLocaleString()} gil`);
+  return lines.join("\n");
+}
+
 export function DcDisparitiesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isDarkMode, toggleDarkMode } = useUiStore();
@@ -110,6 +156,8 @@ export function DcDisparitiesPage() {
   const [areSavedViewsOpen, setAreSavedViewsOpen] = useState(false);
   const [editingSavedViewId, setEditingSavedViewId] = useState<string | null>(null);
   const [editingSavedViewName, setEditingSavedViewName] = useState("");
+  const [routeOpportunities, setRouteOpportunities] = useState<RouteOpportunity[]>([]);
+  const [routePlanMessage, setRoutePlanMessage] = useState("");
 
   useEffect(() => {
     document.title = "DC Disparities | XIV Arbitrage";
@@ -204,6 +252,14 @@ export function DcDisparitiesPage() {
 
   const hasActiveFilters = Boolean(highDc || lowDc || region || sort || minSpread);
   const currentViewSummary = formatSavedViewSummary(currentQueryString);
+  const routeGroups = useMemo(() => {
+    const groups = new Map<string, RouteOpportunity[]>();
+    for (const opportunity of routeOpportunities) {
+      const key = `${opportunity.buyDataCenter} → ${opportunity.sellDataCenter}`;
+      groups.set(key, [...(groups.get(key) ?? []), opportunity]);
+    }
+    return [...groups.entries()];
+  }, [routeOpportunities]);
 
   const updateFilter = useCallback(
     (key: string, value: string) => {
@@ -321,6 +377,43 @@ export function DcDisparitiesPage() {
       setSavedViewMessage("Copied this filtered URL to the clipboard.");
     } catch {
       setSavedViewMessage(url);
+    }
+  }
+
+  function getRouteOpportunity(
+    disparity: DcDisparity & { item: { id: number; name: string } },
+  ): RouteOpportunity | null {
+    if (disparity.spread <= 0 || disparity.lowDc.dataCenter === disparity.highDc.dataCenter) {
+      return null;
+    }
+    return {
+      id: `${disparity.itemId}-${disparity.lowDc.dataCenter}-${disparity.highDc.dataCenter}`,
+      itemName: disparity.item.name,
+      buyDataCenter: disparity.lowDc.dataCenter,
+      sellDataCenter: disparity.highDc.dataCenter,
+      buyPrice: disparity.lowDc.avgPrice,
+      expectedSellPrice: disparity.highDc.avgPrice,
+      estimatedSpread: disparity.spread,
+    };
+  }
+
+  function toggleRouteOpportunity(disparity: DcDisparity & { item: { id: number; name: string } }) {
+    const opportunity = getRouteOpportunity(disparity);
+    if (!opportunity) return;
+    setRouteOpportunities((current) =>
+      current.some((entry) => entry.id === opportunity.id)
+        ? current.filter((entry) => entry.id !== opportunity.id)
+        : [...current, opportunity],
+    );
+  }
+
+  async function copyRoutePlan(markdown: boolean) {
+    const plan = getRoutePlanText(routeOpportunities, markdown);
+    try {
+      await navigator.clipboard.writeText(plan);
+      setRoutePlanMessage(`Copied ${markdown ? "Markdown" : "plain text"} route plan.`);
+    } catch {
+      setRoutePlanMessage(plan);
     }
   }
 
@@ -593,6 +686,85 @@ export function DcDisparitiesPage() {
         ) : null}
       </section>
 
+      {routeOpportunities.length > 0 ? (
+        <section className="routePlan" aria-labelledby="route-plan-title">
+          <div className="routePlanHeader">
+            <div>
+              <p className="eyebrow">Shopping run</p>
+              <h2 id="route-plan-title">Route plan</h2>
+              <p>
+                {routeOpportunities.length} item{routeOpportunities.length === 1 ? "" : "s"} ·{" "}
+                {routeOpportunities
+                  .reduce((total, opportunity) => total + opportunity.estimatedSpread, 0)
+                  .toLocaleString()}{" "}
+                gil estimated pre-fee spread
+              </p>
+            </div>
+            <div className="routePlanActions">
+              <button type="button" className="iconButton" onClick={() => copyRoutePlan(true)}>
+                <Copy size={16} aria-hidden="true" />
+                <span>Copy Markdown</span>
+              </button>
+              <button type="button" className="iconButton" onClick={() => copyRoutePlan(false)}>
+                <Copy size={16} aria-hidden="true" />
+                <span>Copy text</span>
+              </button>
+              <button
+                type="button"
+                className="textButton"
+                onClick={() => {
+                  setRouteOpportunities([]);
+                  setRoutePlanMessage("");
+                }}
+              >
+                Clear plan
+              </button>
+            </div>
+          </div>
+          <div className="routePlanGroups">
+            {routeGroups.map(([route, opportunities]) => (
+              <section key={route} className="routePlanGroup" aria-label={`${route} route`}>
+                <h3>{route}</h3>
+                <ul className="routePlanList">
+                  {opportunities.map((opportunity) => (
+                    <li key={opportunity.id}>
+                      <div>
+                        <strong>{opportunity.itemName}</strong>
+                        <span>Qty 1</span>
+                      </div>
+                      <span>
+                        {opportunity.buyPrice.toLocaleString()} →{" "}
+                        {opportunity.expectedSellPrice.toLocaleString()} gil
+                      </span>
+                      <strong className="discountPositive">
+                        +{opportunity.estimatedSpread.toLocaleString()} gil
+                      </strong>
+                      <button
+                        type="button"
+                        className="textButton"
+                        onClick={() =>
+                          setRouteOpportunities((current) =>
+                            current.filter((entry) => entry.id !== opportunity.id),
+                          )
+                        }
+                        aria-label={`Remove ${opportunity.itemName} from route plan`}
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+          {routePlanMessage ? (
+            <p className="routePlanMessage" role="status" aria-live="polite">
+              {routePlanMessage}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       {error ? (
         <div className="notice error" role="alert">
           <strong>Failed to load disparities.</strong>
@@ -647,6 +819,19 @@ export function DcDisparitiesPage() {
                     >
                       Add note
                     </Link>
+                    {getRouteOpportunity(d) ? (
+                      <button
+                        type="button"
+                        className="marketCardAction"
+                        onClick={() => toggleRouteOpportunity(d)}
+                      >
+                        {routeOpportunities.some(
+                          (opportunity) => opportunity.id === getRouteOpportunity(d)?.id,
+                        )
+                          ? "Remove route"
+                          : "Add to route"}
+                      </button>
+                    ) : null}
                   </div>
                   {d.allDcs.length === 0 ? (
                     <>
@@ -726,6 +911,7 @@ export function DcDisparitiesPage() {
             <table>
               <thead>
                 <tr>
+                  <th scope="col">Route</th>
                   <th scope="col">Item</th>
                   <th scope="col">Buy-side DC</th>
                   <th scope="col">High-side sale DC</th>
@@ -742,6 +928,22 @@ export function DcDisparitiesPage() {
                     },
                   ) => (
                     <tr key={d.itemId}>
+                      <td>
+                        {getRouteOpportunity(d) ? (
+                          <label className="routeSelection">
+                            <input
+                              type="checkbox"
+                              checked={routeOpportunities.some(
+                                (opportunity) => opportunity.id === getRouteOpportunity(d)?.id,
+                              )}
+                              onChange={() => toggleRouteOpportunity(d)}
+                            />
+                            <span className="srOnly">Add {d.item.name} to route plan</span>
+                          </label>
+                        ) : (
+                          <span className="cellSubtext">Unavailable</span>
+                        )}
+                      </td>
                       <td>
                         <div className="itemCell">
                           {d.item.iconUrl ? (

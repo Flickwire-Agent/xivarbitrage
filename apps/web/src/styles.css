@@ -878,6 +878,107 @@ textarea:focus {
   font-weight: 700;
 }
 
+.routePlan {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #b9d8cd;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(22, 107, 92, 0.08), transparent 40%), #ffffff;
+  padding: 16px;
+  margin: 0 0 16px;
+}
+
+.routePlanHeader,
+.routePlanActions,
+.routePlanList li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.routePlanHeader {
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.routePlanHeader h2,
+.routePlanHeader p,
+.routePlanMessage {
+  margin: 0;
+}
+
+.routePlanHeader p:not(.eyebrow),
+.routePlanList span {
+  color: #3d4c5e;
+  font-size: 0.84rem;
+}
+
+.routePlanActions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.routePlanList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.routePlanGroups {
+  display: grid;
+  gap: 12px;
+}
+
+.routePlanGroup h3 {
+  margin: 0 0 4px;
+  font-size: 0.92rem;
+}
+
+.routePlanList li {
+  border-top: 1px solid #d9e8e3;
+  padding-top: 8px;
+}
+
+.routePlanList li div {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+}
+
+.routePlanList li > span {
+  white-space: nowrap;
+}
+
+.routePlanMessage {
+  white-space: pre-wrap;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.routeSelection input {
+  width: 18px;
+  min-height: auto;
+  height: 18px;
+  accent-color: #166b5c;
+  cursor: pointer;
+}
+
+:root[data-theme="dark"] .routePlan {
+  border-color: #28594e;
+  background: linear-gradient(135deg, rgba(110, 231, 183, 0.1), transparent 40%), #1a2332;
+}
+
+:root[data-theme="dark"] .routePlanHeader p:not(.eyebrow),
+:root[data-theme="dark"] .routePlanList span {
+  color: #a3b3c5;
+}
+
+:root[data-theme="dark"] .routePlanList li {
+  border-top-color: #28594e;
+}
+
 :root[data-theme="dark"] .notice.error {
   border-color: #5a3a35;
   background: #3a2420;
@@ -1970,6 +2071,7 @@ a:hover {
   .marketCardHeader {
     display: flex;
     align-items: flex-start;
+    flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
@@ -1982,6 +2084,7 @@ a:hover {
   }
 
   .marketCard .itemCell {
+    flex: 1 1 100%;
     min-width: 0;
   }
 
