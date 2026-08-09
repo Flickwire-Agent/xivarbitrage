@@ -611,7 +611,7 @@ if (existsSync(webDistPath)) {
     cacheControl: false,
     setHeaders: (res, filePath) => {
       if (basename(filePath) === "sw.js") {
-        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+        res.header("Cache-Control", "public, max-age=0, must-revalidate");
         return;
       }
 
@@ -621,11 +621,11 @@ if (existsSync(webDistPath)) {
         filePath.startsWith(join(webDistPath, "assets")) ||
         /-[A-Za-z0-9_-]{8,}\.[A-Za-z0-9.]+$/.test(basename(filePath))
       ) {
-        res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        res.header("Cache-Control", "public, max-age=31536000, immutable");
       } else {
         // index.html and other non-hashed files must never be long-cached so
         // users always pick up a fresh build on their next visit.
-        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+        res.header("Cache-Control", "public, max-age=0, must-revalidate");
       }
     },
   });
