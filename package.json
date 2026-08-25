@@ -15,11 +15,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.0.2",
-    "@commitlint/config-conventional": "^21.0.2",
-    "@types/node": "^25.9.3",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "@types/node": "^25.9.5",
     "husky": "^9.1.7",
-    "oxlint": "^1.70.0",
+    "oxlint": "^1.78.0",
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@9.15.4",
@@ -27,7 +27,9 @@
     "overrides": {
       "@fastify/static@>=8.0.0 <=9.1.0": ">=9.1.1",
       "esbuild@>=0.27.3 <0.28.1": ">=0.28.1",
-      "fast-uri": "3.1.5"
+      "fast-uri": "3.1.5",
+      "brace-expansion@>=2.0.0 <2.1.4": ">=2.1.4",
+      "@opentelemetry/core@<2.8.0": ">=2.8.0"
     }
   }
 }
