@@ -32,6 +32,12 @@ Optional environment variables:
 - `MARKET_WARNING_STALE_AVERAGE_HOURS`: DC average age threshold for stale-average warnings. Defaults to `6`.
 - `VITE_PLAUSIBLE_DOMAIN`: Domain for Plausible analytics (EU-based, privacy-friendly). Set to your domain to enable analytics. Omit to disable. Must be set during web build.
 
+## Operations
+
+See [Interpreting ingestion status](docs/ingestion-status.md) for the meanings and
+limits of `/api/health`, `/api/worker/status`, and `/api/freshness`, including
+read-only checks for queue activity and market-data freshness.
+
 ## Notes
 
 Universalis documentation currently lists an API rate limit of 25 requests per second with a 50 request burst. The API package uses a local token-bucket limiter and defaults below that ceiling.
