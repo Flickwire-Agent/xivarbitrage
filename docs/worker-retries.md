@@ -8,8 +8,15 @@ empty listings and sales is still successful ingestion.
 BullMQ applies the existing queue defaults: **three total attempts**, with
 exponential backoff starting at two seconds. Concurrency, the ten-second fetch
 timeout, and rate limiting are unchanged. A failed fetch writes no snapshot or
-successful scan state. Failed pairs remain due for eventual scheduler recovery
-after the bounded retries have been exhausted.
+successful scan state. Failed pairs remain due after bounded retries are exhausted.
+On an eligible scheduling pass, once outstanding jobs drain, the scheduler removes
+up to 1,000 terminal failed jobs older than five minutes before enqueueing due
+pairs. This explicitly frees deterministic IDs: BullMQ's age retention is lazy
+and alone does not guarantee recovery. Recent failures retain their grace period;
+active, waiting, prioritized, and delayed retries prevent scheduling. Recovery
+also depends on scheduler cooldown, queue drainage, and available database/Redis;
+five minutes is a minimum retention period, not a recovery deadline. Larger failed
+cohorts drain over multiple eligible passes. PostgreSQL history remains available.
 
 Each attempted region writes its own `job_history` row. Failures name the actual
 region, not `all`. A legacy job spanning multiple regions stops at the first
@@ -49,10 +56,15 @@ fresh scan. Use snapshot ages and `/api/freshness` for freshness assessment.
 
 ## Verification and rollout
 
-Run `pnpm --filter @xiv-arbitrage/api test`. HTTP and persistence are mocked; tests
+Run `pnpm --filter @xiv-arbitrage/api test`. HTTP and persistence are mocked; processor tests
 exercise the actual processor and client, including partial-region retries, while
 checking the actual queue configuration through a mocked BullMQ constructor.
-They do not test Redis-backed retry timing or live upstream availability.
+The scheduler regression requires `redis-server` on PATH and starts a disposable
+instance with TCP and persistence disabled, using a private Unix socket. It runs
+real BullMQ retries and scheduler enqueueing, verifies recovery without another
+terminal failure, and checks recent-failure retention and delayed-retry protection.
+It ages only the test job's Redis timestamps instead of waiting five minutes;
+PostgreSQL due-row selection is mocked. Tests do not contact live upstream services.
 
 After review and deployment, compare a fixed journal interval and overdue snapshot
 counts with the baseline in [issue #98](https://github.com/Flickwire-Agent/xivarbitrage/issues/98).

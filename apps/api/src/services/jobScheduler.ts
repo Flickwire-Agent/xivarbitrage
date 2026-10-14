@@ -1,5 +1,10 @@
 import { config } from "../config.js";
-import { getItemScanJobId, getQueue, TARGET_REGIONS } from "./jobQueue.js";
+import {
+  FAILED_SCAN_RETENTION_SECONDS,
+  getItemScanJobId,
+  getQueue,
+  TARGET_REGIONS,
+} from "./jobQueue.js";
 import { universalis } from "./universalis.js";
 import { pool } from "../db/pool.js";
 
@@ -172,6 +177,14 @@ export class JobScheduler {
       }
 
       this.lastScheduleTime = now;
+
+      // BullMQ's age retention is lazy: a final cohort of failures otherwise
+      // occupies its deterministic IDs indefinitely. Bound work per scheduling
+      // pass and preserve the diagnostic grace period and in-flight retries.
+      const removed = await queue.clean(FAILED_SCAN_RETENTION_SECONDS * 1000, 1000, "failed");
+      if (removed.length > 0) {
+        console.log(`[JobScheduler] Released ${removed.length} aged failed scan job ID(s)`);
+      }
 
       const reqPerSecond = config.universalisRequestsPerSecond;
 
