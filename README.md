@@ -34,10 +34,12 @@ Optional environment variables:
 
 ## Worker regression checks
 
-With Node.js 24 and dependencies installed, run `pnpm --filter @xiv-arbitrage/api test`.
-The tests use Node's experimental module mocks to exercise the real worker processor
-and Universalis client without PostgreSQL, Redis, or external HTTP requests.
-They check processor rejection and queue retry configuration, not Redis scheduling.
+With Node.js 24, dependencies installed, and `redis-server` on PATH, run
+`pnpm --filter @xiv-arbitrage/api test`. The processor tests use Node's experimental
+module mocks to exercise the real worker processor and Universalis client. The
+scheduler regression starts a disposable Redis instance on a private Unix socket
+with TCP and persistence disabled to verify exhausted-job recovery with real BullMQ.
+The suite requires no running PostgreSQL or Redis service and makes no external HTTP requests.
 See [worker retries and counters](docs/worker-retries.md) for operational semantics.
 
 ## Notes
