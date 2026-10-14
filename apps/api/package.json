@@ -10,7 +10,8 @@
     "daily-recommendations": "node --env-file=../../.env dist/dailyRecommendations.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "reset-db": "tsx scripts/reset-db.ts",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "test": "node --import tsx --experimental-test-module-mocks --test tests/*.test.ts"
   },
   "dependencies": {
     "@fastify/compress": "~9.0.0",

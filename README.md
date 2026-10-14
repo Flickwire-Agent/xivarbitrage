@@ -32,6 +32,16 @@ Optional environment variables:
 - `MARKET_WARNING_STALE_AVERAGE_HOURS`: DC average age threshold for stale-average warnings. Defaults to `6`.
 - `VITE_PLAUSIBLE_DOMAIN`: Domain for Plausible analytics (EU-based, privacy-friendly). Set to your domain to enable analytics. Omit to disable. Must be set during web build.
 
+## Worker regression checks
+
+With Node.js 24, dependencies installed, and `redis-server` on PATH, run
+`pnpm --filter @xiv-arbitrage/api test`. The processor tests use Node's experimental
+module mocks to exercise the real worker processor and Universalis client. The
+scheduler regression starts a disposable Redis instance on a private Unix socket
+with TCP and persistence disabled to verify exhausted-job recovery with real BullMQ.
+The suite requires no running PostgreSQL or Redis service and makes no external HTTP requests.
+See [worker retries and counters](docs/worker-retries.md) for operational semantics.
+
 ## Notes
 
 Universalis documentation currently lists an API rate limit of 25 requests per second with a 50 request burst. The API package uses a local token-bucket limiter and defaults below that ceiling.

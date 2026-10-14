@@ -3,6 +3,7 @@ import { config } from "../config.js";
 
 export const TARGET_REGIONS = ["North-America", "Europe", "Oceania"] as const;
 export type TargetRegion = (typeof TARGET_REGIONS)[number];
+export const FAILED_SCAN_RETENTION_SECONDS = 300;
 
 export interface EvaluateItemJob {
   itemId: number;
@@ -32,7 +33,7 @@ export function getQueue(): Queue<EvaluateItemJob> {
           age: 300, // Keep completed jobs briefly for status without blocking the next scan cycle
         },
         removeOnFail: {
-          age: 300, // job_history keeps diagnostics; stale IDs must not block the next scan
+          age: FAILED_SCAN_RETENTION_SECONDS, // Lazy cleanup; scheduler also frees aged failed IDs
         },
       },
     });
