@@ -32,6 +32,12 @@ Optional environment variables:
 - `MARKET_WARNING_STALE_AVERAGE_HOURS`: DC average age threshold for stale-average warnings. Defaults to `6`.
 - `VITE_PLAUSIBLE_DOMAIN`: Domain for Plausible analytics (EU-based, privacy-friendly). Set to your domain to enable analytics. Omit to disable. Must be set during web build.
 
+## Operations
+
+See [Interpreting ingestion status](docs/ingestion-status.md) for the meanings and
+limits of `/api/health`, `/api/worker/status`, and `/api/freshness`, including
+read-only checks for queue activity and market-data freshness.
+
 ## Worker regression checks
 
 With Node.js 24, dependencies installed, and `redis-server` on PATH, run
