@@ -45,19 +45,41 @@ or fresh-cache skip schedules that pair's next scan 24 hours later. Due pairs ca
 remain outside the queue while existing active, delayed, prioritized, or waiting
 jobs drain. The scheduler's cooldown also affects when it next queues due work.
 
-### Known fetch-failure accounting gap
+### Failures, retries, and recovery
 
-[Issue #98](https://github.com/Flickwire-Agent/xivarbitrage/issues/98) tracks the
-current behavior: `universalis.getCurrentData` catches fetch failures and returns
-`null`; the worker continues and can resolve successfully without ingesting any
-region. That path does not write failed history, advance the failed region's scan
-state, or trigger BullMQ retries. Thus `queue.failed: 0`, no `jobs24h.failed`, and
-worker log `failed=0` do not establish upstream success.
+Since [PR #101](https://github.com/Flickwire-Agent/xivarbitrage/pull/101), upstream
+HTTP, transport, abort, parse, and invalid-item failures reject the processor. The
+worker attempts to record failed history for the actual region, then rethrows even
+if history persistence fails. A failed fetch writes no snapshot or successful scan
+state. Valid responses with empty listings and sales still count as ingestion.
 
 The queue configures **three total attempts**, with exponential backoff starting at
-two seconds, for a rejecting processor. A swallowed failure bypasses that policy.
-Update this section when the repair lands; it describes the current implementation,
-not intended future behavior.
+two seconds. Backoff is not a retry-completion deadline: queued work and worker
+capacity can delay the next attempt. A fixed interval containing only `attempt 1/3`
+messages does not by itself prove retries are broken.
+
+Keep these failure counts separate:
+
+- `queue.failed` counts retained terminal failures, not attempts awaiting retry.
+- `jobs24h.failed` counts persisted failed region-history rows; retries can add
+  rows for the same job and region, and database failures can prevent recording.
+- Worker metric `failed` counts rejected processor invocations, including retryable
+  attempts. Metrics are emitted on attempt completion after at least 60 seconds,
+  not by an idle heartbeat. Their windows need not match timestamp-filtered history.
+
+After retries are exhausted, failed pairs remain due. Once outstanding jobs drain,
+an eligible scheduler pass removes up to 1,000 terminal failed jobs older than five
+minutes to release their deterministic IDs before enqueueing due pairs. Recovery
+also depends on cooldown and available dependencies; five minutes is a minimum
+retention period, not a recovery deadline. A cleanup log proves IDs were released,
+not that those pairs subsequently ingested successfully.
+
+See [worker retries and counters](worker-retries.md) for persistence ordering,
+legacy multi-region jobs, and the full metric definitions. Baselines from before
+the repair may hide fetch failures; increased visible failures alone do not prove
+upstream availability worsened. Honest failure accounting also does not establish
+freshness recovery: compare successful regional throughput and snapshot ages over
+dated intervals.
 
 ## Freshness
 

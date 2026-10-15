@@ -39,12 +39,14 @@ async function recordRegionScan(
   );
 }
 
-function recordWorkerSuccess(
+function recordWorkerAttempt(
+  completed: boolean,
   processedRegions: number,
   skippedFreshRegions: number,
   duration: number,
 ): void {
-  workerMetrics.completedJobs++;
+  if (completed) workerMetrics.completedJobs++;
+  else workerMetrics.failedJobs++;
   workerMetrics.processedRegions += processedRegions;
   workerMetrics.skippedFreshRegions += skippedFreshRegions;
   workerMetrics.totalDuration += duration;
@@ -55,9 +57,10 @@ function recordWorkerSuccess(
     return;
   }
 
-  const avgDuration = Math.round(workerMetrics.totalDuration / workerMetrics.completedJobs);
+  const attempts = workerMetrics.completedJobs + workerMetrics.failedJobs;
+  const avgDuration = Math.round(workerMetrics.totalDuration / attempts);
   console.log(
-    `[Worker] Metrics jobs=${workerMetrics.completedJobs} failed=${workerMetrics.failedJobs} regions=${workerMetrics.processedRegions} skippedFresh=${workerMetrics.skippedFreshRegions} avgDuration=${avgDuration}ms maxDuration=${workerMetrics.maxDuration}ms`,
+    `[Worker] Metrics attempts=${attempts} jobs=${workerMetrics.completedJobs} failed=${workerMetrics.failedJobs} regions=${workerMetrics.processedRegions} skippedFresh=${workerMetrics.skippedFreshRegions} avgDuration=${avgDuration}ms maxDuration=${workerMetrics.maxDuration}ms`,
   );
 
   workerMetrics.completedJobs = 0;
@@ -82,53 +85,41 @@ export async function initializeWorker(): Promise<void> {
       const startTime = Date.now();
       let processedRegions = 0;
       let skippedFreshRegions = 0;
-      const regionResults: { region: string; status: string }[] = [];
+      let completed = false;
+      let activeRegion: TargetRegion | undefined = region;
 
       try {
         const regionsToScan = region ? [region] : TARGET_REGIONS;
 
         for (const targetRegion of regionsToScan) {
+          activeRegion = targetRegion;
           const freshData = await marketSnapshotStore.getFresh(targetRegion, itemId);
-
+          let status: "completed" | "skipped_fresh";
           if (freshData) {
             await recordRegionScan(itemId, targetRegion, "skipped_fresh");
-            regionResults.push({ region: targetRegion, status: "skipped_fresh" });
+            status = "skipped_fresh";
             skippedFreshRegions++;
-            continue;
+          } else {
+            const data = await universalis.getCurrentData(targetRegion, itemId);
+            // Persist sales before publishing a fresh snapshot: a failed sales write
+            // must not cause the next attempt to skip unfinished ingestion.
+            await marketSnapshotStore.storeSales(itemId, data);
+            await marketSnapshotStore.upsert(targetRegion, itemId, data);
+            await recordRegionScan(itemId, targetRegion, "completed");
+            status = "completed";
+            processedRegions++;
           }
-
-          const data = await universalis.getCurrentData(targetRegion, itemId);
-
-          if (!data) {
-            continue;
-          }
-
-          await marketSnapshotStore.upsert(targetRegion, itemId, data);
-
-          await marketSnapshotStore.storeSales(itemId, data);
-
-          await recordRegionScan(itemId, targetRegion, "completed");
-          regionResults.push({ region: targetRegion, status: "completed" });
-          processedRegions++;
-        }
-
-        if (regionResults.length > 0) {
-          const values: string[] = [];
-          const params: unknown[] = [job.id, itemId];
-          for (const result of regionResults) {
-            const offset = params.length;
-            values.push(`($1, $2, $${offset + 1}, $${offset + 2}, now(), now())`);
-            params.push(result.region, result.status);
-          }
+          // Record each region immediately so a later legacy multi-region failure
+          // cannot discard successful history. Retries reuse those fresh snapshots.
           await pool.query(
             `INSERT INTO job_history (job_id, item_id, region, status, completed_at, created_at)
-             VALUES ${values.join(", ")}`,
-            params,
+             VALUES ($1, $2, $3, $4, now(), now())`,
+            [job.id, itemId, targetRegion, status],
           );
         }
 
         const duration = Date.now() - startTime;
-        recordWorkerSuccess(processedRegions, skippedFreshRegions, duration);
+        completed = true;
 
         return {
           processed: processedRegions + skippedFreshRegions > 0,
@@ -138,16 +129,24 @@ export async function initializeWorker(): Promise<void> {
         };
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
-        workerMetrics.failedJobs++;
-
-        await pool.query(
-          `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)
-           VALUES ($1, $2, $3, $4, $5, now())`,
-          [job.id, itemId, "all", "failed", errorMsg],
-        );
-
-        console.error(`[Worker] Failed item_id=${itemId} error=${errorMsg}`);
+        try {
+          await pool.query(
+            `INSERT INTO job_history (job_id, item_id, region, status, error_message, created_at)
+             VALUES ($1, $2, $3, $4, $5, now())`,
+            [job.id, itemId, activeRegion, "failed", errorMsg],
+          );
+        } catch (historyError) {
+          console.error(`[Worker] Could not record failed attempt item_id=${itemId}`, historyError);
+        }
+        console.error(`[Worker] Failed item_id=${itemId} region=${activeRegion} error=${errorMsg}`);
         throw error;
+      } finally {
+        recordWorkerAttempt(
+          completed,
+          processedRegions,
+          skippedFreshRegions,
+          Date.now() - startTime,
+        );
       }
     },
     {
@@ -161,7 +160,9 @@ export async function initializeWorker(): Promise<void> {
   );
 
   worker.on("failed", (job, err) => {
-    console.error(`[Worker] Job ${job?.id} failed after retries: ${err.message}`);
+    console.error(
+      `[Worker] Job ${job?.id} attempt ${job?.attemptsMade}/${job?.opts.attempts ?? 1} failed: ${err.message}`,
+    );
   });
 
   worker.on("error", (err) => {

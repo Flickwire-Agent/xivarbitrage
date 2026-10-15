@@ -36,9 +36,9 @@ function draftFromSearch(): TradeNoteDraft {
 }
 
 function noteToDraft({
-  id: _,
-  createdAt: __,
-  updatedAt: ___,
+  id: _id,
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
   ...draft
 }: TradeNote): TradeNoteDraft {
   return draft;

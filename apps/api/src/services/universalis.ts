@@ -48,22 +48,15 @@ export class UniversalisClient {
     return this.fetchJson<UniversalisDataCenter[]>("/data-centers");
   }
 
-  async getCurrentData(
-    regionOrWorld: string,
-    itemId: number,
-  ): Promise<UniversalisMarketData | null> {
-    try {
-      return await this.fetchJson<UniversalisMarketData>(
-        `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entries=100`,
-      );
-    } catch (error) {
-      console.warn(
-        `Universalis.getCurrentData: request failed for ${regionOrWorld}/${itemId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      );
-      return null;
+  async getCurrentData(regionOrWorld: string, itemId: number): Promise<UniversalisMarketData> {
+    // Let the worker reject the attempt so BullMQ applies its bounded retry policy.
+    const data = await this.fetchJson<UniversalisMarketData>(
+      `/${encodeURIComponent(regionOrWorld)}/${itemId}?listings=100&entries=100`,
+    );
+    if (!data || data.itemID !== itemId) {
+      throw new Error(`Universalis returned invalid market data for ${regionOrWorld}/${itemId}`);
     }
+    return data;
   }
 
   private async fetchJson<T>(path: string): Promise<T> {
