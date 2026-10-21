@@ -62,6 +62,12 @@ the saved mapping before optionally copying it into the new cache path. Perform
 this migration with the old service stopped so it cannot rewrite the seed, then
 deploy the reviewed, published commit using the established deployment helper.
 
+## Operations
+
+See [Interpreting ingestion status](docs/ingestion-status.md) for the meanings and
+limits of `/api/health`, `/api/worker/status`, and `/api/freshness`, including
+read-only checks for queue activity and market-data freshness.
+
 ## Notes
 
 Universalis documentation currently lists an API rate limit of 25 requests per second with a 50 request burst. The API package uses a local token-bucket limiter and defaults below that ceiling.
