@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { UniversalisClient } from "./universalis.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const CACHE_FILE = path.resolve(__dirname, "../../data/world-dc-mapping.json");
+const SEED_FILE = path.resolve(__dirname, "../../data/world-dc-mapping.json");
+const CACHE_FILE = path.resolve(__dirname, "../../data/cache/world-dc-mapping.json");
 
 export interface WorldDcMapping {
   worldIdToDc: Record<number, string>;
@@ -40,6 +41,11 @@ export class WorldDcMappingService {
   private universalis = new UniversalisClient();
   private mapping: WorldDcMapping | null = null;
   private refreshPromise: Promise<void> | null = null;
+
+  constructor(
+    private cacheFile = CACHE_FILE,
+    private seedFile = SEED_FILE,
+  ) {}
 
   async getMapping(): Promise<WorldDcMapping> {
     if (this.mapping) return this.mapping;
@@ -122,18 +128,23 @@ export class WorldDcMappingService {
   }
 
   private async loadFromFile(): Promise<WorldDcMapping | null> {
-    try {
-      const raw = await fs.readFile(CACHE_FILE, "utf-8");
-      return JSON.parse(raw) as WorldDcMapping;
-    } catch {
-      return null;
+    for (const file of [this.cacheFile, this.seedFile]) {
+      try {
+        const raw = await fs.readFile(file, "utf-8");
+        return JSON.parse(raw) as WorldDcMapping;
+      } catch {
+        // A missing or unreadable runtime cache must not prevent offline seed loading.
+      }
     }
+    return null;
   }
 
   private async saveToFile(mapping: WorldDcMapping): Promise<void> {
-    const dir = path.dirname(CACHE_FILE);
+    const dir = path.dirname(this.cacheFile);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(CACHE_FILE, `${JSON.stringify(mapping, null, 2)}\n`, "utf-8");
+    const temporaryFile = `${this.cacheFile}.tmp`;
+    await fs.writeFile(temporaryFile, `${JSON.stringify(mapping, null, 2)}\n`, "utf-8");
+    await fs.rename(temporaryFile, this.cacheFile);
   }
 }
 

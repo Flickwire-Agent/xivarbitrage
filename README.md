@@ -42,6 +42,26 @@ with TCP and persistence disabled to verify exhausted-job recovery with real Bul
 The suite requires no running PostgreSQL or Redis service and makes no external HTTP requests.
 See [worker retries and counters](docs/worker-retries.md) for operational semantics.
 
+## World mapping cache
+
+`apps/api/data/world-dc-mapping.json` is the versioned, read-only fallback seed.
+The service loads `apps/api/data/cache/world-dc-mapping.json` first, falling back
+to the seed if the cache is missing, unreadable, or invalid JSON. Both paths are
+relative to the API package in development and compiled execution, not the shell's
+working directory. Offline startup therefore works without a runtime cache.
+
+Semantic Universalis mapping changes are written atomically to the Git-ignored
+`data/cache/` directory; unchanged mappings retain their existing timestamp.
+The API user needs write access to that directory. Cache writes never update the
+seed. Review upstream topology changes separately before updating the seed in Git.
+
+For installations where older code already modified the tracked seed, preserve
+that file and its diff outside the checkout before restoring the reviewed seed.
+Do not commit generated topology changes just to clear a deployment check. Review
+the saved mapping before optionally copying it into the new cache path. Perform
+this migration with the old service stopped so it cannot rewrite the seed, then
+deploy the reviewed, published commit using the established deployment helper.
+
 ## Notes
 
 Universalis documentation currently lists an API rate limit of 25 requests per second with a 50 request burst. The API package uses a local token-bucket limiter and defaults below that ceiling.
